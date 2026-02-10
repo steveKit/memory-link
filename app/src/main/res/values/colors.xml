@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark theme colors - matching Compose theme -->
+    <color name="dark_background">#FF121212</color>
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="accent_blue">#FF90CAF9</color>
+</resources>

@@ -22,20 +22,20 @@ A kiosk-locked Android tablet app for dementia/elderly users displaying calendar
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Language | Kotlin |
-| UI | Jetpack Compose |
-| DI | Hilt |
-| Async | Coroutines + Flow |
-| Local DB | Room |
-| Calendar | Google Calendar API v3 |
-| Testing | JUnit5, MockK, Maestro |
+| Component | Technology             |
+| --------- | ---------------------- |
+| Language  | Kotlin                 |
+| UI        | Jetpack Compose        |
+| DI        | Hilt                   |
+| Async     | Coroutines + Flow      |
+| Local DB  | Room                   |
+| Calendar  | Google Calendar API v3 |
+| Testing   | JUnit5, MockK, Maestro |
 
 ## Project Status
 
 - [x] Planning & Architecture
-- [ ] Phase 1: Project Setup
+- [x] Phase 1: Project Setup
 - [ ] Phase 2: Display Layer (Kiosk UI)
 - [ ] Phase 3: State Machine
 - [ ] Phase 4: Calendar Integration
