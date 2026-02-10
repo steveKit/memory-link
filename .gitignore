@@ -1,0 +1,48 @@
+# Android/Gradle
+*.iml
+.gradle/
+build/
+local.properties
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Android Studio
+.idea/
+*.swp
+*~
+
+# Kotlin
+*.class
+*.jar
+*.war
+*.kotlin_module
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+
+# Environment & Secrets
+.env
+.env.local
+*.keystore
+*.jks
+google-services.json
+credentials.json
+
+# Test outputs
+/test-results/
+/coverage/
+
+# Maestro
+.maestro/output/
+
+# AI/Cline config
+.clinerules/
