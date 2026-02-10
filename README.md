@@ -48,4 +48,4 @@ A kiosk-locked Android tablet app for dementia/elderly users displaying calendar
 
 ## License
 
-TBD
+MIT License - see [LICENSE](./LICENSE) for details.
