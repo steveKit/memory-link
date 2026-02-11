@@ -1,0 +1,34 @@
+# ============================================================
+# local.properties.example
+# ============================================================
+# Copy this file to `local.properties` and fill in your values.
+# local.properties is gitignored - never commit real credentials!
+
+# Android SDK location (adjust for your system)
+sdk.dir=/path/to/your/android-sdk
+
+# ============================================================
+# Google OAuth Credentials
+# ============================================================
+# Setup instructions:
+#
+# 1. Go to https://console.cloud.google.com
+# 2. Create a new project (or select existing)
+# 3. Enable "Google Calendar API":
+#    - APIs & Services → Library → Search "Google Calendar API" → Enable
+# 4. Configure OAuth Consent Screen:
+#    - APIs & Services → OAuth consent screen
+#    - User Type: External
+#    - Add scope: https://www.googleapis.com/auth/calendar.readonly
+# 5. Create credentials:
+#    - APIs & Services → Credentials → Create Credentials → OAuth client ID
+#    - Application type: Web application (NOT Android!)
+#    - Name: MemoryLink Web Client
+#    - Copy the Client ID and Client Secret below
+# 6. Also create an Android credential for your debug keystore:
+#    - Application type: Android
+#    - Package name: com.memorylink.debug
+#    - SHA-1: Run `./gradlew signingReport` to get your debug SHA-1
+
+GOOGLE_WEB_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_WEB_CLIENT_SECRET=your-client-secret
