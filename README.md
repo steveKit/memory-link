@@ -82,7 +82,7 @@ To have the display dim at 9 PM and wake at 7 AM:
 - [x] Phase 3: State Machine
 - [x] Phase 4: Calendar Integration
 - [ ] Phase 5: Config Parser
-- [ ] Phase 6: Admin Mode
+- [x] Phase 6: Admin Mode
 - [ ] Phase 7: Kiosk Lock
 - [ ] Phase 8: First-Time Setup
 - [ ] Phase 9: Testing & Polish
