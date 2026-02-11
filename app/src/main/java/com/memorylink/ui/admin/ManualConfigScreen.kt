@@ -1,0 +1,594 @@
+package com.memorylink.ui.admin
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.memorylink.ui.theme.AccentBlue
+import com.memorylink.ui.theme.DarkBackground
+import com.memorylink.ui.theme.MemoryLinkTheme
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
+/**
+ * Manual configuration screen for display settings.
+ *
+ * Allows manual override of:
+ * - Wake time
+ * - Sleep time
+ * - Brightness
+ * - Time format (12/24 hour)
+ *
+ * These override [CONFIG] calendar events.
+ *
+ * @param configState Current configuration state
+ * @param onWakeTimeChange Update wake time (null to clear override)
+ * @param onSleepTimeChange Update sleep time (null to clear override)
+ * @param onBrightnessChange Update brightness (null to clear override)
+ * @param onTimeFormatChange Update time format (null to clear override)
+ * @param onClearAll Clear all manual overrides
+ * @param onBackClick Navigate back to admin home
+ * @param modifier Modifier for the screen
+ */
+@Composable
+fun ManualConfigScreen(
+    configState: ConfigState,
+    onWakeTimeChange: (LocalTime?) -> Unit,
+    onSleepTimeChange: (LocalTime?) -> Unit,
+    onBrightnessChange: (Int?) -> Unit,
+    onTimeFormatChange: (Boolean?) -> Unit,
+    onClearAll: () -> Unit,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(DarkBackground)
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header with back button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onBackClick) {
+                    Text(
+                        text = "← Back",
+                        fontSize = 16.sp,
+                        color = AccentBlue
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Title
+            Text(
+                text = "Display Settings",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Manual overrides (takes priority over calendar configs)",
+                fontSize = 14.sp,
+                color = Color.White.copy(alpha = 0.7f)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Wake Time
+            TimeSettingItem(
+                title = "Wake Time",
+                description = "When display enters full brightness mode",
+                currentTime = configState.wakeTime,
+                defaultDescription = "Using calendar config or default (6:00 AM)",
+                onTimeSelected = onWakeTimeChange
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Sleep Time
+            TimeSettingItem(
+                title = "Sleep Time",
+                description = "When display enters dimmed mode",
+                currentTime = configState.sleepTime,
+                defaultDescription = "Using calendar config or default (9:00 PM)",
+                onTimeSelected = onSleepTimeChange
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Brightness
+            BrightnessSettingItem(
+                title = "Brightness",
+                description = "Screen brightness during wake hours",
+                currentValue = configState.brightness,
+                onValueChange = onBrightnessChange
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Time Format
+            TimeFormatSettingItem(
+                title = "Time Format",
+                description = "Clock display format",
+                use24Hour = configState.use24HourFormat,
+                onFormatChange = onTimeFormatChange
+            )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // Clear All button
+            Button(
+                onClick = onClearAll,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2A2A2A)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "Clear All Overrides",
+                    fontSize = 16.sp,
+                    color = Color(0xFFEF5350)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Removes manual settings and uses calendar [CONFIG] events",
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimeSettingItem(
+    title: String,
+    description: String,
+    currentTime: LocalTime?,
+    defaultDescription: String,
+    onTimeSelected: (LocalTime?) -> Unit
+) {
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF1E1E1E))
+            .clickable { showTimePicker = true }
+            .padding(16.dp)
+    ) {
+        Text(
+            text = title,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.White
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = description,
+            fontSize = 12.sp,
+            color = Color.White.copy(alpha = 0.5f)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (currentTime != null) {
+                Text(
+                    text = currentTime.format(DateTimeFormatter.ofPattern("h:mm a")),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentBlue
+                )
+                TextButton(onClick = { onTimeSelected(null) }) {
+                    Text(
+                        text = "Clear",
+                        fontSize = 14.sp,
+                        color = Color(0xFFEF5350)
+                    )
+                }
+            } else {
+                Text(
+                    text = defaultDescription,
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+                TextButton(onClick = { showTimePicker = true }) {
+                    Text(
+                        text = "Set",
+                        fontSize = 14.sp,
+                        color = AccentBlue
+                    )
+                }
+            }
+        }
+    }
+
+    // Simple time picker dialog
+    if (showTimePicker) {
+        SimpleTimePickerDialog(
+            initialTime = currentTime ?: LocalTime.of(12, 0),
+            onTimeSelected = {
+                onTimeSelected(it)
+                showTimePicker = false
+            },
+            onDismiss = { showTimePicker = false }
+        )
+    }
+}
+
+@Composable
+private fun SimpleTimePickerDialog(
+    initialTime: LocalTime,
+    onTimeSelected: (LocalTime) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var hour by remember { mutableIntStateOf(initialTime.hour) }
+    var minute by remember { mutableIntStateOf(initialTime.minute) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.7f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF1E1E1E))
+                .clickable(enabled = false) {} // Prevent click through
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Select Time",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Hour picker
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    TextButton(onClick = { hour = (hour + 1) % 24 }) {
+                        Text("▲", fontSize = 24.sp, color = AccentBlue)
+                    }
+                    Text(
+                        text = hour.toString().padStart(2, '0'),
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    TextButton(onClick = { hour = if (hour > 0) hour - 1 else 23 }) {
+                        Text("▼", fontSize = 24.sp, color = AccentBlue)
+                    }
+                }
+
+                Text(
+                    text = ":",
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                // Minute picker
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    TextButton(onClick = { minute = (minute + 5) % 60 }) {
+                        Text("▲", fontSize = 24.sp, color = AccentBlue)
+                    }
+                    Text(
+                        text = minute.toString().padStart(2, '0'),
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    TextButton(onClick = { minute = if (minute >= 5) minute - 5 else 55 }) {
+                        Text("▼", fontSize = 24.sp, color = AccentBlue)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel", fontSize = 16.sp, color = Color.White.copy(alpha = 0.7f))
+                }
+                Button(
+                    onClick = { onTimeSelected(LocalTime.of(hour, minute)) },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                ) {
+                    Text("Set Time", fontSize = 16.sp, color = Color.White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BrightnessSettingItem(
+    title: String,
+    description: String,
+    currentValue: Int?,
+    onValueChange: (Int?) -> Unit
+) {
+    var sliderValue by remember(currentValue) {
+        mutableIntStateOf(currentValue ?: 100)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF1E1E1E))
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+            }
+
+            if (currentValue != null) {
+                TextButton(onClick = { onValueChange(null) }) {
+                    Text(
+                        text = "Clear",
+                        fontSize = 14.sp,
+                        color = Color(0xFFEF5350)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (currentValue != null) {
+            Text(
+                text = "$currentValue%",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = AccentBlue
+            )
+        } else {
+            Text(
+                text = "Using calendar config or default (100%)",
+                fontSize = 14.sp,
+                color = Color.White.copy(alpha = 0.5f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Slider(
+            value = sliderValue.toFloat(),
+            onValueChange = { sliderValue = it.toInt() },
+            onValueChangeFinished = { onValueChange(sliderValue) },
+            valueRange = 10f..100f,
+            steps = 8,
+            colors = SliderDefaults.colors(
+                thumbColor = AccentBlue,
+                activeTrackColor = AccentBlue,
+                inactiveTrackColor = Color(0xFF3A3A3A)
+            )
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("10%", fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
+            Text("100%", fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
+        }
+    }
+}
+
+@Composable
+private fun TimeFormatSettingItem(
+    title: String,
+    description: String,
+    use24Hour: Boolean?,
+    onFormatChange: (Boolean?) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF1E1E1E))
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+            }
+
+            if (use24Hour != null) {
+                TextButton(onClick = { onFormatChange(null) }) {
+                    Text(
+                        text = "Clear",
+                        fontSize = 14.sp,
+                        color = Color(0xFFEF5350)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = when (use24Hour) {
+                    true -> "24-hour (14:30)"
+                    false -> "12-hour (2:30 PM)"
+                    null -> "Using calendar config or default (12-hour)"
+                },
+                fontSize = 16.sp,
+                color = if (use24Hour != null) AccentBlue else Color.White.copy(alpha = 0.5f)
+            )
+
+            Switch(
+                checked = use24Hour ?: false,
+                onCheckedChange = { onFormatChange(it) },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = AccentBlue,
+                    checkedTrackColor = AccentBlue.copy(alpha = 0.5f),
+                    uncheckedThumbColor = Color(0xFF3A3A3A),
+                    uncheckedTrackColor = Color(0xFF2A2A2A)
+                )
+            )
+        }
+    }
+}
+
+// region Previews
+
+@Preview(
+    name = "Manual Config - With Values",
+    showBackground = true,
+    backgroundColor = 0xFF121212,
+    widthDp = 400,
+    heightDp = 800
+)
+@Composable
+private fun ManualConfigWithValuesPreview() {
+    MemoryLinkTheme {
+        ManualConfigScreen(
+            configState = ConfigState(
+                wakeTime = LocalTime.of(7, 0),
+                sleepTime = LocalTime.of(21, 30),
+                brightness = 80,
+                use24HourFormat = true
+            ),
+            onWakeTimeChange = {},
+            onSleepTimeChange = {},
+            onBrightnessChange = {},
+            onTimeFormatChange = {},
+            onClearAll = {},
+            onBackClick = {}
+        )
+    }
+}
+
+@Preview(
+    name = "Manual Config - Defaults",
+    showBackground = true,
+    backgroundColor = 0xFF121212,
+    widthDp = 400,
+    heightDp = 800
+)
+@Composable
+private fun ManualConfigDefaultsPreview() {
+    MemoryLinkTheme {
+        ManualConfigScreen(
+            configState = ConfigState(),
+            onWakeTimeChange = {},
+            onSleepTimeChange = {},
+            onBrightnessChange = {},
+            onTimeFormatChange = {},
+            onClearAll = {},
+            onBackClick = {}
+        )
+    }
+}
+
+// endregion

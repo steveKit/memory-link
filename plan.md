@@ -188,13 +188,13 @@ app/
 
 ### Phase 4: Calendar Integration
 
-- [ ] 4.1 Set up Google Cloud project + Calendar API credentials
-- [ ] 4.2 Implement OAuth2 sign-in flow with offline token storage
-- [ ] 4.3 Implement `GoogleCalendarService` (fetch today's events)
-- [ ] 4.4 Implement `CalendarRepository` (API + Room cache)
-- [ ] 4.5 Create `CalendarSyncWorker` (WorkManager, 5-min interval)
-- [ ] 4.6 Handle offline mode (use cached events)
-- [ ] 4.7 Write integration tests with mocked API responses
+- [x] 4.1 Set up Google Cloud project + Calendar API credentials
+- [x] 4.2 Implement OAuth2 sign-in flow with offline token storage
+- [x] 4.3 Implement `GoogleCalendarService` (fetch today's events)
+- [x] 4.4 Implement `CalendarRepository` (API + Room cache)
+- [x] 4.5 Create `CalendarSyncWorker` (WorkManager, 5-min interval)
+- [x] 4.6 Handle offline mode (use cached events)
+- [x] 4.7 Write integration tests with mocked API responses
 
 ### Phase 5: Config Parser
 
@@ -208,16 +208,16 @@ app/
 
 ### Phase 6: Admin Mode
 
-- [ ] 6.1 Implement 5-tap detection in top-left corner
-- [ ] 6.2 Build `PinEntryScreen` with numeric keypad
-- [ ] 6.3 Implement PIN storage + 3-attempt lockout
-- [ ] 6.4 Build admin navigation graph
-- [ ] 6.5 Build `WifiSettingsScreen`
-- [ ] 6.6 Build `GoogleSignInScreen`
-- [ ] 6.7 Build `CalendarSelectScreen`
-- [ ] 6.8 Build `ManualConfigScreen` (override sleep/wake/brightness)
-- [ ] 6.9 Build `TimezoneScreen` (optional override, defaults to device auto)
-- [ ] 6.10 Implement 5-minute inactivity auto-exit
+- [x] 6.1 Implement 5-tap detection in top-left corner
+- [x] 6.2 Build `PinEntryScreen` with numeric keypad
+- [x] 6.3 Implement PIN storage + 3-attempt lockout
+- [x] 6.4 Build admin navigation graph
+- [ ] 6.5 Build `WifiSettingsScreen` (deferred to Phase 8 - Setup Wizard)
+- [x] 6.6 Build `GoogleSignInScreen`
+- [x] 6.7 Build `CalendarSelectScreen`
+- [x] 6.8 Build `ManualConfigScreen` (override sleep/wake/brightness)
+- [ ] 6.9 Build `TimezoneScreen` (deferred - device default used)
+- [x] 6.10 Implement 5-minute inactivity auto-exit
 
 ### Phase 7: Kiosk Lock
 
