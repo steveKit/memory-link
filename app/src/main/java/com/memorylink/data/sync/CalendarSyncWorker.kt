@@ -13,7 +13,9 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.memorylink.data.repository.CalendarRepository
+import com.memorylink.data.repository.SettingsRepository
 import com.memorylink.domain.StateCoordinator
+import com.memorylink.domain.usecase.ParseConfigEventUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.first
  * Per .clinerules/10-project-meta.md:
  * - Sync Interval: Poll every 5 minutes for new events
  * - However, WorkManager minimum is 15 minutes for periodic work
+ * - Config events are parsed immediately when cached
  *
  * Per .clinerules/20-android.md:
  * - Background sync continues during sleep mode (battery permitting)
@@ -36,7 +39,9 @@ constructor(
         @Assisted context: Context,
         @Assisted workerParams: WorkerParameters,
         private val repository: CalendarRepository,
-        private val stateCoordinator: StateCoordinator
+        private val stateCoordinator: StateCoordinator,
+        private val parseConfigEventUseCase: ParseConfigEventUseCase,
+        private val settingsRepository: SettingsRepository
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -85,12 +90,31 @@ constructor(
         }
     }
 
-    /** Update StateCoordinator with the latest events from the repository. */
+    /**
+     * Update StateCoordinator with the latest events and process config events.
+     *
+     * Per .clinerules/10-project-meta.md:
+     * - Config events are parsed immediately when cached
+     * - Config events are never displayed to the memory user
+     */
     private suspend fun updateStateCoordinator() {
         try {
+            // 1. Process config events first (updates settings)
+            val configEvents = repository.observeConfigEvents().first()
+            if (configEvents.isNotEmpty()) {
+                val appliedCount = parseConfigEventUseCase(configEvents)
+                Log.d(TAG, "Processed $appliedCount config events")
+            }
+
+            // 2. Get updated settings after config processing
+            val settings = settingsRepository.refreshSettings()
+            stateCoordinator.updateSettings(settings)
+            Log.d(TAG, "Settings updated: $settings")
+
+            // 3. Update display events (non-config events only)
             val events = repository.observeTodaysEvents().first()
             stateCoordinator.updateEvents(events)
-            Log.d(TAG, "StateCoordinator updated with ${events.size} events")
+            Log.d(TAG, "StateCoordinator updated with ${events.size} display events")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update StateCoordinator", e)
         }

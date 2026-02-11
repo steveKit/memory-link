@@ -40,18 +40,19 @@ MemoryLink can be configured remotely by creating special calendar events with t
 
 ### Available Commands
 
-| Command       | Example                    | Description                                   |
-| ------------- | -------------------------- | --------------------------------------------- |
-| `SLEEP`       | `[CONFIG] SLEEP 21:00`     | Set sleep mode start time (HH:MM)             |
-| `SLEEP`       | `[CONFIG] SLEEP SUNSET`    | Sleep at sunset                               |
-| `SLEEP`       | `[CONFIG] SLEEP SUNSET+30` | Sleep 30 minutes after sunset                 |
-| `SLEEP`       | `[CONFIG] SLEEP SUNSET-15` | Sleep 15 minutes before sunset                |
-| `WAKE`        | `[CONFIG] WAKE 07:00`      | Set wake time (HH:MM)                         |
-| `WAKE`        | `[CONFIG] WAKE SUNRISE`    | Wake at sunrise                               |
-| `WAKE`        | `[CONFIG] WAKE SUNRISE+15` | Wake 15 minutes after sunrise                 |
-| `BRIGHTNESS`  | `[CONFIG] BRIGHTNESS 80`   | Screen brightness (0-100)                     |
-| `FONT_SIZE`   | `[CONFIG] FONT_SIZE 48`    | Override default font size (sp)               |
-| `TIME_FORMAT` | `[CONFIG] TIME_FORMAT 12`  | Clock format: `12` or `24` hour (default: 12) |
+| Command        | Example                    | Description                                          |
+| -------------- | -------------------------- | ---------------------------------------------------- |
+| `SLEEP`        | `[CONFIG] SLEEP 21:00`     | Set sleep mode start time (HH:MM)                    |
+| `SLEEP`        | `[CONFIG] SLEEP SUNSET`    | Sleep at sunset                                      |
+| `SLEEP`        | `[CONFIG] SLEEP SUNSET+30` | Sleep 30 minutes after sunset                        |
+| `SLEEP`        | `[CONFIG] SLEEP SUNSET-15` | Sleep 15 minutes before sunset                       |
+| `WAKE`         | `[CONFIG] WAKE 07:00`      | Set wake time (HH:MM)                                |
+| `WAKE`         | `[CONFIG] WAKE SUNRISE`    | Wake at sunrise                                      |
+| `WAKE`         | `[CONFIG] WAKE SUNRISE+15` | Wake 15 minutes after sunrise                        |
+| `BRIGHTNESS`   | `[CONFIG] BRIGHTNESS 80`   | Screen brightness (0-100)                            |
+| `FONT_SIZE`    | `[CONFIG] FONT_SIZE 48`    | Event title font size in sp (default: 48)            |
+| `MESSAGE_SIZE` | `[CONFIG] MESSAGE_SIZE 60` | Message area % of screen height (20-80, default: 60) |
+| `TIME_FORMAT`  | `[CONFIG] TIME_FORMAT 12`  | Clock format: `12` or `24` hour (default: 12)        |
 
 ### Example: Setting Up a Sleep Schedule
 
@@ -81,7 +82,7 @@ To have the display dim at 9 PM and wake at 7 AM:
 - [x] Phase 2: Display Layer (Kiosk UI)
 - [x] Phase 3: State Machine
 - [x] Phase 4: Calendar Integration
-- [ ] Phase 5: Config Parser
+- [x] Phase 5: Config Parser
 - [x] Phase 6: Admin Mode
 - [ ] Phase 7: Kiosk Lock
 - [ ] Phase 8: First-Time Setup
