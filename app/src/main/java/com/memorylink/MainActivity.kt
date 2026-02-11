@@ -5,15 +5,16 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
+import com.memorylink.domain.model.DisplayState
+import com.memorylink.ui.kiosk.KioskScreen
 import com.memorylink.ui.theme.MemoryLinkTheme
 import dagger.hilt.android.AndroidEntryPoint
+import java.time.LocalDate
+import java.time.LocalTime
 
 /**
- * Single activity that hosts the entire Compose UI.
- * Configured for kiosk mode: fullscreen, landscape, no system UI.
+ * Single activity that hosts the entire Compose UI. Configured for kiosk mode: fullscreen,
+ * landscape, no system UI.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -29,12 +30,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MemoryLinkTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // TODO: Add navigation host with KioskScreen
-                    // Placeholder for now - will be implemented in Phase 2
-                }
+                // TODO: Replace with actual state from StateCoordinator (Phase 3)
+                // For now, display a static preview state
+                val displayState =
+                        DisplayState.AwakeWithEvent(
+                                currentTime = LocalTime.now(),
+                                currentDate = LocalDate.now(),
+                                nextEventTitle = "Sample Event",
+                                nextEventTime = LocalTime.now().plusHours(1),
+                                use24HourFormat = false
+                        )
+                KioskScreen(displayState = displayState)
             }
         }
     }
@@ -47,13 +53,12 @@ class MainActivity : ComponentActivity() {
 
     private fun hideSystemUI() {
         @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = (
-            android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                or android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
-                or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-        )
+        window.decorView.systemUiVisibility =
+                (android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                        android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                        android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                        android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                        android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                        android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
     }
 }
