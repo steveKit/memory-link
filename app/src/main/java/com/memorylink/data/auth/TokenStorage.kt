@@ -68,6 +68,121 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getLong(KEY_LAST_SYNC_TIME, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_SYNC_TIME, value).apply()
 
+    // ========== Admin PIN Management ==========
+
+    /** Store the admin 4-digit PIN (encrypted). Only set during first-time setup or PIN change. */
+    var adminPin: String?
+        get() = prefs.getString(KEY_ADMIN_PIN, null)
+        set(value) = prefs.edit().putString(KEY_ADMIN_PIN, value).apply()
+
+    /** Check if admin PIN has been configured. */
+    val isPinSet: Boolean
+        get() = !adminPin.isNullOrBlank()
+
+    /** Track failed PIN entry attempts. Reset after successful entry. */
+    var failedPinAttempts: Int
+        get() = prefs.getInt(KEY_FAILED_PIN_ATTEMPTS, 0)
+        set(value) = prefs.edit().putInt(KEY_FAILED_PIN_ATTEMPTS, value).apply()
+
+    /** Lockout end time after 3 failed attempts. Epoch millis. 0 means no active lockout. */
+    var pinLockoutEndTime: Long
+        get() = prefs.getLong(KEY_PIN_LOCKOUT_END, 0L)
+        set(value) = prefs.edit().putLong(KEY_PIN_LOCKOUT_END, value).apply()
+
+    /** Check if currently locked out due to failed PIN attempts. */
+    val isPinLockedOut: Boolean
+        get() = pinLockoutEndTime > System.currentTimeMillis()
+
+    /** Get remaining lockout time in seconds, or 0 if not locked out. */
+    val lockoutRemainingSeconds: Int
+        get() {
+            val remaining = pinLockoutEndTime - System.currentTimeMillis()
+            return if (remaining > 0) (remaining / 1000).toInt() else 0
+        }
+
+    /**
+     * Validate entered PIN against stored PIN. Manages failed attempts and lockout automatically.
+     *
+     * @param enteredPin The 4-digit PIN entered by user
+     * @return true if PIN matches, false otherwise
+     */
+    fun validatePin(enteredPin: String): Boolean {
+        // Check for active lockout
+        if (isPinLockedOut) {
+            return false
+        }
+
+        val storedPin = adminPin ?: return false
+
+        return if (enteredPin == storedPin) {
+            // Success - reset failed attempts
+            failedPinAttempts = 0
+            pinLockoutEndTime = 0L
+            true
+        } else {
+            // Failed - increment attempts
+            val attempts = failedPinAttempts + 1
+            failedPinAttempts = attempts
+
+            // Lockout after 3 failed attempts (30 seconds)
+            if (attempts >= MAX_PIN_ATTEMPTS) {
+                pinLockoutEndTime = System.currentTimeMillis() + LOCKOUT_DURATION_MS
+                failedPinAttempts = 0 // Reset for next lockout cycle
+            }
+            false
+        }
+    }
+
+    /** Reset PIN lockout state. Called after lockout period expires. */
+    fun resetPinLockout() {
+        failedPinAttempts = 0
+        pinLockoutEndTime = 0L
+    }
+
+    // ========== Manual Config Overrides ==========
+
+    /** Manually overridden wake time (HH:mm format), or null to use [CONFIG] events. */
+    var manualWakeTime: String?
+        get() = prefs.getString(KEY_MANUAL_WAKE_TIME, null)
+        set(value) = prefs.edit().putString(KEY_MANUAL_WAKE_TIME, value).apply()
+
+    /** Manually overridden sleep time (HH:mm format), or null to use [CONFIG] events. */
+    var manualSleepTime: String?
+        get() = prefs.getString(KEY_MANUAL_SLEEP_TIME, null)
+        set(value) = prefs.edit().putString(KEY_MANUAL_SLEEP_TIME, value).apply()
+
+    /** Manually overridden brightness (0-100), or -1 to use [CONFIG] events. */
+    var manualBrightness: Int
+        get() = prefs.getInt(KEY_MANUAL_BRIGHTNESS, -1)
+        set(value) = prefs.edit().putInt(KEY_MANUAL_BRIGHTNESS, value).apply()
+
+    /** Manually overridden time format. null = use [CONFIG], true = 24h, false = 12h. */
+    var manualUse24HourFormat: Boolean?
+        get() {
+            return if (prefs.contains(KEY_MANUAL_TIME_FORMAT)) {
+                prefs.getBoolean(KEY_MANUAL_TIME_FORMAT, false)
+            } else {
+                null
+            }
+        }
+        set(value) {
+            if (value == null) {
+                prefs.edit().remove(KEY_MANUAL_TIME_FORMAT).apply()
+            } else {
+                prefs.edit().putBoolean(KEY_MANUAL_TIME_FORMAT, value).apply()
+            }
+        }
+
+    /** Clear all manual config overrides, reverting to [CONFIG] event values. */
+    fun clearManualOverrides() {
+        prefs.edit()
+                .remove(KEY_MANUAL_WAKE_TIME)
+                .remove(KEY_MANUAL_SLEEP_TIME)
+                .remove(KEY_MANUAL_BRIGHTNESS)
+                .remove(KEY_MANUAL_TIME_FORMAT)
+                .apply()
+    }
+
     /** Check if user is signed in (has refresh token). */
     val isSignedIn: Boolean
         get() = !refreshToken.isNullOrBlank()
@@ -117,5 +232,20 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_SELECTED_CALENDAR_ID = "selected_calendar_id"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
+
+        // Admin PIN keys
+        private const val KEY_ADMIN_PIN = "admin_pin"
+        private const val KEY_FAILED_PIN_ATTEMPTS = "failed_pin_attempts"
+        private const val KEY_PIN_LOCKOUT_END = "pin_lockout_end"
+
+        // PIN lockout configuration
+        const val MAX_PIN_ATTEMPTS = 3
+        const val LOCKOUT_DURATION_MS = 30_000L // 30 seconds
+
+        // Manual config override keys
+        private const val KEY_MANUAL_WAKE_TIME = "manual_wake_time"
+        private const val KEY_MANUAL_SLEEP_TIME = "manual_sleep_time"
+        private const val KEY_MANUAL_BRIGHTNESS = "manual_brightness"
+        private const val KEY_MANUAL_TIME_FORMAT = "manual_time_format"
     }
 }
