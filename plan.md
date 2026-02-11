@@ -19,22 +19,22 @@
 
 ### Functional Requirements
 
-| ID    | Requirement                                                                              |
-| ----- | ---------------------------------------------------------------------------------------- |
-| FR-01 | Display current time (HH:MM format, 72sp bold) updating every minute.                    |
-| FR-02 | Display current date (Day, Month DD) below time.                                         |
-| FR-03 | Display next calendar event title (48sp) and start time (32sp) when available.           |
-| FR-04 | Show only TODAY's events; never show tomorrow's events.                                  |
-| FR-05 | Advance to next event when current event's start time passes.                            |
-| FR-06 | Sync with Google Calendar API every 5 minutes.                                           |
-| FR-07 | Parse `[CONFIG]` events for sleep/wake/brightness settings.                              |
-| FR-08 | Support `SUNRISE`/`SUNSET` dynamic time calculation.                                     |
-| FR-09 | Enter sleep mode (dimmed, clock only) during configured sleep period.                    |
-| FR-10 | Cache existing events 1 week in advance locally in Room database for offline resilience. |
-| FR-11 | Hidden admin mode via 5-tap gesture + 4-digit PIN.                                       |
-| FR-12 | First-time setup wizard: PIN → Wi-Fi → Google sign-in → Calendar select.                 |
-| FR-13 | Kiosk lock: disable all touch in normal mode, block home/back.                           |
-| FR-14 | Auto-launch on device boot.                                                              |
+| ID    | Requirement                                                                      |
+| ----- | -------------------------------------------------------------------------------- |
+| FR-01 | Display current time (configurable 12/24-hour, 72sp bold) updating every minute. |
+| FR-02 | Display current date (full: "Day, Month DD, YYYY") below time.                   |
+| FR-03 | Display next calendar event title (48sp) and start time (32sp) when available.   |
+| FR-04 | Show only TODAY's events; never show tomorrow's events.                          |
+| FR-05 | Advance to next event when current event's start time passes.                    |
+| FR-06 | Sync with Google Calendar API every 5 minutes.                                   |
+| FR-07 | Parse `[CONFIG]` events for sleep/wake/brightness/time format settings.          |
+| FR-08 | Support `SUNRISE`/`SUNSET` dynamic time with `+N`/`-N` minute offsets.           |
+| FR-09 | Enter sleep mode (dimmed, clock only) during configured sleep period.            |
+| FR-10 | Cache events 2 weeks in advance locally in Room database for offline resilience. |
+| FR-11 | Hidden admin mode via 5-tap gesture + 4-digit PIN.                               |
+| FR-12 | First-time setup wizard: PIN → Wi-Fi → Google sign-in → Calendar select.         |
+| FR-13 | Kiosk lock: disable all touch in normal mode, block home/back.                   |
+| FR-14 | Auto-launch on device boot.                                                      |
 
 ### Non-Functional Requirements
 
@@ -171,11 +171,11 @@ app/
 
 ### Phase 2: Display Layer (Kiosk UI)
 
-- [ ] 2.1 Build `ClockDisplay` composable (72sp time, 36sp date)
-- [ ] 2.2 Build `EventCard` composable (48sp title, 32sp time)
-- [ ] 2.3 Build `KioskScreen` combining clock + event
-- [ ] 2.4 Build `SleepOverlay` for dimmed night mode
-- [ ] 2.5 Implement state-driven UI (AWAKE_NO_EVENT, AWAKE_WITH_EVENT, SLEEP)
+- [x] 2.1 Build `ClockDisplay` composable (72sp time, 36sp date)
+- [x] 2.2 Build `EventCard` composable (48sp title, 32sp time)
+- [x] 2.3 Build `KioskScreen` combining clock + event
+- [x] 2.4 Build `SleepOverlay` for dimmed night mode
+- [x] 2.5 Implement state-driven UI (AWAKE_NO_EVENT, AWAKE_WITH_EVENT, SLEEP)
 
 ### Phase 3: State Machine
 
