@@ -7,6 +7,15 @@ plugins {
     alias(libs.plugins.room)
 }
 
+import java.util.Properties
+
+// Load local.properties for sensitive values
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
 android {
     namespace = "com.memorylink"
     compileSdk = 35
@@ -19,6 +28,18 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Google OAuth credentials from local.properties
+        buildConfigField(
+            "String",
+            "GOOGLE_WEB_CLIENT_ID",
+            "\"${localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "GOOGLE_WEB_CLIENT_SECRET",
+            "\"${localProperties.getProperty("GOOGLE_WEB_CLIENT_SECRET", "")}\""
+        )
     }
 
     buildTypes {
@@ -52,6 +73,12 @@ android {
 
     room {
         schemaDirectory("$projectDir/schemas")
+    }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
     }
 }
 
@@ -91,6 +118,20 @@ dependencies {
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
+
+    // Google Calendar API
+    implementation(libs.play.services.auth)
+    implementation(libs.google.api.client)
+    implementation(libs.google.api.client.android) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation(libs.google.api.services.calendar) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation(libs.google.http.client.gson)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     // Debug
     debugImplementation(libs.androidx.ui.tooling)

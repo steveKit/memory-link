@@ -80,7 +80,7 @@ To have the display dim at 9 PM and wake at 7 AM:
 - [x] Phase 1: Project Setup
 - [x] Phase 2: Display Layer (Kiosk UI)
 - [x] Phase 3: State Machine
-- [ ] Phase 4: Calendar Integration
+- [x] Phase 4: Calendar Integration
 - [ ] Phase 5: Config Parser
 - [ ] Phase 6: Admin Mode
 - [ ] Phase 7: Kiosk Lock
