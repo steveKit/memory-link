@@ -198,13 +198,13 @@ app/
 
 ### Phase 5: Config Parser
 
-- [ ] 5.1 Implement `ConfigParser` for `[CONFIG]` event syntax
-- [ ] 5.2 Support SLEEP/WAKE static times (HH:MM)
-- [ ] 5.3 Support SUNRISE/SUNSET dynamic times
-- [ ] 5.4 Implement `SunriseSunsetApi` integration
-- [ ] 5.5 Support BRIGHTNESS and FONT_SIZE configs
-- [ ] 5.6 Store config in EncryptedSharedPreferences
-- [ ] 5.7 Write unit tests for all config patterns
+- [x] 5.1 Implement `ConfigParser` for `[CONFIG]` event syntax
+- [x] 5.2 Support SLEEP/WAKE static times (HH:MM)
+- [x] 5.3 Support SUNRISE/SUNSET dynamic times
+- [x] 5.4 Implement `SunriseSunsetApi` integration
+- [x] 5.5 Support BRIGHTNESS, FONT_SIZE, MESSAGE_SIZE, TIME_FORMAT configs
+- [x] 5.6 Store config in EncryptedSharedPreferences
+- [x] 5.7 Write unit tests for all config patterns
 
 ### Phase 6: Admin Mode
 

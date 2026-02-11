@@ -173,6 +173,16 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
             }
         }
 
+    /** Manually overridden font size (sp), or -1 to use [CONFIG] events. */
+    var manualFontSize: Int
+        get() = prefs.getInt(KEY_MANUAL_FONT_SIZE, -1)
+        set(value) = prefs.edit().putInt(KEY_MANUAL_FONT_SIZE, value).apply()
+
+    /** Manually overridden message area percent, or -1 to use [CONFIG] events. */
+    var manualMessageSize: Int
+        get() = prefs.getInt(KEY_MANUAL_MESSAGE_SIZE, -1)
+        set(value) = prefs.edit().putInt(KEY_MANUAL_MESSAGE_SIZE, value).apply()
+
     /** Clear all manual config overrides, reverting to [CONFIG] event values. */
     fun clearManualOverrides() {
         prefs.edit()
@@ -180,6 +190,92 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
                 .remove(KEY_MANUAL_SLEEP_TIME)
                 .remove(KEY_MANUAL_BRIGHTNESS)
                 .remove(KEY_MANUAL_TIME_FORMAT)
+                .remove(KEY_MANUAL_FONT_SIZE)
+                .remove(KEY_MANUAL_MESSAGE_SIZE)
+                .apply()
+    }
+
+    // ========== [CONFIG] Event Settings ==========
+    // These are set when parsing [CONFIG] calendar events.
+    // Priority: Manual Override > Config Event > Default
+
+    /** Config event wake time (HH:mm format), or null if not set. */
+    var configWakeTime: String?
+        get() = prefs.getString(KEY_CONFIG_WAKE_TIME, null)
+        set(value) = prefs.edit().putString(KEY_CONFIG_WAKE_TIME, value).apply()
+
+    /** Config event sleep time (HH:mm format), or null if not set. */
+    var configSleepTime: String?
+        get() = prefs.getString(KEY_CONFIG_SLEEP_TIME, null)
+        set(value) = prefs.edit().putString(KEY_CONFIG_SLEEP_TIME, value).apply()
+
+    /** Config event brightness (0-100), or -1 if not set. */
+    var configBrightness: Int
+        get() = prefs.getInt(KEY_CONFIG_BRIGHTNESS, -1)
+        set(value) = prefs.edit().putInt(KEY_CONFIG_BRIGHTNESS, value).apply()
+
+    /** Config event time format. null = not set, true = 24h, false = 12h. */
+    var configUse24HourFormat: Boolean?
+        get() {
+            return if (prefs.contains(KEY_CONFIG_TIME_FORMAT)) {
+                prefs.getBoolean(KEY_CONFIG_TIME_FORMAT, false)
+            } else {
+                null
+            }
+        }
+        set(value) {
+            if (value == null) {
+                prefs.edit().remove(KEY_CONFIG_TIME_FORMAT).apply()
+            } else {
+                prefs.edit().putBoolean(KEY_CONFIG_TIME_FORMAT, value).apply()
+            }
+        }
+
+    /** Config event font size (sp), or -1 if not set. */
+    var configFontSize: Int
+        get() = prefs.getInt(KEY_CONFIG_FONT_SIZE, -1)
+        set(value) = prefs.edit().putInt(KEY_CONFIG_FONT_SIZE, value).apply()
+
+    /** Config event message area percent, or -1 if not set. */
+    var configMessageSize: Int
+        get() = prefs.getInt(KEY_CONFIG_MESSAGE_SIZE, -1)
+        set(value) = prefs.edit().putInt(KEY_CONFIG_MESSAGE_SIZE, value).apply()
+
+    // ========== Solar Time Config (SUNRISE/SUNSET) ==========
+
+    /** Wake solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
+    var configWakeSolarRef: String?
+        get() = prefs.getString(KEY_CONFIG_WAKE_SOLAR_REF, null)
+        set(value) = prefs.edit().putString(KEY_CONFIG_WAKE_SOLAR_REF, value).apply()
+
+    /** Wake solar offset in minutes (e.g., +30 or -15). */
+    var configWakeSolarOffset: Int
+        get() = prefs.getInt(KEY_CONFIG_WAKE_SOLAR_OFFSET, 0)
+        set(value) = prefs.edit().putInt(KEY_CONFIG_WAKE_SOLAR_OFFSET, value).apply()
+
+    /** Sleep solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
+    var configSleepSolarRef: String?
+        get() = prefs.getString(KEY_CONFIG_SLEEP_SOLAR_REF, null)
+        set(value) = prefs.edit().putString(KEY_CONFIG_SLEEP_SOLAR_REF, value).apply()
+
+    /** Sleep solar offset in minutes (e.g., +30 or -15). */
+    var configSleepSolarOffset: Int
+        get() = prefs.getInt(KEY_CONFIG_SLEEP_SOLAR_OFFSET, 0)
+        set(value) = prefs.edit().putInt(KEY_CONFIG_SLEEP_SOLAR_OFFSET, value).apply()
+
+    /** Clear all config event settings (used when resetting or testing). */
+    fun clearConfigSettings() {
+        prefs.edit()
+                .remove(KEY_CONFIG_WAKE_TIME)
+                .remove(KEY_CONFIG_SLEEP_TIME)
+                .remove(KEY_CONFIG_BRIGHTNESS)
+                .remove(KEY_CONFIG_TIME_FORMAT)
+                .remove(KEY_CONFIG_FONT_SIZE)
+                .remove(KEY_CONFIG_MESSAGE_SIZE)
+                .remove(KEY_CONFIG_WAKE_SOLAR_REF)
+                .remove(KEY_CONFIG_WAKE_SOLAR_OFFSET)
+                .remove(KEY_CONFIG_SLEEP_SOLAR_REF)
+                .remove(KEY_CONFIG_SLEEP_SOLAR_OFFSET)
                 .apply()
     }
 
@@ -247,5 +343,21 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_MANUAL_SLEEP_TIME = "manual_sleep_time"
         private const val KEY_MANUAL_BRIGHTNESS = "manual_brightness"
         private const val KEY_MANUAL_TIME_FORMAT = "manual_time_format"
+        private const val KEY_MANUAL_FONT_SIZE = "manual_font_size"
+        private const val KEY_MANUAL_MESSAGE_SIZE = "manual_message_size"
+
+        // Config event-derived settings keys (from [CONFIG] calendar events)
+        private const val KEY_CONFIG_WAKE_TIME = "config_wake_time"
+        private const val KEY_CONFIG_SLEEP_TIME = "config_sleep_time"
+        private const val KEY_CONFIG_BRIGHTNESS = "config_brightness"
+        private const val KEY_CONFIG_TIME_FORMAT = "config_time_format"
+        private const val KEY_CONFIG_FONT_SIZE = "config_font_size"
+        private const val KEY_CONFIG_MESSAGE_SIZE = "config_message_size"
+
+        // Dynamic time config (SUNRISE/SUNSET references)
+        private const val KEY_CONFIG_WAKE_SOLAR_REF = "config_wake_solar_ref"
+        private const val KEY_CONFIG_WAKE_SOLAR_OFFSET = "config_wake_solar_offset"
+        private const val KEY_CONFIG_SLEEP_SOLAR_REF = "config_sleep_solar_ref"
+        private const val KEY_CONFIG_SLEEP_SOLAR_OFFSET = "config_sleep_solar_offset"
     }
 }
