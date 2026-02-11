@@ -179,12 +179,12 @@ app/
 
 ### Phase 3: State Machine
 
-- [ ] 3.1 Define `DisplayState` sealed class
-- [ ] 3.2 Implement `StateCoordinator` with StateFlow
-- [ ] 3.3 Implement `DetermineDisplayStateUseCase` logic
-- [ ] 3.4 Implement `GetNextEventUseCase` (today only, next upcoming)
-- [ ] 3.5 Add 1-minute tick for state re-evaluation
-- [ ] 3.6 Write unit tests for state transitions (100% branch coverage)
+- [x] 3.1 Define `DisplayState` sealed class
+- [x] 3.2 Implement `StateCoordinator` with StateFlow
+- [x] 3.3 Implement `DetermineDisplayStateUseCase` logic
+- [x] 3.4 Implement `GetNextEventUseCase` (today only, next upcoming, 2-hour preview)
+- [x] 3.5 Add 1-minute tick for state re-evaluation
+- [x] 3.6 Write unit tests for state transitions (100% branch coverage)
 
 ### Phase 4: Calendar Integration
 
