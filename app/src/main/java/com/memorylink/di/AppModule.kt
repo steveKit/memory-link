@@ -9,28 +9,18 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import javax.inject.Qualifier
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 
-/**
- * Qualifier for IO dispatcher (file/network operations).
- */
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class IoDispatcher
+/** Qualifier for IO dispatcher (file/network operations). */
+@Qualifier @Retention(AnnotationRetention.BINARY) annotation class IoDispatcher
 
-/**
- * Qualifier for Default dispatcher (CPU-intensive work).
- */
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class DefaultDispatcher
+/** Qualifier for Default dispatcher (CPU-intensive work). */
+@Qualifier @Retention(AnnotationRetention.BINARY) annotation class DefaultDispatcher
 
-/**
- * Main Hilt module providing application-scoped dependencies.
- */
+/** Main Hilt module providing application-scoped dependencies. */
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -38,37 +28,28 @@ object AppModule {
     private const val PREFS_FILE_NAME = "memorylink_secure_prefs"
 
     /**
-     * Provides EncryptedSharedPreferences for secure storage.
-     * Used for PIN, OAuth tokens, and sensitive settings.
+     * Provides EncryptedSharedPreferences for secure storage. Used for PIN, OAuth tokens, and
+     * sensitive settings.
      */
     @Provides
     @Singleton
-    fun provideEncryptedSharedPreferences(
-        @ApplicationContext context: Context
-    ): SharedPreferences {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+    fun provideEncryptedSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
+        val masterKey =
+                MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
 
         return EncryptedSharedPreferences.create(
-            context,
-            PREFS_FILE_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                context,
+                PREFS_FILE_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
     }
 
-    /**
-     * Provides IO dispatcher for file and network operations.
-     */
-    @Provides
-    @IoDispatcher
-    fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
+    /** Provides IO dispatcher for file and network operations. */
+    @Provides @IoDispatcher fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
 
-    /**
-     * Provides Default dispatcher for CPU-intensive work.
-     */
+    /** Provides Default dispatcher for CPU-intensive work. */
     @Provides
     @DefaultDispatcher
     fun provideDefaultDispatcher(): CoroutineDispatcher = Dispatchers.Default

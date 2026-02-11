@@ -5,12 +5,12 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.memorylink.domain.model.DisplayState
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.memorylink.ui.kiosk.KioskScreen
+import com.memorylink.ui.kiosk.KioskViewModel
 import com.memorylink.ui.theme.MemoryLinkTheme
 import dagger.hilt.android.AndroidEntryPoint
-import java.time.LocalDate
-import java.time.LocalTime
 
 /**
  * Single activity that hosts the entire Compose UI. Configured for kiosk mode: fullscreen,
@@ -30,17 +30,9 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MemoryLinkTheme {
-                // TODO: Replace with actual state from StateCoordinator (Phase 3)
-                // For now, display a static preview state
-                val displayState =
-                        DisplayState.AwakeWithEvent(
-                                currentTime = LocalTime.now(),
-                                currentDate = LocalDate.now(),
-                                nextEventTitle = "Sample Event",
-                                nextEventTime = LocalTime.now().plusHours(1),
-                                use24HourFormat = false
-                        )
-                KioskScreen(displayState = displayState)
+                val viewModel: KioskViewModel = hiltViewModel()
+                val displayState = viewModel.displayState.collectAsStateWithLifecycle()
+                KioskScreen(displayState = displayState.value)
             }
         }
     }
