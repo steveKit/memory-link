@@ -49,6 +49,14 @@ fun ClockDisplay(
                         DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
                 }
 
+        // Normalize AM/PM to lowercase without periods
+        val formattedTime =
+                time.format(timeFormatter)
+                        .replace("AM", "am")
+                        .replace("PM", "pm")
+                        .replace("a.m.", "am")
+                        .replace("p.m.", "pm")
+
         // Full date format: "Wednesday, February 11, 2026"
         val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.getDefault())
 
@@ -59,7 +67,7 @@ fun ClockDisplay(
         ) {
                 // Time - takes 70% of height, auto-sizes to fill, light blue color, no wrap
                 AutoSizeText(
-                        text = time.format(timeFormatter),
+                        text = formattedTime,
                         modifier = Modifier.fillMaxWidth().weight(0.7f),
                         style = TextStyle(color = AccentBlue, fontWeight = FontWeight.Bold),
                         maxFontSize = 150.sp,
