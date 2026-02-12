@@ -69,6 +69,8 @@ constructor(
     init {
         // Load initial auth state
         updateAuthState()
+        // Load initial calendar state from repository
+        updateCalendarState()
         // Start inactivity timer
         resetInactivityTimer()
     }
@@ -253,6 +255,16 @@ constructor(
             it.copy(
                     isSignedIn = googleAuthManager.isSignedIn,
                     userEmail = googleAuthManager.userEmail
+            )
+        }
+    }
+
+    /** Load initial calendar state from repository (stored calendar selection). */
+    private fun updateCalendarState() {
+        _calendarState.update {
+            it.copy(
+                    selectedCalendarId = calendarRepository.selectedCalendarId,
+                    selectedCalendarName = calendarRepository.selectedCalendarName
             )
         }
     }
