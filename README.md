@@ -75,6 +75,83 @@ To have the display dim at 9 PM and wake at 7 AM:
 | Calendar  | Google Calendar API v3 |
 | Testing   | JUnit5, MockK, Maestro |
 
+## Kiosk Mode Setup (Device Owner Provisioning)
+
+For full kiosk functionality (blocking home button, recent apps, etc.), the app must be set as **Device Owner**. This requires a factory-reset device or a freshly set up device.
+
+### Prerequisites
+
+- Android device running Android 8.0 (API 26) or higher
+- USB debugging enabled
+- ADB installed on your computer
+- Device must be **factory reset** OR have **no Google accounts** set up
+
+### Setup Steps
+
+1. **Factory reset the tablet** (Settings → System → Reset options → Erase all data)
+
+2. **Skip Google account setup** during initial device setup (tap "Skip" or "Set up later")
+
+3. **Enable Developer Options:**
+   - Go to Settings → About tablet
+   - Tap "Build number" 7 times
+   - Go back to Settings → System → Developer options
+   - Enable "USB debugging"
+
+4. **Install the app via ADB:**
+
+   ```bash
+   adb install app-release.apk
+   ```
+
+5. **Set the app as Device Owner:**
+
+   ```bash
+   adb shell dpm set-device-owner com.memorylink/.service.DeviceAdminReceiver
+   ```
+
+   You should see: `Success: Device owner set to package com.memorylink`
+
+6. **Launch the app** - it will now run in full kiosk mode
+
+### Verifying Device Owner Status
+
+To check if the app is set as device owner:
+
+```bash
+adb shell dumpsys device_policy | grep "Device Owner"
+```
+
+### Removing Device Owner (for development)
+
+To remove device owner status and allow normal device operation:
+
+```bash
+adb shell dpm remove-active-admin com.memorylink/.service.DeviceAdminReceiver
+```
+
+Or from the device: Admin Mode → Settings → Exit Kiosk Mode (requires factory reset for full removal).
+
+### Troubleshooting
+
+| Issue                             | Solution                                                          |
+| --------------------------------- | ----------------------------------------------------------------- |
+| "Not allowed to set device owner" | Factory reset the device and skip Google account setup            |
+| "Already has a device owner"      | Remove existing device owner first or factory reset               |
+| App doesn't block home button     | Verify device owner is set with `adb shell dumpsys device_policy` |
+| "Unknown admin component"         | Ensure the app is installed before running dpm command            |
+
+### Without Device Owner
+
+If device owner cannot be set, the app will still function but with reduced kiosk protection:
+
+- Clock and events display normally
+- Sleep mode and config parsing work
+- Admin gesture (5-tap) works
+- **BUT:** Home/back buttons will still work (user can exit)
+
+For testing without device owner, the app logs: `Not device owner, skipping LockTask start`
+
 ## Project Status
 
 - [x] Planning & Architecture
@@ -84,7 +161,7 @@ To have the display dim at 9 PM and wake at 7 AM:
 - [x] Phase 4: Calendar Integration
 - [x] Phase 5: Config Parser
 - [x] Phase 6: Admin Mode
-- [ ] Phase 7: Kiosk Lock
+- [x] Phase 7: Kiosk Lock
 - [ ] Phase 8: First-Time Setup
 - [ ] Phase 9: Testing & Polish
 - [ ] Phase 10: Documentation & Release
