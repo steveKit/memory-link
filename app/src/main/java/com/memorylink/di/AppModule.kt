@@ -20,6 +20,9 @@ import kotlinx.coroutines.Dispatchers
 /** Qualifier for Default dispatcher (CPU-intensive work). */
 @Qualifier @Retention(AnnotationRetention.BINARY) annotation class DefaultDispatcher
 
+/** Qualifier for application-scoped coroutine scope. */
+@Qualifier @Retention(AnnotationRetention.BINARY) annotation class ApplicationScope
+
 /** Main Hilt module providing application-scoped dependencies. */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -53,4 +56,16 @@ object AppModule {
     @Provides
     @DefaultDispatcher
     fun provideDefaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
+
+    /**
+     * Provides application-scoped CoroutineScope. Uses SupervisorJob so child coroutine failures
+     * don't cancel siblings. Lives for the entire application lifecycle.
+     */
+    @Provides
+    @Singleton
+    @ApplicationScope
+    fun provideApplicationScope(): kotlinx.coroutines.CoroutineScope =
+            kotlinx.coroutines.CoroutineScope(
+                    kotlinx.coroutines.SupervisorJob() + Dispatchers.Default
+            )
 }
