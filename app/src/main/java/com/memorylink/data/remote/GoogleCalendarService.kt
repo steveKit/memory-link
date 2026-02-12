@@ -34,6 +34,8 @@ class GoogleCalendarService @Inject constructor(private val authManager: GoogleA
         data class Error(val message: String, val exception: Exception? = null) :
                 ApiResult<Nothing>()
         data object NotAuthenticated : ApiResult<Nothing>()
+        /** 410 Gone - sync token is invalid, must perform full sync. */
+        data object SyncTokenExpired : ApiResult<Nothing>()
     }
 
     /** DTO representing a calendar event from the API. */
@@ -48,6 +50,20 @@ class GoogleCalendarService @Inject constructor(private val authManager: GoogleA
 
     /** DTO representing a calendar in the user's calendar list. */
     data class CalendarDto(val id: String, val name: String, val isPrimary: Boolean)
+
+    /**
+     * Response from incremental sync API call.
+     *
+     * Contains:
+     * - events: New or updated events
+     * - deletedEventIds: IDs of events that were deleted from the calendar
+     * - nextSyncToken: Token to use for next incremental sync
+     */
+    data class SyncResponse(
+            val events: List<CalendarEventDto>,
+            val deletedEventIds: List<String>,
+            val nextSyncToken: String?
+    )
 
     /**
      * Get list of calendars available to the user. Used in admin setup to let user select which
@@ -155,6 +171,116 @@ class GoogleCalendarService @Inject constructor(private val authManager: GoogleA
                 }
             }
 
+    /**
+     * Fetch events using incremental sync with syncToken.
+     *
+     * Per Google Calendar API docs:
+     * - If syncToken is null, performs full sync and returns nextSyncToken
+     * - If syncToken is provided, returns only changes since last sync
+     * - Returns SyncTokenExpired if token is invalid (410 response)
+     * - Deleted events have status = "cancelled"
+     *
+     * @param calendarId The calendar ID to fetch from
+     * @param syncToken Optional sync token from previous sync (null = full sync)
+     * @return SyncResponse with events, deletedEventIds, and nextSyncToken
+     */
+    suspend fun fetchEventsWithSync(
+            calendarId: String,
+            syncToken: String?
+    ): ApiResult<SyncResponse> =
+            withContext(Dispatchers.IO) {
+                val calendarService =
+                        getCalendarService() ?: return@withContext ApiResult.NotAuthenticated
+
+                try {
+                    val allEvents = mutableListOf<CalendarEventDto>()
+                    val deletedIds = mutableListOf<String>()
+                    var pageToken: String? = null
+                    var nextSyncToken: String? = null
+
+                    do {
+                        val request =
+                                calendarService
+                                        .events()
+                                        .list(calendarId)
+                                        .setSingleEvents(true)
+                                        .setMaxResults(250) // Max allowed by API
+                                        .setShowDeleted(true) // Required to see cancelled events
+
+                        if (syncToken != null) {
+                            // Incremental sync - use syncToken
+                            request.syncToken = syncToken
+                        } else {
+                            // Full sync - set date range (2 weeks back, 2 weeks forward)
+                            val zoneId = ZoneId.systemDefault()
+                            val today = LocalDate.now()
+                            val startDateTime = today.minusDays(7).atStartOfDay(zoneId).toInstant()
+                            val endDateTime = today.plusDays(14).atStartOfDay(zoneId).toInstant()
+                            request.setTimeMin(DateTime(startDateTime.toEpochMilli()))
+                            request.setTimeMax(DateTime(endDateTime.toEpochMilli()))
+                        }
+
+                        if (pageToken != null) {
+                            request.pageToken = pageToken
+                        }
+
+                        val response = request.execute()
+
+                        // Process events
+                        response.items?.forEach { event ->
+                            if (event.status == "cancelled") {
+                                // Event was deleted
+                                deletedIds.add(event.id)
+                                Log.d(TAG, "Event deleted: ${event.id}")
+                            } else {
+                                // Event was created or updated
+                                convertToDto(event)?.let { dto -> allEvents.add(dto) }
+                            }
+                        }
+
+                        pageToken = response.nextPageToken
+                        nextSyncToken = response.nextSyncToken
+                    } while (pageToken != null)
+
+                    Log.d(
+                            TAG,
+                            "Sync complete: ${allEvents.size} events, ${deletedIds.size} deleted"
+                    )
+                    ApiResult.Success(
+                            SyncResponse(
+                                    events = allEvents,
+                                    deletedEventIds = deletedIds,
+                                    nextSyncToken = nextSyncToken
+                            )
+                    )
+                } catch (e: com.google.api.client.googleapis.json.GoogleJsonResponseException) {
+                    when (e.statusCode) {
+                        401 -> {
+                            Log.w(TAG, "Token expired, attempting refresh")
+                            val refreshed = authManager.refreshAccessToken()
+                            if (refreshed) {
+                                // Recursive retry after token refresh
+                                return@withContext fetchEventsWithSync(calendarId, syncToken)
+                            } else {
+                                ApiResult.NotAuthenticated
+                            }
+                        }
+                        410 -> {
+                            // Sync token is invalid - must perform full sync
+                            Log.w(TAG, "Sync token expired (410 Gone)")
+                            ApiResult.SyncTokenExpired
+                        }
+                        else -> {
+                            Log.e(TAG, "API error: ${e.statusCode}", e)
+                            ApiResult.Error("Calendar API error: ${e.message}", e)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to sync events", e)
+                    ApiResult.Error("Failed to sync events: ${e.message}", e)
+                }
+            }
+
     /** Convert Google Calendar Event to our DTO. */
     private fun convertToDto(event: Event): CalendarEventDto? {
         val title = event.summary ?: return null // Skip events without title
@@ -233,6 +359,7 @@ class GoogleCalendarService @Inject constructor(private val authManager: GoogleA
             when (result) {
                 is ApiResult.Success -> return result
                 is ApiResult.NotAuthenticated -> return result
+                is ApiResult.SyncTokenExpired -> return result
                 is ApiResult.Error -> {
                     lastError = result
                     if (attempt < maxRetries - 1) {

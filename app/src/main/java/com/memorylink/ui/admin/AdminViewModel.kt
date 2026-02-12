@@ -291,6 +291,10 @@ constructor(
                         it.copy(isLoading = false, error = "Please sign in first")
                     }
                 }
+                GoogleCalendarService.ApiResult.SyncTokenExpired -> {
+                    // Should not happen when fetching calendar list, but handle anyway
+                    _calendarState.update { it.copy(isLoading = false, error = "Sync token error") }
+                }
             }
         }
     }
@@ -298,17 +302,21 @@ constructor(
     /** Select a calendar for event syncing. */
     fun selectCalendar(calendarId: String, calendarName: String) {
         resetInactivityTimer()
-        calendarRepository.selectCalendar(calendarId, calendarName)
-        _calendarState.update {
-            it.copy(selectedCalendarId = calendarId, selectedCalendarName = calendarName)
-        }
+        viewModelScope.launch {
+            // selectCalendar clears cache if calendar changed
+            calendarRepository.selectCalendar(calendarId, calendarName)
+            _calendarState.update {
+                it.copy(selectedCalendarId = calendarId, selectedCalendarName = calendarName)
+            }
 
-        // Trigger sync after selecting calendar
-        syncCalendars()
+            // Trigger sync after selecting calendar
+            // syncEvents() will do a full sync since syncToken was cleared on calendar change
+            syncCalendars()
+        }
     }
 
     private fun syncCalendars() {
-        viewModelScope.launch { calendarRepository.syncEvents(forceFullSync = true) }
+        viewModelScope.launch { calendarRepository.syncEvents() }
     }
 
     // ========== Config Methods ==========

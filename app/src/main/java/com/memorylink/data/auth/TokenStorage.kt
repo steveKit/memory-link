@@ -73,6 +73,19 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getLong(KEY_LAST_SYNC_TIME, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_SYNC_TIME, value).apply()
 
+    /**
+     * Google Calendar API sync token for incremental sync.
+     *
+     * Per Google Calendar API docs:
+     * - null = perform full sync
+     * - non-null = perform incremental sync (only changes since last sync)
+     * - Must be cleared when calendar selection changes
+     * - 410 response means token expired, must clear and full sync
+     */
+    var syncToken: String?
+        get() = prefs.getString(KEY_SYNC_TOKEN, null)
+        set(value) = prefs.edit().putString(KEY_SYNC_TOKEN, value).apply()
+
     // ========== Admin PIN Management ==========
 
     /** Store the admin 4-digit PIN (encrypted). Only set during first-time setup or PIN change. */
@@ -341,6 +354,7 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_SELECTED_CALENDAR_NAME = "selected_calendar_name"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
+        private const val KEY_SYNC_TOKEN = "sync_token"
 
         // Admin PIN keys
         private const val KEY_ADMIN_PIN = "admin_pin"
