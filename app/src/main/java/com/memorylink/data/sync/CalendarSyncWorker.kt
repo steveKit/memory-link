@@ -48,12 +48,16 @@ constructor(
         Log.d(TAG, "Starting calendar sync")
 
         return try {
-            // Perform sync
-            val syncResult = repository.syncEvents(forceFullSync = runAttemptCount == 0)
+            // Perform sync using incremental sync with syncToken
+            // The repository handles full vs incremental sync automatically
+            val syncResult = repository.syncEvents()
 
             when (syncResult) {
                 is CalendarRepository.SyncResult.Success -> {
-                    Log.d(TAG, "Sync completed: ${syncResult.eventCount} events")
+                    Log.d(
+                            TAG,
+                            "Sync completed: ${syncResult.eventCount} events synced, ${syncResult.deletedCount} deleted"
+                    )
 
                     // Update StateCoordinator with new events
                     updateStateCoordinator()

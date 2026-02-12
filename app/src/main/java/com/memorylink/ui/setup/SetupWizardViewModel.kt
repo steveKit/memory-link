@@ -206,20 +206,27 @@ constructor(
                         it.copy(isLoading = false, error = "Please sign in first")
                     }
                 }
+                GoogleCalendarService.ApiResult.SyncTokenExpired -> {
+                    // Should not happen when fetching calendar list
+                    _calendarState.update { it.copy(isLoading = false, error = "Sync token error") }
+                }
             }
         }
     }
 
     /** Select a calendar for event syncing. */
     fun selectCalendar(calendarId: String, calendarName: String) {
-        calendarRepository.selectCalendar(calendarId, calendarName)
-        _calendarState.update { it.copy(selectedCalendarId = calendarId) }
+        viewModelScope.launch {
+            // selectCalendar clears cache if calendar changed and is now a suspend function
+            calendarRepository.selectCalendar(calendarId, calendarName)
+            _calendarState.update { it.copy(selectedCalendarId = calendarId) }
 
-        // Trigger initial sync
-        viewModelScope.launch { calendarRepository.syncEvents(forceFullSync = true) }
+            // Trigger initial sync (will be a full sync since no syncToken exists yet)
+            calendarRepository.syncEvents()
 
-        // Mark setup complete and trigger completion
-        _wizardState.update { it.copy(isSetupComplete = true) }
+            // Mark setup complete and trigger completion
+            _wizardState.update { it.copy(isSetupComplete = true) }
+        }
     }
 
     // ========== Navigation ==========

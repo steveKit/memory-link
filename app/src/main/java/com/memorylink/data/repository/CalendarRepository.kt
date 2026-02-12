@@ -30,6 +30,11 @@ import kotlinx.coroutines.flow.map
  *
  * Per .clinerules/20-android.md:
  * - Eviction: Delete events older than 7 days on each sync
+ *
+ * Uses Google Calendar API syncToken for incremental sync:
+ * - Full sync when no syncToken exists
+ * - Incremental sync returns only changed/deleted events
+ * - 410 response means token expired, triggers full resync
  */
 @Singleton
 class CalendarRepository
@@ -41,7 +46,7 @@ constructor(
 ) {
     /** Result of sync operation. */
     sealed class SyncResult {
-        data class Success(val eventCount: Int) : SyncResult()
+        data class Success(val eventCount: Int, val deletedCount: Int = 0) : SyncResult()
         data class Error(val message: String) : SyncResult()
         data object NotAuthenticated : SyncResult()
         data object NoCalendarSelected : SyncResult()
@@ -75,12 +80,109 @@ constructor(
     }
 
     /**
-     * Sync events from Google Calendar API to local cache.
+     * Sync events from Google Calendar API to local cache using incremental sync.
+     *
+     * Uses syncToken for efficient incremental sync:
+     * - If syncToken exists: fetch only changes since last sync
+     * - If no syncToken: perform full sync
+     * - Handles deleted events by removing them from cache
+     * - 410 response: clears token and performs full resync
+     *
+     * @return SyncResult indicating success or failure
+     */
+    suspend fun syncEvents(): SyncResult {
+        val calendarId = tokenStorage.selectedCalendarId
+        if (calendarId.isNullOrBlank()) {
+            Log.w(TAG, "No calendar selected")
+            return SyncResult.NoCalendarSelected
+        }
+
+        val syncToken = tokenStorage.syncToken
+        val isFullSync = syncToken == null
+        Log.d(TAG, "Starting ${if (isFullSync) "full" else "incremental"} sync")
+
+        // Fetch events using syncToken
+        val result = calendarService.fetchEventsWithSync(calendarId, syncToken)
+
+        return when (result) {
+            is ApiResult.Success -> {
+                val fetchedAt = System.currentTimeMillis()
+                val syncResponse = result.data
+
+                // Convert DTOs to entities
+                val entities =
+                        syncResponse.events.map { dto ->
+                            EventEntity(
+                                    id = dto.id,
+                                    title = dto.title,
+                                    startTime = dto.startTimeMillis,
+                                    endTime = dto.endTimeMillis,
+                                    isConfigEvent = dto.isConfigEvent,
+                                    isAllDay = dto.isAllDay,
+                                    fetchedAt = fetchedAt
+                            )
+                        }
+
+                // Insert/update changed events
+                if (entities.isNotEmpty()) {
+                    eventDao.insertEvents(entities)
+                    Log.d(TAG, "Inserted/updated ${entities.size} events")
+                }
+
+                // Delete removed events
+                var deletedCount = 0
+                if (syncResponse.deletedEventIds.isNotEmpty()) {
+                    deletedCount = eventDao.deleteEventsByIds(syncResponse.deletedEventIds)
+                    Log.d(TAG, "Deleted $deletedCount events")
+                }
+
+                // Store the new sync token for next incremental sync
+                tokenStorage.syncToken = syncResponse.nextSyncToken
+                Log.d(TAG, "Sync token updated: ${syncResponse.nextSyncToken != null}")
+
+                // Evict old events (older than 7 days) - only on full sync to avoid overhead
+                if (isFullSync) {
+                    val cutoffTime = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
+                    val evictedCount = eventDao.deleteOldEvents(cutoffTime)
+                    if (evictedCount > 0) {
+                        Log.d(TAG, "Evicted $evictedCount old events")
+                    }
+                }
+
+                // Update last sync time
+                tokenStorage.lastSyncTime = fetchedAt
+
+                Log.d(TAG, "Sync successful: ${entities.size} events synced, $deletedCount deleted")
+                SyncResult.Success(entities.size, deletedCount)
+            }
+            is ApiResult.SyncTokenExpired -> {
+                // 410 Gone - sync token is invalid, must perform full sync
+                Log.w(TAG, "Sync token expired, clearing cache and performing full sync")
+                tokenStorage.syncToken = null
+                clearCache()
+                // Retry as full sync
+                return syncEvents()
+            }
+            is ApiResult.NotAuthenticated -> {
+                Log.w(TAG, "Sync failed: not authenticated")
+                SyncResult.NotAuthenticated
+            }
+            is ApiResult.Error -> {
+                Log.e(TAG, "Sync failed: ${result.message}")
+                SyncResult.Error(result.message)
+            }
+        }
+    }
+
+    /**
+     * Legacy sync method using date range (for backward compatibility).
      *
      * @param forceFullSync If true, fetch 2 weeks of events; otherwise just today
      * @return SyncResult indicating success or failure
+     * @deprecated Use syncEvents() instead for incremental sync support
      */
-    suspend fun syncEvents(forceFullSync: Boolean = false): SyncResult {
+    @Deprecated("Use syncEvents() for incremental sync", ReplaceWith("syncEvents()"))
+    suspend fun syncEventsLegacy(forceFullSync: Boolean = false): SyncResult {
         val calendarId = tokenStorage.selectedCalendarId
         if (calendarId.isNullOrBlank()) {
             Log.w(TAG, "No calendar selected")
@@ -133,6 +235,11 @@ constructor(
                 Log.w(TAG, "Sync failed: not authenticated")
                 SyncResult.NotAuthenticated
             }
+            is ApiResult.SyncTokenExpired -> {
+                // Should not happen with legacy sync, but handle anyway
+                Log.w(TAG, "Unexpected sync token expiration in legacy sync")
+                SyncResult.Error("Unexpected sync token error")
+            }
             is ApiResult.Error -> {
                 Log.e(TAG, "Sync failed: ${result.message}")
                 SyncResult.Error(result.message)
@@ -145,11 +252,33 @@ constructor(
         return calendarService.getCalendarList()
     }
 
-    /** Select a calendar for syncing. */
-    fun selectCalendar(calendarId: String, calendarName: String) {
+    /**
+     * Select a calendar for syncing.
+     *
+     * If the calendar changes, clears the existing cache and sync token so the next sync will be a
+     * full sync from the new calendar.
+     *
+     * @param calendarId The calendar ID to select
+     * @param calendarName Display name for the calendar
+     * @return true if calendar changed (cache was cleared), false if same calendar
+     */
+    suspend fun selectCalendar(calendarId: String, calendarName: String): Boolean {
+        val previousCalendarId = tokenStorage.selectedCalendarId
+        val calendarChanged = previousCalendarId != calendarId
+
+        if (calendarChanged) {
+            Log.d(TAG, "Calendar changed from $previousCalendarId to $calendarId")
+            // Clear sync token so next sync is a full sync
+            tokenStorage.syncToken = null
+            // Clear cached events from old calendar
+            clearCache()
+        }
+
         tokenStorage.selectedCalendarId = calendarId
         tokenStorage.selectedCalendarName = calendarName
         Log.d(TAG, "Selected calendar: $calendarName ($calendarId)")
+
+        return calendarChanged
     }
 
     /** Get the currently selected calendar ID. */
@@ -177,10 +306,11 @@ constructor(
     val lastSyncTime: Long
         get() = tokenStorage.lastSyncTime
 
-    /** Clear all cached events. */
+    /** Clear all cached events and reset sync token. */
     suspend fun clearCache() {
         eventDao.deleteAllEvents()
-        Log.d(TAG, "Cache cleared")
+        tokenStorage.syncToken = null
+        Log.d(TAG, "Cache cleared and sync token reset")
     }
 
     /** Get count of cached events (for debugging). */
