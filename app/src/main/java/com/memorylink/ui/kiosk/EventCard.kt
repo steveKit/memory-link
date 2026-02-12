@@ -2,31 +2,19 @@ package com.memorylink.ui.kiosk
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.memorylink.ui.theme.AccentBlue
+import com.memorylink.ui.components.AutoSizeText
 import com.memorylink.ui.theme.DarkSurface
 import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.TextPrimary
@@ -35,14 +23,14 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * Displays the next calendar event with time prefix and title.
+ * Displays the next calendar event with time and title as a single flowing sentence.
  *
- * Layout (time on top):
- * - Timed events: "AT 10:30 AM" / "Event Title"
- * - All-day events: "TODAY IS" / "Event Title"
+ * Format:
+ * - Timed events: "At 10:30 AM, Event Title"
+ * - All-day events: "Today is Event Title"
  *
- * Both lines use the same font size and auto-scale together to fill the available space while never
- * truncating or using ellipsis.
+ * Text auto-sizes to fill the available space while wrapping naturally. Designed for
+ * elderly/sight-challenged users - text is always as large as possible.
  *
  * @param title The event title to display
  * @param startTime The event start time, or null for all-day events
@@ -56,7 +44,8 @@ fun EventCard(
         use24HourFormat: Boolean = false,
         modifier: Modifier = Modifier
 ) {
-    val timePrefix =
+    // Combine time and title into a single sentence
+    val displayText =
             if (startTime != null) {
                 val timeFormatter =
                         if (use24HourFormat) {
@@ -64,9 +53,9 @@ fun EventCard(
                         } else {
                             DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
                         }
-                "AT ${startTime.format(timeFormatter)}"
+                "At ${startTime.format(timeFormatter)}, $title"
             } else {
-                "TODAY IS"
+                "Today is $title"
             }
 
     Box(
@@ -74,106 +63,13 @@ fun EventCard(
                     modifier.clip(RoundedCornerShape(16.dp)).background(DarkSurface).padding(24.dp),
             contentAlignment = Alignment.Center
     ) {
-        AutoSizeEventText(timePrefix = timePrefix, title = title, modifier = Modifier.fillMaxSize())
-    }
-}
-
-/**
- * Auto-sizing text component that displays time prefix and title.
- *
- * Both lines scale together to be as large as possible while fitting within the available space. No
- * truncation or ellipsis - text always displays completely.
- *
- * @param timePrefix The time line (e.g., "AT 10:30 AM" or "TODAY IS")
- * @param title The event title
- * @param modifier Modifier for the container
- */
-@Composable
-private fun AutoSizeEventText(timePrefix: String, title: String, modifier: Modifier = Modifier) {
-    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
-        val density = LocalDensity.current
-
-        // Calculate available space
-        val maxWidthPx = with(density) { maxWidth.toPx() }
-        val maxHeightPx = with(density) { maxHeight.toPx() }
-
-        // Start with a large font size and scale down
-        val maxFontSizeSp = 80f
-        val minFontSizeSp = 16f
-
-        var fontSizeSp by
-                remember(timePrefix, title, maxWidthPx, maxHeightPx) {
-                    mutableFloatStateOf(maxFontSizeSp)
-                }
-        var readyToDraw by
-                remember(timePrefix, title, maxWidthPx, maxHeightPx) { mutableStateOf(false) }
-
-        Column(
-                modifier =
-                        Modifier.fillMaxWidth().drawWithContent {
-                            if (readyToDraw) {
-                                drawContent()
-                            }
-                        },
-                horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Time prefix line
-            Text(
-                    text = timePrefix,
-                    style =
-                            TextStyle(
-                                    fontSize = fontSizeSp.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AccentBlue,
-                                    lineHeight = (fontSizeSp * 1.2f).sp
-                            ),
-                    textAlign = TextAlign.Center,
-                    softWrap = true,
-                    onTextLayout = { result ->
-                        if (!readyToDraw) {
-                            if (result.didOverflowWidth || result.didOverflowHeight) {
-                                val newSize = fontSizeSp * 0.9f
-                                if (newSize >= minFontSizeSp) {
-                                    fontSizeSp = newSize
-                                } else {
-                                    fontSizeSp = minFontSizeSp
-                                    readyToDraw = true
-                                }
-                            }
-                        }
-                    }
-            )
-
-            // Title line
-            Text(
-                    text = title,
-                    style =
-                            TextStyle(
-                                    fontSize = fontSizeSp.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary,
-                                    lineHeight = (fontSizeSp * 1.2f).sp
-                            ),
-                    textAlign = TextAlign.Center,
-                    softWrap = true,
-                    onTextLayout = { result ->
-                        if (!readyToDraw) {
-                            if (result.didOverflowWidth || result.didOverflowHeight) {
-                                val newSize = fontSizeSp * 0.9f
-                                if (newSize >= minFontSizeSp) {
-                                    fontSizeSp = newSize
-                                } else {
-                                    fontSizeSp = minFontSizeSp
-                                    readyToDraw = true
-                                }
-                            } else {
-                                // Both texts fit, we're done
-                                readyToDraw = true
-                            }
-                        }
-                    }
-            )
-        }
+        AutoSizeText(
+                text = displayText,
+                modifier = Modifier.fillMaxSize(),
+                style = TextStyle(color = TextPrimary, fontWeight = FontWeight.Bold),
+                maxFontSize = 300.sp,
+                minFontSize = 24.sp
+        )
     }
 }
 
@@ -247,8 +143,8 @@ private fun EventCardLongTitlePreview() {
 private fun EventCardVeryLongTitlePreview() {
     MemoryLinkTheme {
         EventCard(
-                title = "Annual Family Reunion Potluck Dinner at Grandma's House",
-                startTime = LocalTime.of(17, 0),
+                title = "Meet Eric downstairs so he can take you to your doctors appointment",
+                startTime = LocalTime.of(15, 0),
                 use24HourFormat = false,
                 modifier = Modifier.fillMaxSize().padding(16.dp)
         )
@@ -317,7 +213,7 @@ private fun EventCardAllDayLongPreview() {
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 700,
-        heightDp = 250
+        heightDp = 350
 )
 @Composable
 private fun EventCardTabletPreview() {
@@ -325,6 +221,44 @@ private fun EventCardTabletPreview() {
         EventCard(
                 title = "Physical Therapy Session",
                 startTime = LocalTime.of(14, 30),
+                use24HourFormat = false,
+                modifier = Modifier.fillMaxSize().padding(16.dp)
+        )
+    }
+}
+
+@Preview(
+        name = "Event Card - Small Area (20% of screen)",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 800,
+        heightDp = 100
+)
+@Composable
+private fun EventCardSmallAreaPreview() {
+    MemoryLinkTheme {
+        EventCard(
+                title = "Lunch",
+                startTime = LocalTime.of(12, 0),
+                use24HourFormat = false,
+                modifier = Modifier.fillMaxSize().padding(8.dp)
+        )
+    }
+}
+
+@Preview(
+        name = "Event Card - Large Area (80% of screen)",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 800,
+        heightDp = 400
+)
+@Composable
+private fun EventCardLargeAreaPreview() {
+    MemoryLinkTheme {
+        EventCard(
+                title = "Doctor Appointment",
+                startTime = LocalTime.of(10, 30),
                 use24HourFormat = false,
                 modifier = Modifier.fillMaxSize().padding(16.dp)
         )
