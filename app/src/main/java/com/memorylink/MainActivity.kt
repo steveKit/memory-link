@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.memorylink.data.sync.CalendarSyncWorker
 import com.memorylink.service.DeviceAdminReceiver
 import com.memorylink.ui.admin.AdminNavGraph
 import com.memorylink.ui.admin.AdminViewModel
@@ -139,6 +140,21 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Hide system UI for kiosk mode
         hideSystemUI()
+
+        // Trigger immediate sync when app resumes (with debounce)
+        // Only sync if setup is complete and last sync was > 1 minute ago
+        if (tokenStorage.isSetupComplete) {
+            val lastSync = tokenStorage.lastSyncTime
+            val elapsed = System.currentTimeMillis() - lastSync
+            val oneMinuteMs = 60 * 1000L
+
+            if (elapsed > oneMinuteMs) {
+                Log.d(TAG, "Triggering sync on resume (last sync was ${elapsed / 1000}s ago)")
+                CalendarSyncWorker.triggerImmediateSync(this)
+            } else {
+                Log.d(TAG, "Skipping sync on resume (last sync was ${elapsed / 1000}s ago)")
+            }
+        }
     }
 
     /**

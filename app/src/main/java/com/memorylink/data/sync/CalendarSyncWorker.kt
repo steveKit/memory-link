@@ -13,13 +13,9 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.memorylink.data.repository.CalendarRepository
-import com.memorylink.data.repository.SettingsRepository
-import com.memorylink.domain.StateCoordinator
-import com.memorylink.domain.usecase.ParseConfigEventUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.flow.first
 
 /**
  * Background worker for syncing calendar events.
@@ -31,6 +27,9 @@ import kotlinx.coroutines.flow.first
  *
  * Per .clinerules/20-android.md:
  * - Background sync continues during sleep mode (battery permitting)
+ *
+ * Note: This worker only performs the sync. The StateCoordinator observes Room directly and will
+ * automatically update when new events are inserted/deleted.
  */
 @HiltWorker
 class CalendarSyncWorker
@@ -38,10 +37,7 @@ class CalendarSyncWorker
 constructor(
         @Assisted context: Context,
         @Assisted workerParams: WorkerParameters,
-        private val repository: CalendarRepository,
-        private val stateCoordinator: StateCoordinator,
-        private val parseConfigEventUseCase: ParseConfigEventUseCase,
-        private val settingsRepository: SettingsRepository
+        private val repository: CalendarRepository
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -50,6 +46,7 @@ constructor(
         return try {
             // Perform sync using incremental sync with syncToken
             // The repository handles full vs incremental sync automatically
+            // StateCoordinator observes Room directly, so events will propagate automatically
             val syncResult = repository.syncEvents()
 
             when (syncResult) {
@@ -58,10 +55,7 @@ constructor(
                             TAG,
                             "Sync completed: ${syncResult.eventCount} events synced, ${syncResult.deletedCount} deleted"
                     )
-
-                    // Update StateCoordinator with new events
-                    updateStateCoordinator()
-
+                    // No need to manually update StateCoordinator - it observes Room
                     Result.success()
                 }
                 is CalendarRepository.SyncResult.NotAuthenticated -> {
@@ -91,36 +85,6 @@ constructor(
             } else {
                 Result.failure()
             }
-        }
-    }
-
-    /**
-     * Update StateCoordinator with the latest events and process config events.
-     *
-     * Per .clinerules/10-project-meta.md:
-     * - Config events are parsed immediately when cached
-     * - Config events are never displayed to the memory user
-     */
-    private suspend fun updateStateCoordinator() {
-        try {
-            // 1. Process config events first (updates settings)
-            val configEvents = repository.observeConfigEvents().first()
-            if (configEvents.isNotEmpty()) {
-                val appliedCount = parseConfigEventUseCase(configEvents)
-                Log.d(TAG, "Processed $appliedCount config events")
-            }
-
-            // 2. Get updated settings after config processing
-            val settings = settingsRepository.refreshSettings()
-            stateCoordinator.updateSettings(settings)
-            Log.d(TAG, "Settings updated: $settings")
-
-            // 3. Update display events (non-config events only)
-            val events = repository.observeTodaysEvents().first()
-            stateCoordinator.updateEvents(events)
-            Log.d(TAG, "StateCoordinator updated with ${events.size} display events")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to update StateCoordinator", e)
         }
     }
 
