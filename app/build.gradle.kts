@@ -75,6 +75,19 @@ android {
         schemaDirectory("$projectDir/schemas")
     }
 
+    // Exclude duplicate META-INF files from Google libraries
+    // These are JAR metadata files not needed at runtime
+    packaging {
+        resources {
+            excludes += listOf(
+                "META-INF/INDEX.LIST",
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE.md",
+                "META-INF/NOTICE.md"
+            )
+        }
+    }
+
     testOptions {
         unitTests {
             isReturnDefaultValues = true

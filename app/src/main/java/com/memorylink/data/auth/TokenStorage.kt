@@ -283,6 +283,13 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
     val isSignedIn: Boolean
         get() = !refreshToken.isNullOrBlank()
 
+    /**
+     * Check if first-time setup is complete. Setup requires: PIN set + signed in + calendar
+     * selected. Used to determine whether to show Setup Wizard or Kiosk on launch.
+     */
+    val isSetupComplete: Boolean
+        get() = isPinSet && isSignedIn && !selectedCalendarId.isNullOrBlank()
+
     /** Check if access token is expired or about to expire (within 5 minutes). */
     val isTokenExpired: Boolean
         get() {

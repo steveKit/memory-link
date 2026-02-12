@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 
 /** Main navigation routes. */
 object MainRoutes {
+    const val SETUP = "setup"
     const val KIOSK = "kiosk"
     const val ADMIN = "admin"
 }
@@ -61,6 +62,9 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
+
+    /** Token storage for checking setup state. */
+    @javax.inject.Inject lateinit var tokenStorage: com.memorylink.data.auth.TokenStorage
 
     /** Callback to pass sign-in result to ViewModel. */
     private var signInResultCallback: ((Intent?) -> Unit)? = null
@@ -108,9 +112,14 @@ class MainActivity : ComponentActivity() {
         // Enable edge-to-edge display
         enableEdgeToEdge()
 
+        // Check if setup is complete to determine start destination
+        val isSetupComplete = tokenStorage.isSetupComplete
+        Log.d(TAG, "Setup complete: $isSetupComplete")
+
         setContent {
             MemoryLinkTheme {
                 MemoryLinkNavHost(
+                        isSetupComplete = isSetupComplete,
                         onSignInRequested = { intent, callback ->
                             signInResultCallback = callback
                             signInLauncher.launch(intent)
@@ -196,27 +205,54 @@ class MainActivity : ComponentActivity() {
  * Main navigation host for the app.
  *
  * Routes:
- * - kiosk: Main display screen (default)
+ * - setup: First-time setup wizard (shown when not configured)
+ * - kiosk: Main display screen (default when setup complete)
  * - admin: Admin mode screens
  *
+ * @param isSetupComplete Whether first-time setup has been completed
  * @param onSignInRequested Callback to launch Google Sign-In activity
  * @param onEnterKioskMode Callback to start LockTask when entering kiosk
  * @param onExitKioskMode Callback to stop LockTask when entering admin
  */
 @Composable
 private fun MemoryLinkNavHost(
+        isSetupComplete: Boolean,
         onSignInRequested: (Intent, (Intent?) -> Unit) -> Unit,
         onEnterKioskMode: () -> Unit,
         onExitKioskMode: () -> Unit
 ) {
     val navController = rememberNavController()
 
-    // Start LockTask when kiosk screen is initially shown
-    LaunchedEffect(Unit) { onEnterKioskMode() }
+    // Determine start destination based on setup state
+    val startDestination = if (isSetupComplete) MainRoutes.KIOSK else MainRoutes.SETUP
 
-    NavHost(navController = navController, startDestination = MainRoutes.KIOSK) {
+    NavHost(navController = navController, startDestination = startDestination) {
+        // Setup Wizard - First-time setup flow
+        composable(MainRoutes.SETUP) {
+            val setupViewModel: com.memorylink.ui.setup.SetupWizardViewModel = hiltViewModel()
+            val scope = rememberCoroutineScope()
+
+            com.memorylink.ui.setup.SetupWizardScreen(
+                    viewModel = setupViewModel,
+                    onSignInRequested = {
+                        val intent = setupViewModel.getSignInIntent()
+                        onSignInRequested(intent) { resultData ->
+                            scope.launch { setupViewModel.handleSignInResult(resultData) }
+                        }
+                    },
+                    onSetupComplete = {
+                        // Navigate to kiosk mode after setup
+                        onEnterKioskMode()
+                        navController.navigate(MainRoutes.KIOSK) {
+                            popUpTo(MainRoutes.SETUP) { inclusive = true }
+                        }
+                    }
+            )
+        }
+
+        // Kiosk Mode - Main display
         composable(MainRoutes.KIOSK) {
-            // Re-enable LockTask when returning to kiosk
+            // Enable LockTask when entering/returning to kiosk
             LaunchedEffect(Unit) { onEnterKioskMode() }
 
             KioskWithAdminGesture(

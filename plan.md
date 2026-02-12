@@ -229,9 +229,9 @@ app/
 
 ### Phase 8: First-Time Setup
 
-- [ ] 8.1 Detect "no config" state on launch
-- [ ] 8.2 Build `SetupWizardScreen` (PIN → Wi-Fi → Google → Calendar)
-- [ ] 8.3 After setup complete, enter kiosk mode
+- [x] 8.1 Detect "no config" state on launch
+- [x] 8.2 Build `SetupWizardScreen` (PIN → Google → Calendar)
+- [x] 8.3 After setup complete, enter kiosk mode
 
 ### Phase 9: Testing & Polish
 
