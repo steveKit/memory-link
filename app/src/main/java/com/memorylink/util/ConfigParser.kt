@@ -21,7 +21,6 @@ import java.time.LocalTime
  * - `[CONFIG] BRIGHTNESS 80` - Screen brightness (0-100)
  * - `[CONFIG] TIME_FORMAT 12` - 12-hour clock format
  * - `[CONFIG] TIME_FORMAT 24` - 24-hour clock format
- * - `[CONFIG] FONT_SIZE 48` - Event font size in sp
  * - `[CONFIG] MESSAGE_SIZE 60` - Message area % of screen
  *
  * Invalid syntax is logged but returns ConfigResult.Invalid.
@@ -78,7 +77,6 @@ object ConfigParser {
             "WAKE" -> parseWakeConfig(configValue, title)
             "BRIGHTNESS" -> parseBrightnessConfig(configValue, title)
             "TIME_FORMAT" -> parseTimeFormatConfig(configValue, title)
-            "FONT_SIZE" -> parseFontSizeConfig(configValue, title)
             "MESSAGE_SIZE" -> parseMessageSizeConfig(configValue, title)
             else -> {
                 Log.w(TAG, "Unknown config type: $configType")
@@ -170,28 +168,6 @@ object ConfigParser {
             "24" -> TimeFormatConfig(use24Hour = true)
             else -> Invalid(rawTitle, "TIME_FORMAT must be 12 or 24, got: $value")
         }
-    }
-
-    /**
-     * Parse FONT_SIZE configuration.
-     *
-     * Accepts: Integer 8-120 (sp units)
-     */
-    private fun parseFontSizeConfig(value: String, rawTitle: String): ConfigResult {
-        if (value.isEmpty()) {
-            return Invalid(rawTitle, "FONT_SIZE requires a value (8-120)")
-        }
-
-        val size = value.toIntOrNull()
-        if (size == null) {
-            return Invalid(rawTitle, "FONT_SIZE must be a number: $value")
-        }
-
-        if (size !in 8..120) {
-            return Invalid(rawTitle, "FONT_SIZE must be 8-120sp, got $size")
-        }
-
-        return FontSizeConfig(size)
     }
 
     /**

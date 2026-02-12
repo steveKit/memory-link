@@ -317,15 +317,17 @@ class CalendarRepositoryTest {
     // ============================================================
 
     @Test
-    fun `selectCalendar stores calendar ID`() {
+    fun `selectCalendar stores calendar ID and name`() {
         // Given
         val calendarId = "my-calendar-id"
+        val calendarName = "My Calendar"
 
         // When
-        repository.selectCalendar(calendarId)
+        repository.selectCalendar(calendarId, calendarName)
 
         // Then
         verify { tokenStorage.selectedCalendarId = calendarId }
+        verify { tokenStorage.selectedCalendarName = calendarName }
     }
 
     @Test

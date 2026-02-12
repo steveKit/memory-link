@@ -6,7 +6,6 @@ import com.memorylink.data.repository.SettingsRepository
 import com.memorylink.domain.model.CalendarEvent
 import com.memorylink.domain.model.ConfigResult
 import com.memorylink.domain.model.ConfigResult.*
-import com.memorylink.domain.model.SolarReference
 import com.memorylink.util.ConfigParser
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -14,9 +13,8 @@ import javax.inject.Inject
 /**
  * Use case for parsing [CONFIG] calendar events and applying settings.
  *
- * Processes config events from the calendar cache and stores the
- * resulting settings in TokenStorage. Settings are then resolved
- * by SettingsRepository with proper priority handling.
+ * Processes config events from the calendar cache and stores the resulting settings in
+ * TokenStorage. Settings are then resolved by SettingsRepository with proper priority handling.
  *
  * Per .clinerules/10-project-meta.md:
  * - Config events are parsed immediately when cached
@@ -29,9 +27,11 @@ import javax.inject.Inject
  * 3. Settings are stored in TokenStorage
  * 4. SettingsRepository refreshes to combine with manual overrides
  */
-class ParseConfigEventUseCase @Inject constructor(
-    private val tokenStorage: TokenStorage,
-    private val settingsRepository: SettingsRepository
+class ParseConfigEventUseCase
+@Inject
+constructor(
+        private val tokenStorage: TokenStorage,
+        private val settingsRepository: SettingsRepository
 ) {
     companion object {
         private const val TAG = "ParseConfigEventUseCase"
@@ -57,7 +57,7 @@ class ParseConfigEventUseCase @Inject constructor(
         // Parse and apply each config event
         for (event in configEvents) {
             val result = ConfigParser.parse(event.title)
-            
+
             if (result is Invalid) {
                 Log.w(TAG, "Invalid config: '${event.title}' - ${result.reason}")
                 continue
@@ -98,7 +98,7 @@ class ParseConfigEventUseCase @Inject constructor(
             }
 
             val result = ConfigParser.parse(title)
-            
+
             if (result is Invalid) {
                 Log.w(TAG, "Invalid config: '$title' - ${result.reason}")
                 continue
@@ -126,15 +126,14 @@ class ParseConfigEventUseCase @Inject constructor(
             is WakeConfig -> applyWakeConfig(config)
             is BrightnessConfig -> applyBrightnessConfig(config)
             is TimeFormatConfig -> applyTimeFormatConfig(config)
-            is FontSizeConfig -> applyFontSizeConfig(config)
             is MessageSizeConfig -> applyMessageSizeConfig(config)
-            is Invalid -> { /* Already handled */ }
+            is Invalid -> {
+                /* Already handled */
+            }
         }
     }
 
-    /**
-     * Apply sleep time configuration.
-     */
+    /** Apply sleep time configuration. */
     private fun applySleepConfig(config: SleepConfig) {
         when (config) {
             is SleepConfig.StaticTime -> {
@@ -149,14 +148,15 @@ class ParseConfigEventUseCase @Inject constructor(
                 tokenStorage.configSleepTime = null
                 tokenStorage.configSleepSolarRef = config.reference.name
                 tokenStorage.configSleepSolarOffset = config.offsetMinutes
-                Log.d(TAG, "Set sleep time: ${config.reference}${formatOffset(config.offsetMinutes)}")
+                Log.d(
+                        TAG,
+                        "Set sleep time: ${config.reference}${formatOffset(config.offsetMinutes)}"
+                )
             }
         }
     }
 
-    /**
-     * Apply wake time configuration.
-     */
+    /** Apply wake time configuration. */
     private fun applyWakeConfig(config: WakeConfig) {
         when (config) {
             is WakeConfig.StaticTime -> {
@@ -171,46 +171,33 @@ class ParseConfigEventUseCase @Inject constructor(
                 tokenStorage.configWakeTime = null
                 tokenStorage.configWakeSolarRef = config.reference.name
                 tokenStorage.configWakeSolarOffset = config.offsetMinutes
-                Log.d(TAG, "Set wake time: ${config.reference}${formatOffset(config.offsetMinutes)}")
+                Log.d(
+                        TAG,
+                        "Set wake time: ${config.reference}${formatOffset(config.offsetMinutes)}"
+                )
             }
         }
     }
 
-    /**
-     * Apply brightness configuration.
-     */
+    /** Apply brightness configuration. */
     private fun applyBrightnessConfig(config: BrightnessConfig) {
         tokenStorage.configBrightness = config.percent
         Log.d(TAG, "Set brightness: ${config.percent}%")
     }
 
-    /**
-     * Apply time format configuration.
-     */
+    /** Apply time format configuration. */
     private fun applyTimeFormatConfig(config: TimeFormatConfig) {
         tokenStorage.configUse24HourFormat = config.use24Hour
         Log.d(TAG, "Set time format: ${if (config.use24Hour) "24h" else "12h"}")
     }
 
-    /**
-     * Apply font size configuration.
-     */
-    private fun applyFontSizeConfig(config: FontSizeConfig) {
-        tokenStorage.configFontSize = config.sizeSp
-        Log.d(TAG, "Set font size: ${config.sizeSp}sp")
-    }
-
-    /**
-     * Apply message size configuration.
-     */
+    /** Apply message size configuration. */
     private fun applyMessageSizeConfig(config: MessageSizeConfig) {
         tokenStorage.configMessageSize = config.percent
         Log.d(TAG, "Set message size: ${config.percent}%")
     }
 
-    /**
-     * Format offset minutes for logging (e.g., +30, -15, or empty for 0).
-     */
+    /** Format offset minutes for logging (e.g., +30, -15, or empty for 0). */
     private fun formatOffset(minutes: Int): String {
         return when {
             minutes > 0 -> "+$minutes"
@@ -219,10 +206,7 @@ class ParseConfigEventUseCase @Inject constructor(
         }
     }
 
-    /**
-     * Clear all config event settings.
-     * Call this when user wants to reset to defaults.
-     */
+    /** Clear all config event settings. Call this when user wants to reset to defaults. */
     suspend fun clearAllConfigs() {
         tokenStorage.clearConfigSettings()
         settingsRepository.refreshSettings()

@@ -50,7 +50,6 @@ MemoryLink can be configured remotely by creating special calendar events with t
 | `WAKE`         | `[CONFIG] WAKE SUNRISE`    | Wake at sunrise                                      |
 | `WAKE`         | `[CONFIG] WAKE SUNRISE+15` | Wake 15 minutes after sunrise                        |
 | `BRIGHTNESS`   | `[CONFIG] BRIGHTNESS 80`   | Screen brightness (0-100)                            |
-| `FONT_SIZE`    | `[CONFIG] FONT_SIZE 48`    | Event title font size in sp (default: 48)            |
 | `MESSAGE_SIZE` | `[CONFIG] MESSAGE_SIZE 60` | Message area % of screen height (20-80, default: 60) |
 | `TIME_FORMAT`  | `[CONFIG] TIME_FORMAT 12`  | Clock format: `12` or `24` hour (default: 12)        |
 

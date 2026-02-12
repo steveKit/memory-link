@@ -43,13 +43,6 @@ data class AppSettings(
         val brightness: Int = 100,
 
         /**
-         * Font size for event title display in sp units.
-         *
-         * Default: 48sp (large, easy to read) Range: 8-120sp via [CONFIG] FONT_SIZE
-         */
-        val fontSize: Int = DEFAULT_FONT_SIZE,
-
-        /**
          * Percentage of screen height for the message/event area.
          *
          * Default: 60% (clock takes 40%, event takes 60%) Range: 20-80% via [CONFIG] MESSAGE_SIZE
@@ -68,12 +61,6 @@ data class AppSettings(
          * morning default.
          */
         val DEFAULT_WAKE_TIME: LocalTime = LocalTime.of(6, 0)
-
-        /**
-         * Default font size for event title (sp units). 48sp is large and easy to read for elderly
-         * users.
-         */
-        const val DEFAULT_FONT_SIZE: Int = 48
 
         /** Default message area percentage. 60% gives ample space for event display. */
         const val DEFAULT_MESSAGE_AREA_PERCENT: Int = 60
