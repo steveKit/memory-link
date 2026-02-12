@@ -76,13 +76,17 @@ fun AdminNavGraph(
         composable(AdminRoutes.HOME) {
             val authState by viewModel.authState.collectAsStateWithLifecycle()
             val calendarState by viewModel.calendarState.collectAsStateWithLifecycle()
+            val syncState by viewModel.syncState.collectAsStateWithLifecycle()
 
             AdminHomeScreen(
                     authState = authState,
                     selectedCalendarName = calendarState.selectedCalendarName,
+                    syncState = syncState,
+                    lastSyncFormatted = viewModel.getLastSyncTimeFormatted(),
                     onGoogleAccountClick = { navController.navigate(AdminRoutes.GOOGLE_SIGNIN) },
                     onCalendarClick = { navController.navigate(AdminRoutes.CALENDAR_SELECT) },
                     onSettingsClick = { navController.navigate(AdminRoutes.MANUAL_CONFIG) },
+                    onSyncNowClick = { viewModel.triggerManualSync() },
                     onExitAdmin = {
                         viewModel.resetPinState()
                         onExitAdmin()
