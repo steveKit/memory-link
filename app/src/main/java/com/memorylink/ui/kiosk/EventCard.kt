@@ -45,15 +45,24 @@ fun EventCard(
         modifier: Modifier = Modifier
 ) {
     // Combine time and title into a single sentence
+    // Use non-breaking spaces (\u00A0) in "At {time}," so it won't wrap mid-phrase
     val displayText =
             if (startTime != null) {
                 val timeFormatter =
                         if (use24HourFormat) {
                             DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
                         } else {
-                            DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+                            DateTimeFormatter.ofPattern("h:mm\u00A0a", Locale.getDefault())
                         }
-                "At ${startTime.format(timeFormatter)}, $title"
+                // Format time and normalize AM/PM to lowercase without periods
+                val formattedTime =
+                        startTime
+                                .format(timeFormatter)
+                                .replace("AM", "am")
+                                .replace("PM", "pm")
+                                .replace("a.m.", "am")
+                                .replace("p.m.", "pm")
+                "At\u00A0$formattedTime, $title"
             } else {
                 "Today is $title"
             }
