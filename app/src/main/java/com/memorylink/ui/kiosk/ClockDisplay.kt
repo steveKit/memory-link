@@ -12,8 +12,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.memorylink.ui.components.AutoSizeText
+import com.memorylink.ui.theme.AccentBlue
 import com.memorylink.ui.theme.MemoryLinkTheme
-import com.memorylink.ui.theme.TextPrimary
+import com.memorylink.ui.theme.TextDate
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -41,39 +42,40 @@ fun ClockDisplay(
         use24HourFormat: Boolean = false,
         modifier: Modifier = Modifier
 ) {
-    val timeFormatter =
-            if (use24HourFormat) {
-                DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
-            } else {
-                DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
-            }
+        val timeFormatter =
+                if (use24HourFormat) {
+                        DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+                } else {
+                        DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+                }
 
-    // Full date format: "Wednesday, February 11, 2026"
-    val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.getDefault())
+        // Full date format: "Wednesday, February 11, 2026"
+        val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.getDefault())
 
-    Column(
-            modifier = modifier,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-    ) {
-        // Time - takes 70% of height, auto-sizes to fill
-        AutoSizeText(
-                text = time.format(timeFormatter),
-                modifier = Modifier.fillMaxWidth().weight(0.7f),
-                style = TextStyle(color = TextPrimary, fontWeight = FontWeight.Bold),
-                maxFontSize = 400.sp,
-                minFontSize = 48.sp
-        )
+        Column(
+                modifier = modifier,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+        ) {
+                // Time - takes 70% of height, auto-sizes to fill, light blue color, no wrap
+                AutoSizeText(
+                        text = time.format(timeFormatter),
+                        modifier = Modifier.fillMaxWidth().weight(0.7f),
+                        style = TextStyle(color = AccentBlue, fontWeight = FontWeight.Bold),
+                        maxFontSize = 150.sp,
+                        minFontSize = 48.sp,
+                        softWrap = false
+                )
 
-        // Date - takes 30% of height, auto-sizes to fill
-        AutoSizeText(
-                text = date.format(dateFormatter),
-                modifier = Modifier.fillMaxWidth().weight(0.3f),
-                style = TextStyle(color = TextPrimary, fontWeight = FontWeight.Normal),
-                maxFontSize = 200.sp,
-                minFontSize = 24.sp
-        )
-    }
+                // Date - takes 30% of height, auto-sizes to fill, muted white color
+                AutoSizeText(
+                        text = date.format(dateFormatter),
+                        modifier = Modifier.fillMaxWidth().weight(0.3f),
+                        style = TextStyle(color = TextDate, fontWeight = FontWeight.Normal),
+                        maxFontSize = 200.sp,
+                        minFontSize = 24.sp
+                )
+        }
 }
 
 // region Previews
@@ -87,14 +89,14 @@ fun ClockDisplay(
 )
 @Composable
 private fun ClockDisplay12HourPreview() {
-    MemoryLinkTheme {
-        ClockDisplay(
-                time = LocalTime.of(14, 30),
-                date = LocalDate.of(2026, 2, 11),
-                use24HourFormat = false,
-                modifier = Modifier.fillMaxSize()
-        )
-    }
+        MemoryLinkTheme {
+                ClockDisplay(
+                        time = LocalTime.of(14, 30),
+                        date = LocalDate.of(2026, 2, 11),
+                        use24HourFormat = false,
+                        modifier = Modifier.fillMaxSize()
+                )
+        }
 }
 
 @Preview(
@@ -106,14 +108,14 @@ private fun ClockDisplay12HourPreview() {
 )
 @Composable
 private fun ClockDisplay24HourPreview() {
-    MemoryLinkTheme {
-        ClockDisplay(
-                time = LocalTime.of(14, 30),
-                date = LocalDate.of(2026, 2, 11),
-                use24HourFormat = true,
-                modifier = Modifier.fillMaxSize()
-        )
-    }
+        MemoryLinkTheme {
+                ClockDisplay(
+                        time = LocalTime.of(14, 30),
+                        date = LocalDate.of(2026, 2, 11),
+                        use24HourFormat = true,
+                        modifier = Modifier.fillMaxSize()
+                )
+        }
 }
 
 @Preview(
@@ -125,14 +127,14 @@ private fun ClockDisplay24HourPreview() {
 )
 @Composable
 private fun ClockDisplayMorningPreview() {
-    MemoryLinkTheme {
-        ClockDisplay(
-                time = LocalTime.of(9, 5),
-                date = LocalDate.of(2026, 12, 25),
-                use24HourFormat = false,
-                modifier = Modifier.fillMaxSize()
-        )
-    }
+        MemoryLinkTheme {
+                ClockDisplay(
+                        time = LocalTime.of(9, 5),
+                        date = LocalDate.of(2026, 12, 25),
+                        use24HourFormat = false,
+                        modifier = Modifier.fillMaxSize()
+                )
+        }
 }
 
 @Preview(
@@ -144,14 +146,14 @@ private fun ClockDisplayMorningPreview() {
 )
 @Composable
 private fun ClockDisplayTabletPreview() {
-    MemoryLinkTheme {
-        ClockDisplay(
-                time = LocalTime.of(10, 30),
-                date = LocalDate.of(2026, 2, 11),
-                use24HourFormat = false,
-                modifier = Modifier.fillMaxSize()
-        )
-    }
+        MemoryLinkTheme {
+                ClockDisplay(
+                        time = LocalTime.of(10, 30),
+                        date = LocalDate.of(2026, 2, 11),
+                        use24HourFormat = false,
+                        modifier = Modifier.fillMaxSize()
+                )
+        }
 }
 
 @Preview(
@@ -163,14 +165,14 @@ private fun ClockDisplayTabletPreview() {
 )
 @Composable
 private fun ClockDisplaySmallAreaPreview() {
-    MemoryLinkTheme {
-        ClockDisplay(
-                time = LocalTime.of(3, 45),
-                date = LocalDate.of(2026, 2, 11),
-                use24HourFormat = false,
-                modifier = Modifier.fillMaxSize()
-        )
-    }
+        MemoryLinkTheme {
+                ClockDisplay(
+                        time = LocalTime.of(3, 45),
+                        date = LocalDate.of(2026, 2, 11),
+                        use24HourFormat = false,
+                        modifier = Modifier.fillMaxSize()
+                )
+        }
 }
 
 // endregion
