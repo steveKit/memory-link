@@ -67,13 +67,14 @@ fun ClockDisplay(
                         softWrap = false
                 )
 
-                // Date - takes 30% of height, auto-sizes to fill, muted white color
+                // Date - takes 30% of height, auto-sizes to fill, muted white color, top aligned
                 AutoSizeText(
                         text = date.format(dateFormatter),
                         modifier = Modifier.fillMaxWidth().weight(0.3f),
                         style = TextStyle(color = TextDate, fontWeight = FontWeight.Normal),
                         maxFontSize = 200.sp,
-                        minFontSize = 24.sp
+                        minFontSize = 24.sp,
+                        contentAlignment = Alignment.TopCenter
                 )
         }
 }
