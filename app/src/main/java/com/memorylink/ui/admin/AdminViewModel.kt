@@ -60,6 +60,11 @@ constructor(
     private val _configState = MutableStateFlow(loadConfigState())
     val configState: StateFlow<ConfigState> = _configState.asStateFlow()
 
+    // ========== Sync State ==========
+
+    private val _syncState = MutableStateFlow(SyncState())
+    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+
     // ========== Inactivity Timeout ==========
 
     private var inactivityJob: Job? = null
@@ -331,6 +336,56 @@ constructor(
         viewModelScope.launch { calendarRepository.syncEvents() }
     }
 
+    /**
+     * Manually trigger a calendar sync. Updates sync state to show progress/result. Called from
+     * Admin UI "Sync Now" button.
+     */
+    fun triggerManualSync() {
+        resetInactivityTimer()
+        viewModelScope.launch {
+            _syncState.update { it.copy(isSyncing = true, lastResult = null) }
+
+            val result = calendarRepository.syncEvents()
+            val resultMessage =
+                    when (result) {
+                        is CalendarRepository.SyncResult.Success ->
+                                "Synced ${result.eventCount} events" +
+                                        if (result.deletedCount > 0)
+                                                ", ${result.deletedCount} deleted"
+                                        else ""
+                        is CalendarRepository.SyncResult.Error -> "Error: ${result.message}"
+                        CalendarRepository.SyncResult.NotAuthenticated -> "Not signed in"
+                        CalendarRepository.SyncResult.NoCalendarSelected -> "No calendar selected"
+                    }
+
+            _syncState.update {
+                it.copy(
+                        isSyncing = false,
+                        lastResult = resultMessage,
+                        lastSyncTime = tokenStorage.lastSyncTime
+                )
+            }
+        }
+    }
+
+    /** Get the last sync time in a human-readable format. */
+    fun getLastSyncTimeFormatted(): String {
+        val lastSync = tokenStorage.lastSyncTime
+        if (lastSync == 0L) return "Never"
+
+        val elapsed = System.currentTimeMillis() - lastSync
+        val seconds = elapsed / 1000
+        val minutes = seconds / 60
+        val hours = minutes / 60
+
+        return when {
+            seconds < 60 -> "Just now"
+            minutes < 60 -> "$minutes min ago"
+            hours < 24 -> "$hours hours ago"
+            else -> "${hours / 24} days ago"
+        }
+    }
+
     // ========== Config Methods ==========
 
     private fun loadConfigState(): ConfigState {
@@ -450,4 +505,10 @@ data class ConfigState(
         val sleepTime: LocalTime? = null,
         val brightness: Int? = null,
         val use24HourFormat: Boolean? = null
+)
+
+data class SyncState(
+        val isSyncing: Boolean = false,
+        val lastResult: String? = null,
+        val lastSyncTime: Long = 0L
 )
