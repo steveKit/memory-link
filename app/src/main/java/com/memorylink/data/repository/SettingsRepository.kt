@@ -4,14 +4,13 @@ import android.util.Log
 import com.memorylink.data.auth.TokenStorage
 import com.memorylink.data.remote.SunriseSunsetApi
 import com.memorylink.domain.model.AppSettings
-import com.memorylink.domain.model.SolarReference
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Repository for aggregating app settings from multiple sources.
@@ -21,15 +20,17 @@ import javax.inject.Singleton
  * 2. [CONFIG] calendar event settings
  * 3. Default values
  *
- * For dynamic times (SUNRISE/SUNSET), the SunriseSunsetApi is used
- * to resolve the actual time, with fallbacks to defaults.
+ * For dynamic times (SUNRISE/SUNSET), the SunriseSunsetApi is used to resolve the actual time, with
+ * fallbacks to defaults.
  *
  * See .clinerules/10-project-meta.md for config documentation.
  */
 @Singleton
-class SettingsRepository @Inject constructor(
-    private val tokenStorage: TokenStorage,
-    private val sunriseSunsetApi: SunriseSunsetApi
+class SettingsRepository
+@Inject
+constructor(
+        private val tokenStorage: TokenStorage,
+        private val sunriseSunsetApi: SunriseSunsetApi
 ) {
     companion object {
         private const val TAG = "SettingsRepository"
@@ -37,21 +38,19 @@ class SettingsRepository @Inject constructor(
     }
 
     /**
-     * Current resolved settings.
-     * Updated when config events are processed or manual settings change.
+     * Current resolved settings. Updated when config events are processed or manual settings
+     * change.
      */
     private val _settings = MutableStateFlow(AppSettings())
     val settings: Flow<AppSettings> = _settings.asStateFlow()
 
-    /**
-     * Get current settings (non-Flow version for synchronous access).
-     */
+    /** Get current settings (non-Flow version for synchronous access). */
     val currentSettings: AppSettings
         get() = _settings.value
 
     /**
-     * Refresh settings by re-evaluating all sources.
-     * Call this after config events are processed or manual settings change.
+     * Refresh settings by re-evaluating all sources. Call this after config events are processed or
+     * manual settings change.
      *
      * @return The updated AppSettings
      */
@@ -63,17 +62,16 @@ class SettingsRepository @Inject constructor(
     }
 
     /**
-     * Build AppSettings by combining all sources with priority:
-     * Manual Override > Config Event > Default
+     * Build AppSettings by combining all sources with priority: Manual Override > Config Event >
+     * Default
      */
     private suspend fun buildSettings(): AppSettings {
         return AppSettings(
-            sleepTime = resolveSleepTime(),
-            wakeTime = resolveWakeTime(),
-            use24HourFormat = resolveTimeFormat(),
-            brightness = resolveBrightness(),
-            fontSize = resolveFontSize(),
-            messageAreaPercent = resolveMessageSize()
+                sleepTime = resolveSleepTime(),
+                wakeTime = resolveWakeTime(),
+                use24HourFormat = resolveTimeFormat(),
+                brightness = resolveBrightness(),
+                messageAreaPercent = resolveMessageSize()
         )
     }
 
@@ -160,18 +158,19 @@ class SettingsRepository @Inject constructor(
      * @return Resolved LocalTime
      */
     private suspend fun resolveSolarTime(
-        solarRef: String,
-        offsetMinutes: Int,
-        fallback: LocalTime
+            solarRef: String,
+            offsetMinutes: Int,
+            fallback: LocalTime
     ): LocalTime {
-        val baseTime = when (solarRef.uppercase()) {
-            "SUNRISE" -> sunriseSunsetApi.getSunrise(fallback)
-            "SUNSET" -> sunriseSunsetApi.getSunset(fallback)
-            else -> {
-                Log.w(TAG, "Unknown solar reference: $solarRef, using fallback")
-                fallback
-            }
-        }
+        val baseTime =
+                when (solarRef.uppercase()) {
+                    "SUNRISE" -> sunriseSunsetApi.getSunrise(fallback)
+                    "SUNSET" -> sunriseSunsetApi.getSunset(fallback)
+                    else -> {
+                        Log.w(TAG, "Unknown solar reference: $solarRef, using fallback")
+                        fallback
+                    }
+                }
 
         return if (offsetMinutes != 0) {
             baseTime.plusMinutes(offsetMinutes.toLong())
@@ -231,32 +230,6 @@ class SettingsRepository @Inject constructor(
     }
 
     /**
-     * Resolve font size with priority:
-     * 1. Manual override
-     * 2. Config event
-     * 3. Default (48sp)
-     */
-    private fun resolveFontSize(): Int {
-        // Manual override
-        val manual = tokenStorage.manualFontSize
-        if (manual > 0) {
-            Log.d(TAG, "Using manual font size: ${manual}sp")
-            return manual
-        }
-
-        // Config event
-        val config = tokenStorage.configFontSize
-        if (config > 0) {
-            Log.d(TAG, "Using config font size: ${config}sp")
-            return config
-        }
-
-        // Default: 48sp
-        Log.d(TAG, "Using default font size: ${AppSettings.DEFAULT_FONT_SIZE}sp")
-        return AppSettings.DEFAULT_FONT_SIZE
-    }
-
-    /**
      * Resolve message area size with priority:
      * 1. Manual override
      * 2. Config event
@@ -310,16 +283,14 @@ class SettingsRepository @Inject constructor(
     }
 
     /**
-     * Update settings from a manual override change.
-     * Call this from admin mode when user changes a setting.
+     * Update settings from a manual override change. Call this from admin mode when user changes a
+     * setting.
      */
     suspend fun onManualSettingsChanged() {
         refreshSettings()
     }
 
-    /**
-     * Clear the solar time cache (call at midnight for fresh data).
-     */
+    /** Clear the solar time cache (call at midnight for fresh data). */
     fun clearSolarCache() {
         sunriseSunsetApi.clearCache()
     }

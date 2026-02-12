@@ -25,7 +25,8 @@ sealed class ConfigResult {
         data class StaticTime(val time: LocalTime) : SleepConfig()
 
         /** Dynamic sleep time relative to sunset. */
-        data class DynamicTime(val reference: SolarReference, val offsetMinutes: Int) : SleepConfig()
+        data class DynamicTime(val reference: SolarReference, val offsetMinutes: Int) :
+                SleepConfig()
     }
 
     /**
@@ -42,7 +43,8 @@ sealed class ConfigResult {
         data class StaticTime(val time: LocalTime) : WakeConfig()
 
         /** Dynamic wake time relative to sunrise. */
-        data class DynamicTime(val reference: SolarReference, val offsetMinutes: Int) : WakeConfig()
+        data class DynamicTime(val reference: SolarReference, val offsetMinutes: Int) :
+                WakeConfig()
     }
 
     /**
@@ -68,19 +70,6 @@ sealed class ConfigResult {
     data class TimeFormatConfig(val use24Hour: Boolean) : ConfigResult()
 
     /**
-     * Font size configuration.
-     *
-     * Syntax: `[CONFIG] FONT_SIZE 48`
-     *
-     * @param sizeSp Font size in sp units (8-120 reasonable range)
-     */
-    data class FontSizeConfig(val sizeSp: Int) : ConfigResult() {
-        init {
-            require(sizeSp in 8..120) { "Font size must be 8-120sp, got $sizeSp" }
-        }
-    }
-
-    /**
      * Message area size configuration.
      *
      * Syntax: `[CONFIG] MESSAGE_SIZE 60`
@@ -104,9 +93,7 @@ sealed class ConfigResult {
     data class Invalid(val rawText: String, val reason: String) : ConfigResult()
 }
 
-/**
- * Reference point for solar-based time calculations.
- */
+/** Reference point for solar-based time calculations. */
 enum class SolarReference {
     SUNRISE,
     SUNSET

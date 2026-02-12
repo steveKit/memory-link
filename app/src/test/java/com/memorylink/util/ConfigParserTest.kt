@@ -19,7 +19,6 @@ import org.junit.Test
  * - SLEEP/WAKE with dynamic times (SUNRISE/SUNSET with offsets)
  * - BRIGHTNESS (0-100)
  * - TIME_FORMAT (12/24)
- * - FONT_SIZE (8-120)
  * - MESSAGE_SIZE (20-80)
  * - Invalid syntax handling
  */
@@ -257,49 +256,6 @@ class ConfigParserTest {
     @Test
     fun `TIME_FORMAT returns invalid for missing value`() {
         val result = ConfigParser.parse("[CONFIG] TIME_FORMAT")
-        assertTrue(result is Invalid)
-    }
-
-    // endregion
-
-    // region FONT_SIZE config tests
-
-    @Test
-    fun `FONT_SIZE parses valid value`() {
-        val result = ConfigParser.parse("[CONFIG] FONT_SIZE 48")
-        assertTrue(result is FontSizeConfig)
-        assertEquals(48, (result as FontSizeConfig).sizeSp)
-    }
-
-    @Test
-    fun `FONT_SIZE parses minimum value`() {
-        val result = ConfigParser.parse("[CONFIG] FONT_SIZE 8")
-        assertTrue(result is FontSizeConfig)
-        assertEquals(8, (result as FontSizeConfig).sizeSp)
-    }
-
-    @Test
-    fun `FONT_SIZE parses maximum value`() {
-        val result = ConfigParser.parse("[CONFIG] FONT_SIZE 120")
-        assertTrue(result is FontSizeConfig)
-        assertEquals(120, (result as FontSizeConfig).sizeSp)
-    }
-
-    @Test
-    fun `FONT_SIZE returns invalid for value below minimum`() {
-        val result = ConfigParser.parse("[CONFIG] FONT_SIZE 5")
-        assertTrue(result is Invalid)
-    }
-
-    @Test
-    fun `FONT_SIZE returns invalid for value above maximum`() {
-        val result = ConfigParser.parse("[CONFIG] FONT_SIZE 200")
-        assertTrue(result is Invalid)
-    }
-
-    @Test
-    fun `FONT_SIZE returns invalid for non-numeric value`() {
-        val result = ConfigParser.parse("[CONFIG] FONT_SIZE large")
         assertTrue(result is Invalid)
     }
 
