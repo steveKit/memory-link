@@ -78,13 +78,14 @@ class DetermineDisplayStateUseCaseTest {
     fun `returns AWAKE_WITH_EVENT during day with event`() {
         val now = LocalDateTime.of(2026, 2, 11, 10, 0)
         val settings = AppSettings()
-        val event = CalendarEvent(
-            id = "1",
-            title = "Doctor Appointment",
-            startTime = LocalDateTime.of(2026, 2, 11, 14, 0),
-            endTime = LocalDateTime.of(2026, 2, 11, 15, 0),
-            isAllDay = false
-        )
+        val event =
+                CalendarEvent(
+                        id = "1",
+                        title = "Doctor Appointment",
+                        startTime = LocalDateTime.of(2026, 2, 11, 14, 0),
+                        endTime = LocalDateTime.of(2026, 2, 11, 15, 0),
+                        isAllDay = false
+                )
         every { mockGetNextEventUseCase(any(), any()) } returns event
 
         val result = useCase(now, listOf(event), settings)
@@ -154,10 +155,7 @@ class DetermineDisplayStateUseCaseTest {
     @Test
     fun `respects custom wake time`() {
         val now = LocalDateTime.of(2026, 2, 11, 7, 30)
-        val settings = AppSettings(
-            wakeTime = LocalTime.of(8, 0),
-            sleepTime = LocalTime.of(21, 0)
-        )
+        val settings = AppSettings(wakeTime = LocalTime.of(8, 0), sleepTime = LocalTime.of(21, 0))
         every { mockGetNextEventUseCase(any(), any()) } returns null
 
         val result = useCase(now, emptyList(), settings)
@@ -169,10 +167,7 @@ class DetermineDisplayStateUseCaseTest {
     @Test
     fun `respects custom sleep time`() {
         val now = LocalDateTime.of(2026, 2, 11, 19, 30)
-        val settings = AppSettings(
-            wakeTime = LocalTime.of(6, 0),
-            sleepTime = LocalTime.of(19, 0)
-        )
+        val settings = AppSettings(wakeTime = LocalTime.of(6, 0), sleepTime = LocalTime.of(19, 0))
         every { mockGetNextEventUseCase(any(), any()) } returns null
 
         val result = useCase(now, emptyList(), settings)
@@ -210,16 +205,17 @@ class DetermineDisplayStateUseCaseTest {
     // region All-Day Event Display Time
 
     @Test
-    fun `all-day event uses wake time for display`() {
+    fun `all-day event returns null for display time`() {
         val now = LocalDateTime.of(2026, 2, 11, 10, 0)
         val settings = AppSettings(wakeTime = LocalTime.of(7, 0))
-        val allDayEvent = CalendarEvent(
-            id = "1",
-            title = "Birthday Party",
-            startTime = LocalDateTime.of(2026, 2, 11, 0, 0),
-            endTime = LocalDateTime.of(2026, 2, 12, 0, 0),
-            isAllDay = true
-        )
+        val allDayEvent =
+                CalendarEvent(
+                        id = "1",
+                        title = "Birthday Party",
+                        startTime = LocalDateTime.of(2026, 2, 11, 0, 0),
+                        endTime = LocalDateTime.of(2026, 2, 12, 0, 0),
+                        isAllDay = true
+                )
         every { mockGetNextEventUseCase(any(), any()) } returns allDayEvent
 
         val result = useCase(now, listOf(allDayEvent), settings)
@@ -227,8 +223,8 @@ class DetermineDisplayStateUseCaseTest {
         assertTrue(result is DisplayState.AwakeWithEvent)
         val state = result as DisplayState.AwakeWithEvent
         assertEquals("Birthday Party", state.nextEventTitle)
-        // All-day events show wake time as their "start"
-        assertEquals(LocalTime.of(7, 0), state.nextEventTime)
+        // All-day events return null (UI displays "TODAY IS" prefix)
+        assertEquals(null, state.nextEventTime)
     }
 
     // endregion
@@ -239,10 +235,7 @@ class DetermineDisplayStateUseCaseTest {
     fun `handles unusual config where sleep comes before wake`() {
         // Edge case: sleep at 10:00, wake at 18:00 (sleeping during the day)
         val now = LocalDateTime.of(2026, 2, 11, 14, 0)
-        val settings = AppSettings(
-            sleepTime = LocalTime.of(10, 0),
-            wakeTime = LocalTime.of(18, 0)
-        )
+        val settings = AppSettings(sleepTime = LocalTime.of(10, 0), wakeTime = LocalTime.of(18, 0))
         every { mockGetNextEventUseCase(any(), any()) } returns null
 
         val result = useCase(now, emptyList(), settings)
@@ -254,10 +247,7 @@ class DetermineDisplayStateUseCaseTest {
     @Test
     fun `handles unusual config awake after wake time`() {
         val now = LocalDateTime.of(2026, 2, 11, 20, 0)
-        val settings = AppSettings(
-            sleepTime = LocalTime.of(10, 0),
-            wakeTime = LocalTime.of(18, 0)
-        )
+        val settings = AppSettings(sleepTime = LocalTime.of(10, 0), wakeTime = LocalTime.of(18, 0))
         every { mockGetNextEventUseCase(any(), any()) } returns null
 
         val result = useCase(now, emptyList(), settings)
@@ -286,13 +276,14 @@ class DetermineDisplayStateUseCaseTest {
     fun `awake with event state respects format setting`() {
         val now = LocalDateTime.of(2026, 2, 11, 10, 0)
         val settings = AppSettings(use24HourFormat = true)
-        val event = CalendarEvent(
-            id = "1",
-            title = "Event",
-            startTime = LocalDateTime.of(2026, 2, 11, 14, 0),
-            endTime = LocalDateTime.of(2026, 2, 11, 15, 0),
-            isAllDay = false
-        )
+        val event =
+                CalendarEvent(
+                        id = "1",
+                        title = "Event",
+                        startTime = LocalDateTime.of(2026, 2, 11, 14, 0),
+                        endTime = LocalDateTime.of(2026, 2, 11, 15, 0),
+                        isAllDay = false
+                )
         every { mockGetNextEventUseCase(any(), any()) } returns event
 
         val result = useCase(now, listOf(event), settings)
