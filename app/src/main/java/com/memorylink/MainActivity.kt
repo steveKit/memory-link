@@ -1,7 +1,11 @@
 package com.memorylink
 
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.memorylink.service.DeviceAdminReceiver
 import com.memorylink.ui.admin.AdminNavGraph
 import com.memorylink.ui.admin.AdminViewModel
 import com.memorylink.ui.kiosk.AdminGestureState
@@ -48,9 +53,14 @@ object MainRoutes {
  * - Kiosk display mode (default)
  * - Admin mode navigation (via 5-tap gesture)
  * - Google Sign-In activity result
+ * - LockTask mode for kiosk lock (when device owner)
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        private const val TAG = "MainActivity"
+    }
 
     /** Callback to pass sign-in result to ViewModel. */
     private var signInResultCallback: ((Intent?) -> Unit)? = null
@@ -58,8 +68,32 @@ class MainActivity : ComponentActivity() {
     /** Google Sign-In activity launcher. */
     private lateinit var signInLauncher: ActivityResultLauncher<Intent>
 
+    /** Device policy manager for kiosk mode. */
+    private lateinit var devicePolicyManager: DevicePolicyManager
+
+    /** Admin component name for device owner checks. */
+    private lateinit var adminComponentName: ComponentName
+
+    /** Whether this app is the device owner (can use LockTask). */
+    private var isDeviceOwner = false
+
+    /** Whether LockTask is currently active. */
+    private var isLockTaskActive = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize device policy manager
+        devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        adminComponentName = ComponentName(this, DeviceAdminReceiver::class.java)
+        isDeviceOwner = devicePolicyManager.isDeviceOwnerApp(packageName)
+
+        Log.d(TAG, "Device owner status: $isDeviceOwner")
+
+        // If device owner, set up LockTask packages
+        if (isDeviceOwner) {
+            setupLockTaskPackages()
+        }
 
         // Register sign-in activity result handler
         signInLauncher =
@@ -80,7 +114,9 @@ class MainActivity : ComponentActivity() {
                         onSignInRequested = { intent, callback ->
                             signInResultCallback = callback
                             signInLauncher.launch(intent)
-                        }
+                        },
+                        onEnterKioskMode = { startLockTaskIfOwner() },
+                        onExitKioskMode = { stopLockTaskIfOwner() }
                 )
             }
         }
@@ -91,6 +127,58 @@ class MainActivity : ComponentActivity() {
         // Hide system UI for kiosk mode
         hideSystemUI()
     }
+
+    /**
+     * Set up which packages are allowed in LockTask mode. Must be called when app is device owner.
+     */
+    private fun setupLockTaskPackages() {
+        try {
+            // Allow only this app in LockTask mode
+            devicePolicyManager.setLockTaskPackages(adminComponentName, arrayOf(packageName))
+            Log.d(TAG, "LockTask packages configured")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Failed to set LockTask packages", e)
+        }
+    }
+
+    /**
+     * Start LockTask mode (kiosk lock) if this app is device owner. Blocks home button, recent
+     * apps, and other escape routes.
+     */
+    fun startLockTaskIfOwner() {
+        if (isDeviceOwner && !isLockTaskActive) {
+            try {
+                startLockTask()
+                isLockTaskActive = true
+                Log.d(TAG, "LockTask mode started")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start LockTask", e)
+            }
+        } else if (!isDeviceOwner) {
+            Log.d(TAG, "Not device owner, skipping LockTask start")
+        }
+    }
+
+    /**
+     * Stop LockTask mode (exit kiosk lock) if currently active. Called when entering admin mode.
+     */
+    fun stopLockTaskIfOwner() {
+        if (isLockTaskActive) {
+            try {
+                stopLockTask()
+                isLockTaskActive = false
+                Log.d(TAG, "LockTask mode stopped")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to stop LockTask", e)
+            }
+        }
+    }
+
+    /**
+     * Check if this app is configured as device owner.
+     * @return true if device owner, false otherwise
+     */
+    fun isDeviceOwner(): Boolean = isDeviceOwner
 
     private fun hideSystemUI() {
         @Suppress("DEPRECATION")
@@ -112,15 +200,29 @@ class MainActivity : ComponentActivity() {
  * - admin: Admin mode screens
  *
  * @param onSignInRequested Callback to launch Google Sign-In activity
+ * @param onEnterKioskMode Callback to start LockTask when entering kiosk
+ * @param onExitKioskMode Callback to stop LockTask when entering admin
  */
 @Composable
-private fun MemoryLinkNavHost(onSignInRequested: (Intent, (Intent?) -> Unit) -> Unit) {
+private fun MemoryLinkNavHost(
+        onSignInRequested: (Intent, (Intent?) -> Unit) -> Unit,
+        onEnterKioskMode: () -> Unit,
+        onExitKioskMode: () -> Unit
+) {
     val navController = rememberNavController()
+
+    // Start LockTask when kiosk screen is initially shown
+    LaunchedEffect(Unit) { onEnterKioskMode() }
 
     NavHost(navController = navController, startDestination = MainRoutes.KIOSK) {
         composable(MainRoutes.KIOSK) {
+            // Re-enable LockTask when returning to kiosk
+            LaunchedEffect(Unit) { onEnterKioskMode() }
+
             KioskWithAdminGesture(
                     onAdminGestureDetected = {
+                        // Stop LockTask before navigating to admin
+                        onExitKioskMode()
                         navController.navigate(MainRoutes.ADMIN) {
                             // Don't add to back stack to prevent back button issues
                             launchSingleTop = true

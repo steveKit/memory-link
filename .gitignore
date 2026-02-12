@@ -46,3 +46,4 @@ credentials.json
 
 # AI/Cline config
 .clinerules/
+.kotlin/

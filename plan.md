@@ -221,11 +221,11 @@ app/
 
 ### Phase 7: Kiosk Lock
 
-- [ ] 7.1 Configure AndroidManifest for LockTaskMode
-- [ ] 7.2 Create device_admin_receiver.xml
-- [ ] 7.3 Implement `TouchInterceptor` to block touch in kiosk mode
-- [ ] 7.4 Implement `BootReceiver` for auto-start
-- [ ] 7.5 Add instructions for device owner provisioning (ADB command)
+- [x] 7.1 Configure AndroidManifest for LockTaskMode
+- [x] 7.2 Create device_admin_receiver.xml
+- [x] 7.3 Implement `TouchInterceptor` to block touch in kiosk mode
+- [x] 7.4 Implement `BootReceiver` for auto-start
+- [x] 7.5 Add instructions for device owner provisioning (ADB command)
 
 ### Phase 8: First-Time Setup
 
