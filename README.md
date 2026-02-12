@@ -162,7 +162,7 @@ For testing without device owner, the app logs: `Not device owner, skipping Lock
 - [x] Phase 5: Config Parser
 - [x] Phase 6: Admin Mode
 - [x] Phase 7: Kiosk Lock
-- [ ] Phase 8: First-Time Setup
+- [x] Phase 8: First-Time Setup
 - [ ] Phase 9: Testing & Polish
 - [ ] Phase 10: Documentation & Release
 
