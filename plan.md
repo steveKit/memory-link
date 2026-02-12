@@ -243,10 +243,12 @@ app/
 
 ### Phase 10: Documentation & Release
 
-- [ ] 10.1 Write README with setup instructions
-- [ ] 10.2 Document device owner provisioning steps
-- [ ] 10.3 Create signed release APK
-- [ ] 10.4 Test on physical tablet hardware
+- [ ] 10.1 Update README with QR code setup instructions (primary method)
+- [ ] 10.2 Create QR code generation script (`scripts/generate-provisioning-qr.sh`)
+- [ ] 10.3 Set up GitHub Actions workflow for automated releases
+- [ ] 10.4 Create signing keystore for release builds
+- [ ] 10.5 Create signed release APK + provisioning QR
+- [ ] 10.6 Test on physical tablet hardware (full QR provisioning flow)
 
 ---
 
@@ -264,13 +266,13 @@ app/
 
 ## ⚠️ Risks & Mitigations
 
-| Risk                                 | Mitigation                                               |
-| ------------------------------------ | -------------------------------------------------------- |
-| Google API rate limits               | 5-min polling = ~8,640/month (well under 1M limit)       |
-| Device owner provisioning complexity | Document clear ADB commands; consider MDM for enterprise |
-| Memory user discovers admin tap      | 5 taps in 2 seconds is unlikely for confused user        |
-| Tablet battery drain                 | WorkManager respects Doze; sync only every 5 min         |
-| OAuth token expiration               | Store refresh token; silent refresh on failure           |
+| Risk                                 | Mitigation                                                 |
+| ------------------------------------ | ---------------------------------------------------------- |
+| Google API rate limits               | 5-min polling = ~8,640/month (well under 1M limit)         |
+| Device owner provisioning complexity | QR code provisioning for caregivers; ADB fallback for devs |
+| Memory user discovers admin tap      | 5 taps in 2 seconds is unlikely for confused user          |
+| Tablet battery drain                 | WorkManager respects Doze; sync only every 5 min           |
+| OAuth token expiration               | Store refresh token; silent refresh on failure             |
 
 ---
 
