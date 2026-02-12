@@ -29,13 +29,15 @@ object AdminRoutes {
  * @param viewModel Shared AdminViewModel for all admin screens
  * @param onSignInRequested Callback to launch Google Sign-In from the Activity
  * @param onExitAdmin Callback when admin mode should be exited
+ * @param onExitApp Callback to exit the app entirely
  */
 @Composable
 fun AdminNavGraph(
         navController: NavHostController = rememberNavController(),
         viewModel: AdminViewModel = hiltViewModel(),
         onSignInRequested: () -> Unit,
-        onExitAdmin: () -> Unit
+        onExitAdmin: () -> Unit,
+        onExitApp: () -> Unit
 ) {
     // Observe auto-exit due to inactivity
     val shouldExit by viewModel.shouldExitAdmin.collectAsStateWithLifecycle()
@@ -84,7 +86,8 @@ fun AdminNavGraph(
                     onExitAdmin = {
                         viewModel.resetPinState()
                         onExitAdmin()
-                    }
+                    },
+                    onExitApp = onExitApp
             )
         }
 

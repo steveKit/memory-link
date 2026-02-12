@@ -125,7 +125,11 @@ class MainActivity : ComponentActivity() {
                             signInLauncher.launch(intent)
                         },
                         onEnterKioskMode = { startLockTaskIfOwner() },
-                        onExitKioskMode = { stopLockTaskIfOwner() }
+                        onExitKioskMode = { stopLockTaskIfOwner() },
+                        onExitApp = {
+                            stopLockTaskIfOwner()
+                            finishAffinity()
+                        }
                 )
             }
         }
@@ -213,13 +217,15 @@ class MainActivity : ComponentActivity() {
  * @param onSignInRequested Callback to launch Google Sign-In activity
  * @param onEnterKioskMode Callback to start LockTask when entering kiosk
  * @param onExitKioskMode Callback to stop LockTask when entering admin
+ * @param onExitApp Callback to exit the app entirely
  */
 @Composable
 private fun MemoryLinkNavHost(
         isSetupComplete: Boolean,
         onSignInRequested: (Intent, (Intent?) -> Unit) -> Unit,
         onEnterKioskMode: () -> Unit,
-        onExitKioskMode: () -> Unit
+        onExitKioskMode: () -> Unit,
+        onExitApp: () -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -294,7 +300,8 @@ private fun MemoryLinkNavHost(
                         navController.navigate(MainRoutes.KIOSK) {
                             popUpTo(MainRoutes.KIOSK) { inclusive = true }
                         }
-                    }
+                    },
+                    onExitApp = onExitApp
             )
         }
     }
