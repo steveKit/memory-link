@@ -13,13 +13,42 @@ A kiosk-locked Android tablet app for dementia/elderly users displaying calendar
 ## Key Features
 
 - 📱 Full-screen kiosk mode (no escape for memory user)
-- 🕐 Large, high-contrast clock always visible (72sp)
+- 🕐 Large, high-contrast clock with 3-line layout (time / day & date / year)
 - 📅 Shows next calendar event for TODAY only
 - 🌙 Configurable sleep mode (dimmed display at night)
 - 🌅 Supports SUNRISE/SUNSET dynamic scheduling with offsets
 - 📴 Works offline with 2-week event cache
 - 🔐 Hidden admin access (5-tap + PIN)
 - ⚙️ Remote configuration via special calendar events
+
+## Event Display
+
+The display shows calendar events with clear, auto-scaling text optimized for elderly/visually impaired users.
+
+### Timed Events
+
+Timed events display with an "AT" prefix:
+
+```
+AT 10:30 AM
+Doctor Appointment
+```
+
+### All-Day Events
+
+All-day events display with a "TODAY IS" prefix:
+
+```
+TODAY IS
+Mom's Birthday
+```
+
+**Formatting Tip for Caregivers:** Since all-day events display as "TODAY IS [Event Title]", name your all-day events accordingly:
+
+- ✅ Good: "Mom's Birthday" → displays as "TODAY IS Mom's Birthday"
+- ❌ Avoid: "Today is Mom's Birthday" → displays as "TODAY IS Today is Mom's Birthday"
+
+Both lines use the same large font size and auto-scale together to fill the message area while never truncating text.
 
 ## Configuration via Calendar Events
 

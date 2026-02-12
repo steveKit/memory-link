@@ -3,7 +3,6 @@ package com.memorylink.domain.usecase
 import com.memorylink.domain.model.AppSettings
 import com.memorylink.domain.model.CalendarEvent
 import com.memorylink.domain.model.DisplayState
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import javax.inject.Inject
@@ -18,9 +17,9 @@ import javax.inject.Inject
  * - AWAKE_WITH_EVENT: Within wake period AND next event exists
  * - AWAKE_NO_EVENT: Within wake period AND no events
  */
-class DetermineDisplayStateUseCase @Inject constructor(
-    private val getNextEventUseCase: GetNextEventUseCase
-) {
+class DetermineDisplayStateUseCase
+@Inject
+constructor(private val getNextEventUseCase: GetNextEventUseCase) {
 
     /**
      * Determine the current display state.
@@ -31,9 +30,9 @@ class DetermineDisplayStateUseCase @Inject constructor(
      * @return The display state to render
      */
     operator fun invoke(
-        now: LocalDateTime,
-        events: List<CalendarEvent>,
-        settings: AppSettings
+            now: LocalDateTime,
+            events: List<CalendarEvent>,
+            settings: AppSettings
     ): DisplayState {
         val currentTime = now.toLocalTime()
         val currentDate = now.toLocalDate()
@@ -41,8 +40,8 @@ class DetermineDisplayStateUseCase @Inject constructor(
         // Check if we're in sleep period
         if (isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime)) {
             return DisplayState.Sleep(
-                currentTime = currentTime,
-                use24HourFormat = settings.use24HourFormat
+                    currentTime = currentTime,
+                    use24HourFormat = settings.use24HourFormat
             )
         }
 
@@ -51,17 +50,17 @@ class DetermineDisplayStateUseCase @Inject constructor(
 
         return if (nextEvent != null) {
             DisplayState.AwakeWithEvent(
-                currentTime = currentTime,
-                currentDate = currentDate,
-                nextEventTitle = nextEvent.title,
-                nextEventTime = getDisplayTime(nextEvent, settings.wakeTime),
-                use24HourFormat = settings.use24HourFormat
+                    currentTime = currentTime,
+                    currentDate = currentDate,
+                    nextEventTitle = nextEvent.title,
+                    nextEventTime = getDisplayTime(nextEvent),
+                    use24HourFormat = settings.use24HourFormat
             )
         } else {
             DisplayState.AwakeNoEvent(
-                currentTime = currentTime,
-                currentDate = currentDate,
-                use24HourFormat = settings.use24HourFormat
+                    currentTime = currentTime,
+                    currentDate = currentDate,
+                    use24HourFormat = settings.use24HourFormat
             )
         }
     }
@@ -74,9 +73,9 @@ class DetermineDisplayStateUseCase @Inject constructor(
      * - If sleep <= wake: (unusual but handle it) sleep period is [sleep, wake)
      */
     private fun isInSleepPeriod(
-        currentTime: LocalTime,
-        sleepTime: LocalTime,
-        wakeTime: LocalTime
+            currentTime: LocalTime,
+            sleepTime: LocalTime,
+            wakeTime: LocalTime
     ): Boolean {
         return if (sleepTime.isAfter(wakeTime)) {
             // Normal case: sleep at night, wake in morning
@@ -91,16 +90,12 @@ class DetermineDisplayStateUseCase @Inject constructor(
     /**
      * Get the display time for an event.
      *
-     * For all-day events, we show "All Day" concept by returning wake time
-     * (the actual display will handle showing this appropriately).
-     *
-     * For timed events, return the actual start time.
+     * For all-day events, returns null (UI displays "TODAY IS" prefix). For timed events, returns
+     * the actual start time (UI displays "AT [time]" prefix).
      */
-    private fun getDisplayTime(event: CalendarEvent, wakeTime: LocalTime): LocalTime {
+    private fun getDisplayTime(event: CalendarEvent): LocalTime? {
         return if (event.isAllDay) {
-            // For all-day events, conceptually they "start" at wake time
-            // The UI will handle displaying "All Day" text appropriately
-            wakeTime
+            null
         } else {
             event.startTime.toLocalTime()
         }
