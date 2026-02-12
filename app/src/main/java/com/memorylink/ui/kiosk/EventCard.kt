@@ -9,12 +9,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.memorylink.ui.components.AutoSizeText
+import com.memorylink.ui.theme.AccentBlue
 import com.memorylink.ui.theme.DarkSurface
 import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.TextPrimary
@@ -26,8 +30,8 @@ import java.util.Locale
  * Displays the next calendar event with time and title as a single flowing sentence.
  *
  * Format:
- * - Timed events: "At 10:30 AM, Event Title"
- * - All-day events: "Today is Event Title"
+ * - Timed events: "At 10:30 AM, Event Title" (time in accent blue, title in white)
+ * - All-day events: "Today is Event Title" (all white)
  *
  * Text auto-sizes to fill the available space while wrapping naturally. Designed for
  * elderly/sight-challenged users - text is always as large as possible.
@@ -44,7 +48,7 @@ fun EventCard(
         use24HourFormat: Boolean = false,
         modifier: Modifier = Modifier
 ) {
-    // Combine time and title into a single sentence
+    // Build annotated string with two-tone coloring for timed events
     val displayText =
             if (startTime != null) {
                 val timeFormatter =
@@ -53,9 +57,20 @@ fun EventCard(
                         } else {
                             DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
                         }
-                "At ${startTime.format(timeFormatter)}, $title"
+                val formattedTime = startTime.format(timeFormatter)
+
+                // "At {time}," in accent blue, "{title}" in white
+                buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = AccentBlue)) {
+                        append("At $formattedTime, ")
+                    }
+                    withStyle(style = SpanStyle(color = TextPrimary)) { append(title) }
+                }
             } else {
-                "Today is $title"
+                // All-day events: uniform white color
+                buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = TextPrimary)) { append("Today is $title") }
+                }
             }
 
     Box(
@@ -66,7 +81,7 @@ fun EventCard(
         AutoSizeText(
                 text = displayText,
                 modifier = Modifier.fillMaxSize(),
-                style = TextStyle(color = TextPrimary, fontWeight = FontWeight.Bold),
+                style = TextStyle(fontWeight = FontWeight.Bold),
                 maxFontSize = 300.sp,
                 minFontSize = 24.sp
         )
