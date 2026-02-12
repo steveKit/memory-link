@@ -7,27 +7,30 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.memorylink.ui.components.AutoSizeText
 import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.SleepBackground
-import com.memorylink.ui.theme.SleepClockStyle
+import com.memorylink.ui.theme.SleepText
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
- * Sleep mode overlay displaying only a dimmed clock.
+ * Sleep mode overlay displaying only a dimmed, auto-sized clock.
  *
- * Typography:
- * - Clock: 48sp bold in muted gray (SleepClockStyle)
+ * The clock auto-sizes to fill the available space for maximum readability, even in sleep mode.
+ * Uses muted gray color and darker background.
  *
- * Background: #0A0A0A (darker than normal mode)
- * No date, no events displayed during sleep mode.
+ * Background: #0A0A0A (darker than normal mode) No date, no events displayed during sleep mode.
  *
  * Uses 1-second cross-fade animation when entering/exiting (per NFR-02).
  *
@@ -38,33 +41,34 @@ import java.util.Locale
  */
 @Composable
 fun SleepOverlay(
-    time: LocalTime,
-    use24HourFormat: Boolean = false,
-    visible: Boolean = true,
-    modifier: Modifier = Modifier
+        time: LocalTime,
+        use24HourFormat: Boolean = false,
+        visible: Boolean = true,
+        modifier: Modifier = Modifier
 ) {
-    val timeFormatter = if (use24HourFormat) {
-        DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
-    } else {
-        DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
-    }
+    val timeFormatter =
+            if (use24HourFormat) {
+                DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+            } else {
+                DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+            }
 
     AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
-        exit = fadeOut(animationSpec = tween(durationMillis = 1000)),
-        modifier = modifier
+            visible = visible,
+            enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 1000)),
+            modifier = modifier
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(SleepBackground),
-            contentAlignment = Alignment.Center
+                modifier = Modifier.fillMaxSize().background(SleepBackground).padding(48.dp),
+                contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = time.format(timeFormatter),
-                style = SleepClockStyle,
-                textAlign = TextAlign.Center
+            AutoSizeText(
+                    text = time.format(timeFormatter),
+                    modifier = Modifier.fillMaxSize(),
+                    style = TextStyle(color = SleepText, fontWeight = FontWeight.Bold),
+                    maxFontSize = 400.sp,
+                    minFontSize = 48.sp
             )
         }
     }
@@ -73,52 +77,73 @@ fun SleepOverlay(
 // region Previews
 
 @Preview(
-    name = "Sleep Overlay - 12 Hour",
-    showBackground = true,
-    backgroundColor = 0xFF0A0A0A,
-    widthDp = 800,
-    heightDp = 480
+        name = "Sleep Overlay - 12 Hour",
+        showBackground = true,
+        backgroundColor = 0xFF0A0A0A,
+        widthDp = 800,
+        heightDp = 480
 )
 @Composable
 private fun SleepOverlay12HourPreview() {
     MemoryLinkTheme {
         SleepOverlay(
-            time = LocalTime.of(23, 45),
-            use24HourFormat = false
+                time = LocalTime.of(23, 45),
+                use24HourFormat = false,
+                modifier = Modifier.fillMaxSize()
         )
     }
 }
 
 @Preview(
-    name = "Sleep Overlay - 24 Hour",
-    showBackground = true,
-    backgroundColor = 0xFF0A0A0A,
-    widthDp = 800,
-    heightDp = 480
+        name = "Sleep Overlay - 24 Hour",
+        showBackground = true,
+        backgroundColor = 0xFF0A0A0A,
+        widthDp = 800,
+        heightDp = 480
 )
 @Composable
 private fun SleepOverlay24HourPreview() {
     MemoryLinkTheme {
         SleepOverlay(
-            time = LocalTime.of(23, 45),
-            use24HourFormat = true
+                time = LocalTime.of(23, 45),
+                use24HourFormat = true,
+                modifier = Modifier.fillMaxSize()
         )
     }
 }
 
 @Preview(
-    name = "Sleep Overlay - Early Morning",
-    showBackground = true,
-    backgroundColor = 0xFF0A0A0A,
-    widthDp = 800,
-    heightDp = 480
+        name = "Sleep Overlay - Early Morning",
+        showBackground = true,
+        backgroundColor = 0xFF0A0A0A,
+        widthDp = 800,
+        heightDp = 480
 )
 @Composable
 private fun SleepOverlayEarlyMorningPreview() {
     MemoryLinkTheme {
         SleepOverlay(
-            time = LocalTime.of(3, 30),
-            use24HourFormat = false
+                time = LocalTime.of(3, 30),
+                use24HourFormat = false,
+                modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@Preview(
+        name = "Sleep Overlay - Tablet Landscape",
+        showBackground = true,
+        backgroundColor = 0xFF0A0A0A,
+        widthDp = 1024,
+        heightDp = 600
+)
+@Composable
+private fun SleepOverlayTabletPreview() {
+    MemoryLinkTheme {
+        SleepOverlay(
+                time = LocalTime.of(22, 15),
+                use24HourFormat = false,
+                modifier = Modifier.fillMaxSize()
         )
     }
 }
