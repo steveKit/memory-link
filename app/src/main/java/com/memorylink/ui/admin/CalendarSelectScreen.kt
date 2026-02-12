@@ -39,7 +39,7 @@ import com.memorylink.ui.theme.MemoryLinkTheme
  * Lists available calendars from Google and allows selection.
  *
  * @param calendarState Current calendar list state
- * @param onCalendarSelected Called when a calendar is selected
+ * @param onCalendarSelected Called when a calendar is selected (id, name)
  * @param onRefresh Refresh the calendar list
  * @param onBackClick Navigate back to admin home
  * @param modifier Modifier for the screen
@@ -47,7 +47,7 @@ import com.memorylink.ui.theme.MemoryLinkTheme
 @Composable
 fun CalendarSelectScreen(
         calendarState: CalendarState,
-        onCalendarSelected: (String) -> Unit,
+        onCalendarSelected: (String, String) -> Unit,
         onRefresh: () -> Unit,
         onBackClick: () -> Unit,
         modifier: Modifier = Modifier
@@ -150,7 +150,7 @@ fun CalendarSelectScreen(
                             CalendarListItem(
                                     calendar = calendar,
                                     isSelected = calendar.id == calendarState.selectedCalendarId,
-                                    onClick = { onCalendarSelected(calendar.id) }
+                                    onClick = { onCalendarSelected(calendar.id, calendar.name) }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
@@ -233,7 +233,7 @@ private fun CalendarSelectWithCalendarsPreview() {
                                         ),
                                 selectedCalendarId = "1"
                         ),
-                onCalendarSelected = {},
+                onCalendarSelected = { _, _ -> },
                 onRefresh = {},
                 onBackClick = {}
         )
@@ -252,7 +252,7 @@ private fun CalendarSelectLoadingPreview() {
     MemoryLinkTheme {
         CalendarSelectScreen(
                 calendarState = CalendarState(isLoading = true),
-                onCalendarSelected = {},
+                onCalendarSelected = { _, _ -> },
                 onRefresh = {},
                 onBackClick = {}
         )
@@ -274,7 +274,7 @@ private fun CalendarSelectErrorPreview() {
                         CalendarState(
                                 error = "Failed to load calendars. Please check your connection."
                         ),
-                onCalendarSelected = {},
+                onCalendarSelected = { _, _ -> },
                 onRefresh = {},
                 onBackClick = {}
         )
@@ -293,7 +293,7 @@ private fun CalendarSelectEmptyPreview() {
     MemoryLinkTheme {
         CalendarSelectScreen(
                 calendarState = CalendarState(calendars = emptyList()),
-                onCalendarSelected = {},
+                onCalendarSelected = { _, _ -> },
                 onRefresh = {},
                 onBackClick = {}
         )

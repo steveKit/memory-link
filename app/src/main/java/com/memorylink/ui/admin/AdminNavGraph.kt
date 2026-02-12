@@ -10,9 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
-/**
- * Navigation routes for Admin mode screens.
- */
+/** Navigation routes for Admin mode screens. */
 object AdminRoutes {
     const val PIN_ENTRY = "admin/pin_entry"
     const val HOME = "admin/home"
@@ -24,8 +22,8 @@ object AdminRoutes {
 /**
  * Admin mode navigation graph.
  *
- * Entry point is PIN entry (or PIN setup for first-time).
- * After PIN validation, navigates to admin home.
+ * Entry point is PIN entry (or PIN setup for first-time). After PIN validation, navigates to admin
+ * home.
  *
  * @param navController Navigation controller (can be passed in for integration with main nav)
  * @param viewModel Shared AdminViewModel for all admin screens
@@ -34,10 +32,10 @@ object AdminRoutes {
  */
 @Composable
 fun AdminNavGraph(
-    navController: NavHostController = rememberNavController(),
-    viewModel: AdminViewModel = hiltViewModel(),
-    onSignInRequested: () -> Unit,
-    onExitAdmin: () -> Unit
+        navController: NavHostController = rememberNavController(),
+        viewModel: AdminViewModel = hiltViewModel(),
+        onSignInRequested: () -> Unit,
+        onExitAdmin: () -> Unit
 ) {
     // Observe auto-exit due to inactivity
     val shouldExit by viewModel.shouldExitAdmin.collectAsStateWithLifecycle()
@@ -50,10 +48,7 @@ fun AdminNavGraph(
         }
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = AdminRoutes.PIN_ENTRY
-    ) {
+    NavHost(navController = navController, startDestination = AdminRoutes.PIN_ENTRY) {
         composable(AdminRoutes.PIN_ENTRY) {
             val pinState by viewModel.pinState.collectAsStateWithLifecycle()
 
@@ -67,12 +62,12 @@ fun AdminNavGraph(
             }
 
             PinEntryScreen(
-                pinState = pinState,
-                isSetupMode = viewModel.isPinSetupRequired,
-                onDigitClick = viewModel::addPinDigit,
-                onBackspaceClick = viewModel::removePinDigit,
-                onClearClick = viewModel::clearPin,
-                onCancel = onExitAdmin
+                    pinState = pinState,
+                    isSetupMode = viewModel.isPinSetupRequired,
+                    onDigitClick = viewModel::addPinDigit,
+                    onBackspaceClick = viewModel::removePinDigit,
+                    onClearClick = viewModel::clearPin,
+                    onCancel = onExitAdmin
             )
         }
 
@@ -81,22 +76,15 @@ fun AdminNavGraph(
             val calendarState by viewModel.calendarState.collectAsStateWithLifecycle()
 
             AdminHomeScreen(
-                authState = authState,
-                selectedCalendarName = calendarState.calendars
-                    .find { it.id == calendarState.selectedCalendarId }?.name,
-                onGoogleAccountClick = {
-                    navController.navigate(AdminRoutes.GOOGLE_SIGNIN)
-                },
-                onCalendarClick = {
-                    navController.navigate(AdminRoutes.CALENDAR_SELECT)
-                },
-                onSettingsClick = {
-                    navController.navigate(AdminRoutes.MANUAL_CONFIG)
-                },
-                onExitAdmin = {
-                    viewModel.resetPinState()
-                    onExitAdmin()
-                }
+                    authState = authState,
+                    selectedCalendarName = calendarState.selectedCalendarName,
+                    onGoogleAccountClick = { navController.navigate(AdminRoutes.GOOGLE_SIGNIN) },
+                    onCalendarClick = { navController.navigate(AdminRoutes.CALENDAR_SELECT) },
+                    onSettingsClick = { navController.navigate(AdminRoutes.MANUAL_CONFIG) },
+                    onExitAdmin = {
+                        viewModel.resetPinState()
+                        onExitAdmin()
+                    }
             )
         }
 
@@ -104,10 +92,10 @@ fun AdminNavGraph(
             val authState by viewModel.authState.collectAsStateWithLifecycle()
 
             GoogleSignInScreen(
-                authState = authState,
-                onSignInClick = onSignInRequested,
-                onSignOutClick = viewModel::signOut,
-                onBackClick = { navController.popBackStack() }
+                    authState = authState,
+                    onSignInClick = onSignInRequested,
+                    onSignOutClick = viewModel::signOut,
+                    onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -115,15 +103,13 @@ fun AdminNavGraph(
             val calendarState by viewModel.calendarState.collectAsStateWithLifecycle()
 
             // Load calendars when entering screen
-            LaunchedEffect(Unit) {
-                viewModel.loadCalendars()
-            }
+            LaunchedEffect(Unit) { viewModel.loadCalendars() }
 
             CalendarSelectScreen(
-                calendarState = calendarState,
-                onCalendarSelected = viewModel::selectCalendar,
-                onRefresh = viewModel::loadCalendars,
-                onBackClick = { navController.popBackStack() }
+                    calendarState = calendarState,
+                    onCalendarSelected = viewModel::selectCalendar,
+                    onRefresh = viewModel::loadCalendars,
+                    onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -131,13 +117,13 @@ fun AdminNavGraph(
             val configState by viewModel.configState.collectAsStateWithLifecycle()
 
             ManualConfigScreen(
-                configState = configState,
-                onWakeTimeChange = viewModel::setWakeTime,
-                onSleepTimeChange = viewModel::setSleepTime,
-                onBrightnessChange = viewModel::setBrightness,
-                onTimeFormatChange = viewModel::setUse24HourFormat,
-                onClearAll = viewModel::clearAllOverrides,
-                onBackClick = { navController.popBackStack() }
+                    configState = configState,
+                    onWakeTimeChange = viewModel::setWakeTime,
+                    onSleepTimeChange = viewModel::setSleepTime,
+                    onBrightnessChange = viewModel::setBrightness,
+                    onTimeFormatChange = viewModel::setUse24HourFormat,
+                    onClearAll = viewModel::clearAllOverrides,
+                    onBackClick = { navController.popBackStack() }
             )
         }
     }

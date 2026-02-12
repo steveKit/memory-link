@@ -67,9 +67,7 @@ constructor(
 
         // Check auth state
         if (tokenStorage.isSignedIn) {
-            _authState.update {
-                it.copy(isSignedIn = true, userEmail = tokenStorage.userEmail)
-            }
+            _authState.update { it.copy(isSignedIn = true, userEmail = tokenStorage.userEmail) }
         }
 
         // Check calendar state
@@ -213,8 +211,8 @@ constructor(
     }
 
     /** Select a calendar for event syncing. */
-    fun selectCalendar(calendarId: String) {
-        calendarRepository.selectCalendar(calendarId)
+    fun selectCalendar(calendarId: String, calendarName: String) {
+        calendarRepository.selectCalendar(calendarId, calendarName)
         _calendarState.update { it.copy(selectedCalendarId = calendarId) }
 
         // Trigger initial sync

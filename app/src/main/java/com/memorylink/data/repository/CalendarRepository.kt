@@ -146,14 +146,19 @@ constructor(
     }
 
     /** Select a calendar for syncing. */
-    fun selectCalendar(calendarId: String) {
+    fun selectCalendar(calendarId: String, calendarName: String) {
         tokenStorage.selectedCalendarId = calendarId
-        Log.d(TAG, "Selected calendar: $calendarId")
+        tokenStorage.selectedCalendarName = calendarName
+        Log.d(TAG, "Selected calendar: $calendarName ($calendarId)")
     }
 
     /** Get the currently selected calendar ID. */
     val selectedCalendarId: String?
         get() = tokenStorage.selectedCalendarId
+
+    /** Get the currently selected calendar name. */
+    val selectedCalendarName: String?
+        get() = tokenStorage.selectedCalendarName
 
     /** Get the current sync status based on last sync time. */
     fun getSyncStatus(): SyncStatus {

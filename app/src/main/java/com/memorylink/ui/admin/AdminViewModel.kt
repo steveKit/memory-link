@@ -8,6 +8,8 @@ import com.memorylink.data.auth.TokenStorage
 import com.memorylink.data.remote.GoogleCalendarService
 import com.memorylink.data.repository.CalendarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.LocalTime
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,8 +17,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import javax.inject.Inject
 
 /**
  * ViewModel for Admin mode screens.
@@ -32,10 +32,12 @@ import javax.inject.Inject
  * - Exit Admin: Auto-returns to kiosk after 5 minutes of inactivity
  */
 @HiltViewModel
-class AdminViewModel @Inject constructor(
-    private val tokenStorage: TokenStorage,
-    private val googleAuthManager: GoogleAuthManager,
-    private val calendarRepository: CalendarRepository
+class AdminViewModel
+@Inject
+constructor(
+        private val tokenStorage: TokenStorage,
+        private val googleAuthManager: GoogleAuthManager,
+        private val calendarRepository: CalendarRepository
 ) : ViewModel() {
 
     // ========== PIN State ==========
@@ -117,28 +119,30 @@ class AdminViewModel @Inject constructor(
                 val current = _pinState.value
                 if (current.confirmPin == null) {
                     // First entry - ask for confirmation
-                    _pinState.update { it.copy(
-                        enteredPin = "",
-                        confirmPin = pin,
-                        isConfirmingPin = true
-                    )}
+                    _pinState.update {
+                        it.copy(enteredPin = "", confirmPin = pin, isConfirmingPin = true)
+                    }
                 } else if (current.confirmPin == pin) {
                     // Confirmation matches - save PIN
                     tokenStorage.adminPin = pin
-                    _pinState.update { it.copy(
-                        enteredPin = "",
-                        confirmPin = null,
-                        isConfirmingPin = false,
-                        isPinValid = true
-                    )}
+                    _pinState.update {
+                        it.copy(
+                                enteredPin = "",
+                                confirmPin = null,
+                                isConfirmingPin = false,
+                                isPinValid = true
+                        )
+                    }
                 } else {
                     // Confirmation doesn't match - start over
-                    _pinState.update { it.copy(
-                        enteredPin = "",
-                        confirmPin = null,
-                        isConfirmingPin = false,
-                        error = "PINs don't match. Try again."
-                    )}
+                    _pinState.update {
+                        it.copy(
+                                enteredPin = "",
+                                confirmPin = null,
+                                isConfirmingPin = false,
+                                error = "PINs don't match. Try again."
+                        )
+                    }
                 }
             } else {
                 // Validate existing PIN
@@ -148,18 +152,22 @@ class AdminViewModel @Inject constructor(
                 } else {
                     val isLockedOut = tokenStorage.isPinLockedOut
                     val remainingSeconds = tokenStorage.lockoutRemainingSeconds
-                    val attemptsLeft = TokenStorage.MAX_PIN_ATTEMPTS - tokenStorage.failedPinAttempts
+                    val attemptsLeft =
+                            TokenStorage.MAX_PIN_ATTEMPTS - tokenStorage.failedPinAttempts
 
-                    _pinState.update { it.copy(
-                        enteredPin = "",
-                        error = if (isLockedOut) {
-                            "Too many attempts. Wait $remainingSeconds seconds."
-                        } else {
-                            "Incorrect PIN. $attemptsLeft attempts left."
-                        },
-                        isLockedOut = isLockedOut,
-                        lockoutRemainingSeconds = remainingSeconds
-                    )}
+                    _pinState.update {
+                        it.copy(
+                                enteredPin = "",
+                                error =
+                                        if (isLockedOut) {
+                                            "Too many attempts. Wait $remainingSeconds seconds."
+                                        } else {
+                                            "Incorrect PIN. $attemptsLeft attempts left."
+                                        },
+                                isLockedOut = isLockedOut,
+                                lockoutRemainingSeconds = remainingSeconds
+                        )
+                    }
 
                     // Start lockout countdown if locked out
                     if (isLockedOut) {
@@ -174,10 +182,12 @@ class AdminViewModel @Inject constructor(
         viewModelScope.launch {
             while (tokenStorage.isPinLockedOut) {
                 val remaining = tokenStorage.lockoutRemainingSeconds
-                _pinState.update { it.copy(
-                    lockoutRemainingSeconds = remaining,
-                    error = "Too many attempts. Wait $remaining seconds."
-                )}
+                _pinState.update {
+                    it.copy(
+                            lockoutRemainingSeconds = remaining,
+                            error = "Too many attempts. Wait $remaining seconds."
+                    )
+                }
                 delay(1000)
             }
             _pinState.update { it.copy(isLockedOut = false, error = null) }
@@ -203,29 +213,25 @@ class AdminViewModel @Inject constructor(
 
         when (result) {
             is GoogleAuthManager.AuthResult.Success -> {
-                _authState.update { it.copy(
-                    isSignedIn = true,
-                    userEmail = result.email,
-                    isLoading = false,
-                    error = null
-                )}
+                _authState.update {
+                    it.copy(
+                            isSignedIn = true,
+                            userEmail = result.email,
+                            isLoading = false,
+                            error = null
+                    )
+                }
                 // Trigger calendar sync after sign-in
                 syncCalendars()
             }
             is GoogleAuthManager.AuthResult.Error -> {
-                _authState.update { it.copy(
-                    isLoading = false,
-                    error = result.message
-                )}
+                _authState.update { it.copy(isLoading = false, error = result.message) }
             }
             GoogleAuthManager.AuthResult.Cancelled -> {
                 _authState.update { it.copy(isLoading = false) }
             }
             GoogleAuthManager.AuthResult.NeedsSignIn -> {
-                _authState.update { it.copy(
-                    isSignedIn = false,
-                    isLoading = false
-                )}
+                _authState.update { it.copy(isSignedIn = false, isLoading = false) }
             }
         }
 
@@ -243,10 +249,12 @@ class AdminViewModel @Inject constructor(
     }
 
     private fun updateAuthState() {
-        _authState.update { it.copy(
-            isSignedIn = googleAuthManager.isSignedIn,
-            userEmail = googleAuthManager.userEmail
-        )}
+        _authState.update {
+            it.copy(
+                    isSignedIn = googleAuthManager.isSignedIn,
+                    userEmail = googleAuthManager.userEmail
+            )
+        }
     }
 
     // ========== Calendar Methods ==========
@@ -259,48 +267,48 @@ class AdminViewModel @Inject constructor(
 
             when (val result = calendarRepository.getAvailableCalendars()) {
                 is GoogleCalendarService.ApiResult.Success -> {
-                    _calendarState.update { it.copy(
-                        calendars = result.data.map { dto ->
-                            CalendarItem(
-                                id = dto.id,
-                                name = dto.name,
-                                isPrimary = dto.isPrimary
-                            )
-                        },
-                        selectedCalendarId = calendarRepository.selectedCalendarId,
-                        isLoading = false
-                    )}
+                    _calendarState.update {
+                        it.copy(
+                                calendars =
+                                        result.data.map { dto ->
+                                            CalendarItem(
+                                                    id = dto.id,
+                                                    name = dto.name,
+                                                    isPrimary = dto.isPrimary
+                                            )
+                                        },
+                                selectedCalendarId = calendarRepository.selectedCalendarId,
+                                selectedCalendarName = calendarRepository.selectedCalendarName,
+                                isLoading = false
+                        )
+                    }
                 }
                 is GoogleCalendarService.ApiResult.Error -> {
-                    _calendarState.update { it.copy(
-                        isLoading = false,
-                        error = result.message
-                    )}
+                    _calendarState.update { it.copy(isLoading = false, error = result.message) }
                 }
                 GoogleCalendarService.ApiResult.NotAuthenticated -> {
-                    _calendarState.update { it.copy(
-                        isLoading = false,
-                        error = "Please sign in first"
-                    )}
+                    _calendarState.update {
+                        it.copy(isLoading = false, error = "Please sign in first")
+                    }
                 }
             }
         }
     }
 
     /** Select a calendar for event syncing. */
-    fun selectCalendar(calendarId: String) {
+    fun selectCalendar(calendarId: String, calendarName: String) {
         resetInactivityTimer()
-        calendarRepository.selectCalendar(calendarId)
-        _calendarState.update { it.copy(selectedCalendarId = calendarId) }
+        calendarRepository.selectCalendar(calendarId, calendarName)
+        _calendarState.update {
+            it.copy(selectedCalendarId = calendarId, selectedCalendarName = calendarName)
+        }
 
         // Trigger sync after selecting calendar
         syncCalendars()
     }
 
     private fun syncCalendars() {
-        viewModelScope.launch {
-            calendarRepository.syncEvents(forceFullSync = true)
-        }
+        viewModelScope.launch { calendarRepository.syncEvents(forceFullSync = true) }
     }
 
     // ========== Config Methods ==========
@@ -310,10 +318,10 @@ class AdminViewModel @Inject constructor(
         val sleepTimeStr = tokenStorage.manualSleepTime
 
         return ConfigState(
-            wakeTime = wakeTimeStr?.let { parseTime(it) },
-            sleepTime = sleepTimeStr?.let { parseTime(it) },
-            brightness = tokenStorage.manualBrightness.takeIf { it >= 0 },
-            use24HourFormat = tokenStorage.manualUse24HourFormat
+                wakeTime = wakeTimeStr?.let { parseTime(it) },
+                sleepTime = sleepTimeStr?.let { parseTime(it) },
+                brightness = tokenStorage.manualBrightness.takeIf { it >= 0 },
+                use24HourFormat = tokenStorage.manualUse24HourFormat
         )
     }
 
@@ -365,10 +373,11 @@ class AdminViewModel @Inject constructor(
     /** Reset the inactivity timer. Call on any user interaction. */
     fun resetInactivityTimer() {
         inactivityJob?.cancel()
-        inactivityJob = viewModelScope.launch {
-            delay(INACTIVITY_TIMEOUT_MS)
-            _shouldExitAdmin.value = true
-        }
+        inactivityJob =
+                viewModelScope.launch {
+                    delay(INACTIVITY_TIMEOUT_MS)
+                    _shouldExitAdmin.value = true
+                }
     }
 
     /** Clear the exit flag when navigating back to kiosk. */
@@ -390,38 +399,35 @@ class AdminViewModel @Inject constructor(
 // ========== State Classes ==========
 
 data class PinState(
-    val enteredPin: String = "",
-    val confirmPin: String? = null,
-    val isConfirmingPin: Boolean = false,
-    val isPinValid: Boolean = false,
-    val error: String? = null,
-    val isLockedOut: Boolean = false,
-    val lockoutRemainingSeconds: Int = 0
+        val enteredPin: String = "",
+        val confirmPin: String? = null,
+        val isConfirmingPin: Boolean = false,
+        val isPinValid: Boolean = false,
+        val error: String? = null,
+        val isLockedOut: Boolean = false,
+        val lockoutRemainingSeconds: Int = 0
 )
 
 data class AuthState(
-    val isSignedIn: Boolean = false,
-    val userEmail: String? = null,
-    val isLoading: Boolean = false,
-    val error: String? = null
+        val isSignedIn: Boolean = false,
+        val userEmail: String? = null,
+        val isLoading: Boolean = false,
+        val error: String? = null
 )
 
 data class CalendarState(
-    val calendars: List<CalendarItem> = emptyList(),
-    val selectedCalendarId: String? = null,
-    val isLoading: Boolean = false,
-    val error: String? = null
+        val calendars: List<CalendarItem> = emptyList(),
+        val selectedCalendarId: String? = null,
+        val selectedCalendarName: String? = null,
+        val isLoading: Boolean = false,
+        val error: String? = null
 )
 
-data class CalendarItem(
-    val id: String,
-    val name: String,
-    val isPrimary: Boolean
-)
+data class CalendarItem(val id: String, val name: String, val isPrimary: Boolean)
 
 data class ConfigState(
-    val wakeTime: LocalTime? = null,
-    val sleepTime: LocalTime? = null,
-    val brightness: Int? = null,
-    val use24HourFormat: Boolean? = null
+        val wakeTime: LocalTime? = null,
+        val sleepTime: LocalTime? = null,
+        val brightness: Int? = null,
+        val use24HourFormat: Boolean? = null
 )

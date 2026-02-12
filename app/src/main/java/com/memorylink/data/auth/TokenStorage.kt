@@ -58,6 +58,11 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getString(KEY_SELECTED_CALENDAR_ID, null)
         set(value) = prefs.edit().putString(KEY_SELECTED_CALENDAR_ID, value).apply()
 
+    /** Selected calendar name (for display without needing API call). */
+    var selectedCalendarName: String?
+        get() = prefs.getString(KEY_SELECTED_CALENDAR_NAME, null)
+        set(value) = prefs.edit().putString(KEY_SELECTED_CALENDAR_NAME, value).apply()
+
     /** User's email address (for display purposes). */
     var userEmail: String?
         get() = prefs.getString(KEY_USER_EMAIL, null)
@@ -333,6 +338,7 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_TOKEN_EXPIRATION = "token_expiration"
         private const val KEY_SELECTED_CALENDAR_ID = "selected_calendar_id"
+        private const val KEY_SELECTED_CALENDAR_NAME = "selected_calendar_name"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
 
