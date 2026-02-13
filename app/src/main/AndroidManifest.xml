@@ -15,6 +15,9 @@
     <!-- Foreground service for sync (if needed) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
+    <!-- Exact alarms for precise wake/sleep transitions (Android 12+) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <application
         android:name=".MemoryLinkApp"
         android:allowBackup="false"
@@ -62,6 +65,18 @@
                 android:resource="@xml/device_admin_receiver" />
             <intent-filter>
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- State transition receiver for wake/sleep/minute alarms -->
+        <receiver
+            android:name=".service.StateTransitionReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.memorylink.ACTION_WAKE" />
+                <action android:name="com.memorylink.ACTION_SLEEP" />
+                <action android:name="com.memorylink.ACTION_MINUTE_TICK" />
             </intent-filter>
         </receiver>
 

@@ -1,49 +1,41 @@
 package com.memorylink.ui.kiosk
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.memorylink.domain.StateCoordinator
 import com.memorylink.domain.model.DisplayState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * ViewModel for the Kiosk (main display) screen.
  *
- * Observes the StateCoordinator's display state flow and exposes it to the UI.
- * The state updates every minute via TimeProvider and whenever events/settings change.
+ * Observes the StateCoordinator's display state flow and exposes it to the UI. State updates are
+ * triggered by [StateTransitionScheduler] alarms:
+ * - At wake/sleep boundaries
+ * - Every minute during awake period
+ * - When calendar events change
  *
  * This ViewModel has minimal logic - it delegates all state decisions to the domain layer.
  */
 @HiltViewModel
-class KioskViewModel @Inject constructor(
-    private val stateCoordinator: StateCoordinator
-) : ViewModel() {
+class KioskViewModel @Inject constructor(private val stateCoordinator: StateCoordinator) :
+        ViewModel() {
 
     /**
      * The current display state to render.
      *
-     * This StateFlow:
-     * - Emits every minute (for clock updates)
-     * - Emits when calendar events change
-     * - Emits when settings change (sleep/wake times, format)
-     *
-     * Uses WhileSubscribed(5000) to keep the flow active for 5 seconds after the last
-     * subscriber disconnects, preventing unnecessary restarts during configuration changes.
+     * This StateFlow is directly from StateCoordinator and updates when:
+     * - Wake/sleep alarms fire (state transitions)
+     * - Minute tick alarms fire (clock updates during awake)
+     * - Calendar events change (Room database observation)
+     * - Settings change
      */
-    val displayState: StateFlow<DisplayState> = stateCoordinator.observeDisplayState()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = stateCoordinator.displayState.value
-        )
+    val displayState: StateFlow<DisplayState> = stateCoordinator.displayState
 
     /**
-     * Force an immediate state refresh.
-     * Called when the app returns to foreground or after config changes.
+     * Force an immediate state refresh. Called when the app returns to foreground or after config
+     * changes.
      */
     fun refresh() {
         stateCoordinator.refreshState()

@@ -12,23 +12,24 @@ import com.memorylink.domain.usecase.ParseConfigEventUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
  * Central coordinator for the display state machine.
  *
- * Combines:
- * - Time ticks (every minute)
- * - Calendar events (from repository - observed reactively from Room)
+ * Manages:
+ * - Display state (single source of truth via StateFlow)
+ * - Calendar events (observed reactively from Room)
  * - App settings (sleep/wake times, format)
  *
- * Produces a single [DisplayState] flow that the UI observes.
+ * State updates are triggered by:
+ * - [StateTransitionScheduler] alarms (wake/sleep/minute tick)
+ * - Calendar sync (Room observation)
+ * - Settings changes
  *
  * See .clinerules/40-state-machine.md for state transitions.
  */
@@ -48,7 +49,7 @@ constructor(
         private const val TAG = "StateCoordinator"
     }
 
-    /** Current display state. UI observes this to render the appropriate screen. */
+    /** Current display state. UI observes this single StateFlow to render. */
     private val _displayState = MutableStateFlow<DisplayState>(createInitialState())
     val displayState: StateFlow<DisplayState> = _displayState.asStateFlow()
 
@@ -56,16 +57,12 @@ constructor(
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
 
-    /**
-     * Current calendar events for today. Updated reactively from Room database via
-     * CalendarRepository.
-     */
+    /** Current calendar events for today. Updated reactively from Room database. */
     private val _events = MutableStateFlow<List<CalendarEvent>>(emptyList())
     val events: StateFlow<List<CalendarEvent>> = _events.asStateFlow()
 
     init {
         // Start observing Room database for today's events
-        // This creates a reactive connection - any changes in Room will flow here
         applicationScope.launch {
             calendarRepository.observeTodaysEvents().distinctUntilChanged().collect { events ->
                 Log.d(TAG, "Received ${events.size} events from Room")
@@ -99,30 +96,7 @@ constructor(
             }
         }
 
-        Log.d(TAG, "StateCoordinator initialized - observing repository Flows")
-    }
-
-    /**
-     * Get a flow of display states that updates every minute and when events/settings change.
-     *
-     * This combines:
-     * 1. Minute ticks from TimeProvider
-     * 2. Current events
-     * 3. Current settings
-     *
-     * @return Flow emitting the current DisplayState
-     */
-    fun observeDisplayState(): Flow<DisplayState> {
-        return combine(timeProvider.minuteTicks(), _events, _settings) { now, events, settings ->
-            determineDisplayStateUseCase(now, events, settings)
-        }
-    }
-
-    /**
-     * Update the current display state. Called by the ViewModel when observing the combined flow.
-     */
-    fun updateDisplayState(state: DisplayState) {
-        _displayState.value = state
+        Log.d(TAG, "StateCoordinator initialized")
     }
 
     /**
@@ -140,11 +114,28 @@ constructor(
         refreshState()
     }
 
-    /** Force a state refresh. Useful at wake/sleep boundaries or after config changes. */
+    /**
+     * Force a state refresh.
+     *
+     * Called by [StateTransitionReceiver] when:
+     * - Wake alarm fires (transition to awake)
+     * - Sleep alarm fires (transition to sleep)
+     * - Minute tick fires (update clock, check events)
+     *
+     * Also called when events or settings change.
+     */
     fun refreshState() {
         val now = timeProvider.now()
         val state = determineDisplayStateUseCase(now, _events.value, _settings.value)
+        val previousState = _displayState.value
         _displayState.value = state
+
+        if (previousState::class != state::class) {
+            Log.d(
+                    TAG,
+                    "State transition: ${previousState::class.simpleName} -> ${state::class.simpleName}"
+            )
+        }
     }
 
     /**

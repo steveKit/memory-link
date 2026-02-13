@@ -25,7 +25,7 @@ object DisplayConstants {
      *
      * Time is sized independently to fill width as a single line, up to this maximum.
      */
-    val MAX_TIME_FONT_SIZE: TextUnit = 150.sp
+    val MAX_TIME_FONT_SIZE: TextUnit = 130.sp
 
     /**
      * Maximum font size for date and event message text.
