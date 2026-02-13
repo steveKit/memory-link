@@ -59,7 +59,7 @@ object DisplayConstants {
     val EVENT_CARD_PADDING: Dp = 12.dp
 
     /** Corner radius for event card. */
-    val EVENT_CARD_CORNER_RADIUS: Dp = 16.dp
+    val EVENT_CARD_CORNER_RADIUS: Dp = 64.dp
 
     // ========== Animation Durations ==========
 

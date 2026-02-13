@@ -40,7 +40,15 @@ data class AppSettings(
          *
          * Default: 100 (full brightness during wake hours) Sleep mode overrides this to 10%.
          */
-        val brightness: Int = 100
+        val brightness: Int = 100,
+
+        /**
+         * Whether to show the year in the date display.
+         *
+         * Default: true (shows "Wednesday, February 11, 2026") When false: shows "Wednesday,
+         * February 11"
+         */
+        val showYearInDate: Boolean = true
 ) {
     companion object {
         /**

@@ -63,6 +63,7 @@ import java.time.format.DateTimeFormatter
  * @param onClearSleepTime Clear sleep time override
  * @param onBrightnessChange Update brightness (null to clear override)
  * @param onTimeFormatChange Update time format (null to clear override)
+ * @param onShowYearChange Update show year in date (null to clear override)
  * @param onClearAll Clear all manual overrides
  * @param onBackClick Navigate back to admin home
  * @param modifier Modifier for the screen
@@ -78,6 +79,7 @@ fun ManualConfigScreen(
         onClearSleepTime: () -> Unit = {},
         onBrightnessChange: (Int?) -> Unit,
         onTimeFormatChange: (Boolean?) -> Unit,
+        onShowYearChange: (Boolean?) -> Unit = {},
         onClearAll: () -> Unit,
         onBackClick: () -> Unit,
         modifier: Modifier = Modifier
@@ -165,6 +167,16 @@ fun ManualConfigScreen(
                                 description = "Clock display format",
                                 use24Hour = configState.use24HourFormat,
                                 onFormatChange = onTimeFormatChange
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Show Year in Date
+                        ShowYearSettingItem(
+                                title = "Show Year",
+                                description = "Display year in date",
+                                showYear = configState.showYearInDate,
+                                onShowYearChange = onShowYearChange
                         )
 
                         Spacer(modifier = Modifier.height(48.dp))
@@ -862,6 +874,86 @@ private fun TimeFormatSettingItem(
                         Switch(
                                 checked = use24Hour ?: false,
                                 onCheckedChange = { onFormatChange(it) },
+                                colors =
+                                        SwitchDefaults.colors(
+                                                checkedThumbColor = AccentBlue,
+                                                checkedTrackColor = AccentBlue.copy(alpha = 0.5f),
+                                                uncheckedThumbColor = Color(0xFF3A3A3A),
+                                                uncheckedTrackColor = Color(0xFF2A2A2A)
+                                        )
+                        )
+                }
+        }
+}
+
+@Composable
+private fun ShowYearSettingItem(
+        title: String,
+        description: String,
+        showYear: Boolean?,
+        onShowYearChange: (Boolean?) -> Unit
+) {
+        Column(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF1E1E1E))
+                                .padding(16.dp)
+        ) {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                        text = title,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color.White
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                        text = description,
+                                        fontSize = 12.sp,
+                                        color = Color.White.copy(alpha = 0.5f)
+                                )
+                        }
+
+                        if (showYear != null) {
+                                TextButton(onClick = { onShowYearChange(null) }) {
+                                        Text(
+                                                text = "Clear",
+                                                fontSize = 14.sp,
+                                                color = Color(0xFFEF5350)
+                                        )
+                                }
+                        }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Text(
+                                text =
+                                        when (showYear) {
+                                                true -> "February 11, 2026"
+                                                false -> "February 11"
+                                                null -> "Using default (show year)"
+                                        },
+                                fontSize = 16.sp,
+                                color =
+                                        if (showYear != null) AccentBlue
+                                        else Color.White.copy(alpha = 0.5f)
+                        )
+
+                        Switch(
+                                checked = showYear ?: true,
+                                onCheckedChange = { onShowYearChange(it) },
                                 colors =
                                         SwitchDefaults.colors(
                                                 checkedThumbColor = AccentBlue,

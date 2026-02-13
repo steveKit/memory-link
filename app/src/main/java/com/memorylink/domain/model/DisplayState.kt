@@ -16,7 +16,8 @@ sealed class DisplayState {
         data class AwakeNoEvent(
                 val currentTime: LocalTime,
                 val currentDate: LocalDate,
-                val use24HourFormat: Boolean = false
+                val use24HourFormat: Boolean = false,
+                val showYearInDate: Boolean = true
         ) : DisplayState()
 
         /**
@@ -33,7 +34,8 @@ sealed class DisplayState {
                 val currentDate: LocalDate,
                 val nextEventTitle: String,
                 val nextEventTime: LocalTime?,
-                val use24HourFormat: Boolean = false
+                val use24HourFormat: Boolean = false,
+                val showYearInDate: Boolean = true
         ) : DisplayState()
 
         /**
@@ -43,6 +45,7 @@ sealed class DisplayState {
         data class Sleep(
                 val currentTime: LocalTime,
                 val currentDate: LocalDate,
-                val use24HourFormat: Boolean = false
+                val use24HourFormat: Boolean = false,
+                val showYearInDate: Boolean = true
         ) : DisplayState()
 }

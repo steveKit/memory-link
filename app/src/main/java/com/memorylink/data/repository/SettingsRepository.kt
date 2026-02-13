@@ -70,7 +70,8 @@ constructor(
                 sleepTime = resolveSleepTime(),
                 wakeTime = resolveWakeTime(),
                 use24HourFormat = resolveTimeFormat(),
-                brightness = resolveBrightness()
+                brightness = resolveBrightness(),
+                showYearInDate = resolveShowYear()
         )
     }
 
@@ -256,6 +257,25 @@ constructor(
         // Default: 100%
         Log.d(TAG, "Using default brightness: 100%")
         return 100
+    }
+
+    /**
+     * Resolve show year in date with priority:
+     * 1. Manual override
+     * 2. Default (true - show year)
+     *
+     * Note: Config event support can be added later via [CONFIG] SHOW_YEAR ON|OFF
+     */
+    private fun resolveShowYear(): Boolean {
+        // Manual override
+        tokenStorage.manualShowYear?.let { showYear ->
+            Log.d(TAG, "Using manual show year: $showYear")
+            return showYear
+        }
+
+        // Default: show year
+        Log.d(TAG, "Using default show year: true")
+        return true
     }
 
     /**

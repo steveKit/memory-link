@@ -7,6 +7,7 @@ import com.memorylink.data.auth.GoogleAuthManager
 import com.memorylink.data.auth.TokenStorage
 import com.memorylink.data.remote.GoogleCalendarService
 import com.memorylink.data.repository.CalendarRepository
+import com.memorylink.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalTime
 import javax.inject.Inject
@@ -37,7 +38,8 @@ class AdminViewModel
 constructor(
         private val tokenStorage: TokenStorage,
         private val googleAuthManager: GoogleAuthManager,
-        private val calendarRepository: CalendarRepository
+        private val calendarRepository: CalendarRepository,
+        private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     // ========== PIN State ==========
@@ -397,6 +399,7 @@ constructor(
                 sleepTime = sleepTimeStr?.let { parseTime(it) },
                 brightness = tokenStorage.manualBrightness.takeIf { it >= 0 },
                 use24HourFormat = tokenStorage.manualUse24HourFormat,
+                showYearInDate = tokenStorage.manualShowYear,
                 wakeSolarRef = tokenStorage.manualWakeSolarRef,
                 wakeSolarOffset = tokenStorage.manualWakeSolarOffset,
                 sleepSolarRef = tokenStorage.manualSleepSolarRef,
@@ -486,6 +489,15 @@ constructor(
         resetInactivityTimer()
         tokenStorage.manualUse24HourFormat = use24Hour
         _configState.update { it.copy(use24HourFormat = use24Hour) }
+        notifySettingsChanged()
+    }
+
+    /** Update show year in date override. */
+    fun setShowYearInDate(showYear: Boolean?) {
+        resetInactivityTimer()
+        tokenStorage.manualShowYear = showYear
+        _configState.update { it.copy(showYearInDate = showYear) }
+        notifySettingsChanged()
     }
 
     /** Clear all manual overrides. */
@@ -493,6 +505,15 @@ constructor(
         resetInactivityTimer()
         tokenStorage.clearManualOverrides()
         _configState.value = ConfigState()
+        notifySettingsChanged()
+    }
+
+    /**
+     * Notify SettingsRepository that manual settings have changed. This triggers a refresh of
+     * AppSettings and propagates the change to StateCoordinator.
+     */
+    private fun notifySettingsChanged() {
+        viewModelScope.launch { settingsRepository.onManualSettingsChanged() }
     }
 
     private fun parseTime(timeStr: String): LocalTime? {
@@ -565,6 +586,7 @@ data class ConfigState(
         val sleepTime: LocalTime? = null,
         val brightness: Int? = null,
         val use24HourFormat: Boolean? = null,
+        val showYearInDate: Boolean? = null,
         // Solar time settings
         val wakeSolarRef: String? = null,
         val wakeSolarOffset: Int = 0,

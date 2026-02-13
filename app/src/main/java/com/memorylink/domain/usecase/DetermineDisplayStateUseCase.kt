@@ -42,7 +42,8 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
             return DisplayState.Sleep(
                     currentTime = currentTime,
                     currentDate = currentDate,
-                    use24HourFormat = settings.use24HourFormat
+                    use24HourFormat = settings.use24HourFormat,
+                    showYearInDate = settings.showYearInDate
             )
         }
 
@@ -55,13 +56,15 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
                     currentDate = currentDate,
                     nextEventTitle = nextEvent.title,
                     nextEventTime = getDisplayTime(nextEvent),
-                    use24HourFormat = settings.use24HourFormat
+                    use24HourFormat = settings.use24HourFormat,
+                    showYearInDate = settings.showYearInDate
             )
         } else {
             DisplayState.AwakeNoEvent(
                     currentTime = currentTime,
                     currentDate = currentDate,
-                    use24HourFormat = settings.use24HourFormat
+                    use24HourFormat = settings.use24HourFormat,
+                    showYearInDate = settings.showYearInDate
             )
         }
     }
