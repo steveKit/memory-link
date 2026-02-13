@@ -45,36 +45,36 @@ import java.time.LocalTime
  */
 @Composable
 fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
-    Box(
-            modifier = modifier.fillMaxSize().background(DarkBackground),
-            contentAlignment = Alignment.Center
-    ) {
-        when (displayState) {
-            is DisplayState.AwakeNoEvent -> {
-                AwakeNoEventContent(
-                        currentTime = displayState.currentTime,
-                        currentDate = displayState.currentDate,
-                        use24HourFormat = displayState.use24HourFormat
-                )
-            }
-            is DisplayState.AwakeWithEvent -> {
-                AwakeWithEventContent(
-                        currentTime = displayState.currentTime,
-                        currentDate = displayState.currentDate,
-                        use24HourFormat = displayState.use24HourFormat,
-                        eventTitle = displayState.nextEventTitle,
-                        eventTime = displayState.nextEventTime
-                )
-            }
-            is DisplayState.Sleep -> {
-                SleepContent(
-                        currentTime = displayState.currentTime,
-                        currentDate = displayState.currentDate,
-                        use24HourFormat = displayState.use24HourFormat
-                )
-            }
+        Box(
+                modifier = modifier.fillMaxSize().background(DarkBackground),
+                contentAlignment = Alignment.Center
+        ) {
+                when (displayState) {
+                        is DisplayState.AwakeNoEvent -> {
+                                AwakeNoEventContent(
+                                        currentTime = displayState.currentTime,
+                                        currentDate = displayState.currentDate,
+                                        use24HourFormat = displayState.use24HourFormat
+                                )
+                        }
+                        is DisplayState.AwakeWithEvent -> {
+                                AwakeWithEventContent(
+                                        currentTime = displayState.currentTime,
+                                        currentDate = displayState.currentDate,
+                                        use24HourFormat = displayState.use24HourFormat,
+                                        eventTitle = displayState.nextEventTitle,
+                                        eventTime = displayState.nextEventTime
+                                )
+                        }
+                        is DisplayState.Sleep -> {
+                                SleepContent(
+                                        currentTime = displayState.currentTime,
+                                        currentDate = displayState.currentDate,
+                                        use24HourFormat = displayState.use24HourFormat
+                                )
+                        }
+                }
         }
-    }
 }
 
 /** Content displayed when awake with no events. Clock + date centered on screen. */
@@ -85,23 +85,23 @@ private fun AwakeNoEventContent(
         use24HourFormat: Boolean,
         modifier: Modifier = Modifier
 ) {
-    Box(
-            modifier = modifier.fillMaxSize().padding(DisplayConstants.SCREEN_MARGIN),
-            contentAlignment = Alignment.Center
-    ) {
-        ClockDisplay(
-                time = currentTime,
-                date = currentDate,
-                use24HourFormat = use24HourFormat,
-                colorScheme = ClockColorScheme.Awake,
-                modifier = Modifier.fillMaxSize()
-        )
-    }
+        Box(
+                modifier = modifier.fillMaxSize().padding(DisplayConstants.SCREEN_MARGIN),
+                contentAlignment = Alignment.Center
+        ) {
+                ClockDisplay(
+                        time = currentTime,
+                        date = currentDate,
+                        use24HourFormat = use24HourFormat,
+                        colorScheme = ClockColorScheme.Awake,
+                        modifier = Modifier.fillMaxSize()
+                )
+        }
 }
 
 /**
  * Content displayed when awake with an event. Clock + date (with reduced space) and event card, all
- * centered together.
+ * centered together. Both sections size based on content, not fixed percentages.
  */
 @Composable
 private fun AwakeWithEventContent(
@@ -112,34 +112,30 @@ private fun AwakeWithEventContent(
         eventTime: LocalTime?,
         modifier: Modifier = Modifier
 ) {
-    Column(
-            modifier = modifier.fillMaxSize().padding(DisplayConstants.SCREEN_MARGIN),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-    ) {
-        // Clock area - takes space needed, centered
-        Box(modifier = Modifier.fillMaxWidth().weight(0.4f), contentAlignment = Alignment.Center) {
-            ClockDisplay(
-                    time = currentTime,
-                    date = currentDate,
-                    use24HourFormat = use24HourFormat,
-                    colorScheme = ClockColorScheme.Awake,
-                    modifier = Modifier.fillMaxSize()
-            )
-        }
+        Column(
+                modifier = modifier.fillMaxSize().padding(DisplayConstants.SCREEN_MARGIN),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+        ) {
+                // Clock area - sizes to content
+                ClockDisplay(
+                        time = currentTime,
+                        date = currentDate,
+                        use24HourFormat = use24HourFormat,
+                        colorScheme = ClockColorScheme.Awake,
+                        modifier = Modifier.fillMaxWidth()
+                )
 
-        Spacer(modifier = Modifier.height(DisplayConstants.CLOCK_TO_EVENT_SPACING))
+                Spacer(modifier = Modifier.height(DisplayConstants.CLOCK_TO_EVENT_SPACING))
 
-        // Event area - takes remaining space
-        Box(modifier = Modifier.fillMaxWidth().weight(0.6f), contentAlignment = Alignment.Center) {
-            EventCard(
-                    title = eventTitle,
-                    startTime = eventTime,
-                    use24HourFormat = use24HourFormat,
-                    modifier = Modifier.fillMaxSize()
-            )
+                // Event area - sizes to content (fills width, wraps height)
+                EventCard(
+                        title = eventTitle,
+                        startTime = eventTime,
+                        use24HourFormat = use24HourFormat,
+                        modifier = Modifier.fillMaxWidth()
+                )
         }
-    }
 }
 
 /**
@@ -153,42 +149,44 @@ private fun SleepContent(
         use24HourFormat: Boolean,
         modifier: Modifier = Modifier
 ) {
-    AnimatedVisibility(
-            visible = true,
-            enter =
-                    fadeIn(
-                            animationSpec =
-                                    tween(
-                                            durationMillis =
-                                                    DisplayConstants.STATE_TRANSITION_DURATION_MS
-                                    )
-                    ),
-            exit =
-                    fadeOut(
-                            animationSpec =
-                                    tween(
-                                            durationMillis =
-                                                    DisplayConstants.STATE_TRANSITION_DURATION_MS
-                                    )
-                    ),
-            modifier = modifier.fillMaxSize()
-    ) {
-        Box(
-                modifier =
-                        Modifier.fillMaxSize()
-                                .background(SleepBackground)
-                                .padding(DisplayConstants.SLEEP_MARGIN),
-                contentAlignment = Alignment.Center
+        AnimatedVisibility(
+                visible = true,
+                enter =
+                        fadeIn(
+                                animationSpec =
+                                        tween(
+                                                durationMillis =
+                                                        DisplayConstants
+                                                                .STATE_TRANSITION_DURATION_MS
+                                        )
+                        ),
+                exit =
+                        fadeOut(
+                                animationSpec =
+                                        tween(
+                                                durationMillis =
+                                                        DisplayConstants
+                                                                .STATE_TRANSITION_DURATION_MS
+                                        )
+                        ),
+                modifier = modifier.fillMaxSize()
         ) {
-            ClockDisplay(
-                    time = currentTime,
-                    date = currentDate,
-                    use24HourFormat = use24HourFormat,
-                    colorScheme = ClockColorScheme.Sleep,
-                    modifier = Modifier.fillMaxSize()
-            )
+                Box(
+                        modifier =
+                                Modifier.fillMaxSize()
+                                        .background(SleepBackground)
+                                        .padding(DisplayConstants.SLEEP_MARGIN),
+                        contentAlignment = Alignment.Center
+                ) {
+                        ClockDisplay(
+                                time = currentTime,
+                                date = currentDate,
+                                use24HourFormat = use24HourFormat,
+                                colorScheme = ClockColorScheme.Sleep,
+                                modifier = Modifier.fillMaxSize()
+                        )
+                }
         }
-    }
 }
 
 // region Previews
@@ -202,16 +200,16 @@ private fun SleepContent(
 )
 @Composable
 private fun KioskScreenAwakeNoEventPreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.AwakeNoEvent(
-                                currentTime = LocalTime.of(10, 30),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                use24HourFormat = false
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeNoEvent(
+                                        currentTime = LocalTime.of(10, 30),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 @Preview(
@@ -223,16 +221,16 @@ private fun KioskScreenAwakeNoEventPreview() {
 )
 @Composable
 private fun KioskScreenAwakeNoEventPortraitPreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.AwakeNoEvent(
-                                currentTime = LocalTime.of(10, 30),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                use24HourFormat = false
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeNoEvent(
+                                        currentTime = LocalTime.of(10, 30),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 @Preview(
@@ -244,18 +242,18 @@ private fun KioskScreenAwakeNoEventPortraitPreview() {
 )
 @Composable
 private fun KioskScreenAwakeWithEventPreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.AwakeWithEvent(
-                                currentTime = LocalTime.of(9, 15),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                nextEventTitle = "Doctor Appointment",
-                                nextEventTime = LocalTime.of(10, 30),
-                                use24HourFormat = false
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        currentTime = LocalTime.of(9, 15),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        nextEventTitle = "Doctor Appointment",
+                                        nextEventTime = LocalTime.of(10, 30),
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 @Preview(
@@ -267,18 +265,18 @@ private fun KioskScreenAwakeWithEventPreview() {
 )
 @Composable
 private fun KioskScreenAwakeWithEventPortraitPreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.AwakeWithEvent(
-                                currentTime = LocalTime.of(9, 15),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                nextEventTitle = "Doctor Appointment",
-                                nextEventTime = LocalTime.of(10, 30),
-                                use24HourFormat = false
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        currentTime = LocalTime.of(9, 15),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        nextEventTitle = "Doctor Appointment",
+                                        nextEventTime = LocalTime.of(10, 30),
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 @Preview(
@@ -290,18 +288,18 @@ private fun KioskScreenAwakeWithEventPortraitPreview() {
 )
 @Composable
 private fun KioskScreenAllDayEventPreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.AwakeWithEvent(
-                                currentTime = LocalTime.of(10, 0),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                nextEventTitle = "Mom's Birthday",
-                                nextEventTime = null,
-                                use24HourFormat = false
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        currentTime = LocalTime.of(10, 0),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        nextEventTitle = "Mom's Birthday",
+                                        nextEventTime = null,
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 @Preview(
@@ -313,16 +311,16 @@ private fun KioskScreenAllDayEventPreview() {
 )
 @Composable
 private fun KioskScreenSleepPreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.Sleep(
-                                currentTime = LocalTime.of(22, 45),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                use24HourFormat = false
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.Sleep(
+                                        currentTime = LocalTime.of(22, 45),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 @Preview(
@@ -334,16 +332,16 @@ private fun KioskScreenSleepPreview() {
 )
 @Composable
 private fun KioskScreenSleepPortraitPreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.Sleep(
-                                currentTime = LocalTime.of(22, 45),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                use24HourFormat = false
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.Sleep(
+                                        currentTime = LocalTime.of(22, 45),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 @Preview(
@@ -355,18 +353,18 @@ private fun KioskScreenSleepPortraitPreview() {
 )
 @Composable
 private fun KioskScreen24HourPreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.AwakeWithEvent(
-                                currentTime = LocalTime.of(14, 30),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                nextEventTitle = "Lunch with Family",
-                                nextEventTime = LocalTime.of(12, 0),
-                                use24HourFormat = true
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        currentTime = LocalTime.of(14, 30),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        nextEventTitle = "Lunch with Family",
+                                        nextEventTime = LocalTime.of(12, 0),
+                                        use24HourFormat = true
+                                )
+                )
+        }
 }
 
 @Preview(
@@ -378,19 +376,19 @@ private fun KioskScreen24HourPreview() {
 )
 @Composable
 private fun KioskScreenLongTitlePreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.AwakeWithEvent(
-                                currentTime = LocalTime.of(9, 0),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                nextEventTitle =
-                                        "Meet Eric downstairs so he can take you to your doctors appointment",
-                                nextEventTime = LocalTime.of(10, 0),
-                                use24HourFormat = false
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        currentTime = LocalTime.of(9, 0),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        nextEventTitle =
+                                                "Meet Eric downstairs so he can take you to your doctors appointment",
+                                        nextEventTime = LocalTime.of(10, 0),
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 @Preview(
@@ -402,18 +400,18 @@ private fun KioskScreenLongTitlePreview() {
 )
 @Composable
 private fun KioskScreenTabletPreview() {
-    MemoryLinkTheme {
-        KioskScreen(
-                displayState =
-                        DisplayState.AwakeWithEvent(
-                                currentTime = LocalTime.of(10, 30),
-                                currentDate = LocalDate.of(2026, 2, 11),
-                                nextEventTitle = "Physical Therapy",
-                                nextEventTime = LocalTime.of(11, 0),
-                                use24HourFormat = false
-                        )
-        )
-    }
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        currentTime = LocalTime.of(10, 30),
+                                        currentDate = LocalDate.of(2026, 2, 11),
+                                        nextEventTitle = "Physical Therapy",
+                                        nextEventTime = LocalTime.of(11, 0),
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 // endregion

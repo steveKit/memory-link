@@ -3,6 +3,7 @@ package com.memorylink.ui.kiosk
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -75,15 +76,15 @@ fun EventCard(
                         modifier.clip(RoundedCornerShape(16.dp))
                                 .background(DarkSurface)
                                 .padding(24.dp),
-                contentAlignment = Alignment.TopCenter
+                contentAlignment = Alignment.TopStart
         ) {
                 AutoSizeText(
                         text = displayText,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxWidth(),
                         style = TextStyle(color = TextPrimary, fontWeight = FontWeight.Bold),
                         maxFontSize = DisplayConstants.MAX_FONT_SIZE,
                         minFontSize = DisplayConstants.MIN_FONT_SIZE,
-                        contentAlignment = Alignment.TopCenter
+                        contentAlignment = Alignment.TopStart
                 )
         }
 }
