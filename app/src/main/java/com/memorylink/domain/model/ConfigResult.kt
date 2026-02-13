@@ -70,21 +70,6 @@ sealed class ConfigResult {
     data class TimeFormatConfig(val use24Hour: Boolean) : ConfigResult()
 
     /**
-     * Message area size configuration.
-     *
-     * Syntax: `[CONFIG] MESSAGE_SIZE 60`
-     *
-     * Controls what percentage of the screen height the event/message area occupies.
-     *
-     * @param percent Percentage of screen height 20-80
-     */
-    data class MessageSizeConfig(val percent: Int) : ConfigResult() {
-        init {
-            require(percent in 20..80) { "Message size must be 20-80%, got $percent" }
-        }
-    }
-
-    /**
      * Unknown or invalid config (logged but ignored).
      *
      * @param rawText The original config text that couldn't be parsed

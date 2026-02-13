@@ -196,11 +196,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getInt(KEY_MANUAL_FONT_SIZE, -1)
         set(value) = prefs.edit().putInt(KEY_MANUAL_FONT_SIZE, value).apply()
 
-    /** Manually overridden message area percent, or -1 to use [CONFIG] events. */
-    var manualMessageSize: Int
-        get() = prefs.getInt(KEY_MANUAL_MESSAGE_SIZE, -1)
-        set(value) = prefs.edit().putInt(KEY_MANUAL_MESSAGE_SIZE, value).apply()
-
     /** Clear all manual config overrides, reverting to [CONFIG] event values. */
     fun clearManualOverrides() {
         prefs.edit()
@@ -209,7 +204,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
                 .remove(KEY_MANUAL_BRIGHTNESS)
                 .remove(KEY_MANUAL_TIME_FORMAT)
                 .remove(KEY_MANUAL_FONT_SIZE)
-                .remove(KEY_MANUAL_MESSAGE_SIZE)
                 .apply()
     }
 
@@ -254,11 +248,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getInt(KEY_CONFIG_FONT_SIZE, -1)
         set(value) = prefs.edit().putInt(KEY_CONFIG_FONT_SIZE, value).apply()
 
-    /** Config event message area percent, or -1 if not set. */
-    var configMessageSize: Int
-        get() = prefs.getInt(KEY_CONFIG_MESSAGE_SIZE, -1)
-        set(value) = prefs.edit().putInt(KEY_CONFIG_MESSAGE_SIZE, value).apply()
-
     // ========== Solar Time Config (SUNRISE/SUNSET) ==========
 
     /** Wake solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
@@ -289,7 +278,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
                 .remove(KEY_CONFIG_BRIGHTNESS)
                 .remove(KEY_CONFIG_TIME_FORMAT)
                 .remove(KEY_CONFIG_FONT_SIZE)
-                .remove(KEY_CONFIG_MESSAGE_SIZE)
                 .remove(KEY_CONFIG_WAKE_SOLAR_REF)
                 .remove(KEY_CONFIG_WAKE_SOLAR_OFFSET)
                 .remove(KEY_CONFIG_SLEEP_SOLAR_REF)
@@ -371,7 +359,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_MANUAL_BRIGHTNESS = "manual_brightness"
         private const val KEY_MANUAL_TIME_FORMAT = "manual_time_format"
         private const val KEY_MANUAL_FONT_SIZE = "manual_font_size"
-        private const val KEY_MANUAL_MESSAGE_SIZE = "manual_message_size"
 
         // Config event-derived settings keys (from [CONFIG] calendar events)
         private const val KEY_CONFIG_WAKE_TIME = "config_wake_time"
@@ -379,7 +366,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_CONFIG_BRIGHTNESS = "config_brightness"
         private const val KEY_CONFIG_TIME_FORMAT = "config_time_format"
         private const val KEY_CONFIG_FONT_SIZE = "config_font_size"
-        private const val KEY_CONFIG_MESSAGE_SIZE = "config_message_size"
 
         // Dynamic time config (SUNRISE/SUNSET references)
         private const val KEY_CONFIG_WAKE_SOLAR_REF = "config_wake_solar_ref"

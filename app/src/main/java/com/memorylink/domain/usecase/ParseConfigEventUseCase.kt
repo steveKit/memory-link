@@ -126,7 +126,6 @@ constructor(
             is WakeConfig -> applyWakeConfig(config)
             is BrightnessConfig -> applyBrightnessConfig(config)
             is TimeFormatConfig -> applyTimeFormatConfig(config)
-            is MessageSizeConfig -> applyMessageSizeConfig(config)
             is Invalid -> {
                 /* Already handled */
             }
@@ -189,12 +188,6 @@ constructor(
     private fun applyTimeFormatConfig(config: TimeFormatConfig) {
         tokenStorage.configUse24HourFormat = config.use24Hour
         Log.d(TAG, "Set time format: ${if (config.use24Hour) "24h" else "12h"}")
-    }
-
-    /** Apply message size configuration. */
-    private fun applyMessageSizeConfig(config: MessageSizeConfig) {
-        tokenStorage.configMessageSize = config.percent
-        Log.d(TAG, "Set message size: ${config.percent}%")
     }
 
     /** Format offset minutes for logging (e.g., +30, -15, or empty for 0). */

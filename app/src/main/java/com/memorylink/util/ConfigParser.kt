@@ -21,7 +21,6 @@ import java.time.LocalTime
  * - `[CONFIG] BRIGHTNESS 80` - Screen brightness (0-100)
  * - `[CONFIG] TIME_FORMAT 12` - 12-hour clock format
  * - `[CONFIG] TIME_FORMAT 24` - 24-hour clock format
- * - `[CONFIG] MESSAGE_SIZE 60` - Message area % of screen
  *
  * Invalid syntax is logged but returns ConfigResult.Invalid.
  *
@@ -77,7 +76,6 @@ object ConfigParser {
             "WAKE" -> parseWakeConfig(configValue, title)
             "BRIGHTNESS" -> parseBrightnessConfig(configValue, title)
             "TIME_FORMAT" -> parseTimeFormatConfig(configValue, title)
-            "MESSAGE_SIZE" -> parseMessageSizeConfig(configValue, title)
             else -> {
                 Log.w(TAG, "Unknown config type: $configType")
                 Invalid(title, "Unknown config type: $configType")
@@ -168,28 +166,6 @@ object ConfigParser {
             "24" -> TimeFormatConfig(use24Hour = true)
             else -> Invalid(rawTitle, "TIME_FORMAT must be 12 or 24, got: $value")
         }
-    }
-
-    /**
-     * Parse MESSAGE_SIZE configuration.
-     *
-     * Accepts: Integer 20-80 (percentage of screen)
-     */
-    private fun parseMessageSizeConfig(value: String, rawTitle: String): ConfigResult {
-        if (value.isEmpty()) {
-            return Invalid(rawTitle, "MESSAGE_SIZE requires a value (20-80)")
-        }
-
-        val percent = value.toIntOrNull()
-        if (percent == null) {
-            return Invalid(rawTitle, "MESSAGE_SIZE must be a number: $value")
-        }
-
-        if (percent !in 20..80) {
-            return Invalid(rawTitle, "MESSAGE_SIZE must be 20-80%, got $percent")
-        }
-
-        return MessageSizeConfig(percent)
     }
 
     /**

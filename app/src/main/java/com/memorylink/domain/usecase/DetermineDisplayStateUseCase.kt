@@ -41,6 +41,7 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
         if (isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime)) {
             return DisplayState.Sleep(
                     currentTime = currentTime,
+                    currentDate = currentDate,
                     use24HourFormat = settings.use24HourFormat
             )
         }
