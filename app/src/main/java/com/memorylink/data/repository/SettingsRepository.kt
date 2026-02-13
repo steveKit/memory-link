@@ -76,17 +76,29 @@ constructor(
 
     /**
      * Resolve sleep time with priority:
-     * 1. Manual override
-     * 2. Config event (static or dynamic)
-     * 3. Default (SUNSET+30 fallback to 21:00)
+     * 1. Manual override (static time)
+     * 2. Manual override (solar time)
+     * 3. Config event (static or dynamic)
+     * 4. Default (SUNSET+30 fallback to 21:00)
      */
     private suspend fun resolveSleepTime(): LocalTime {
-        // Check manual override first
+        // Check manual static time override first
         tokenStorage.manualSleepTime?.let { timeStr ->
             parseTime(timeStr)?.let { time ->
                 Log.d(TAG, "Using manual sleep time: $time")
                 return time
             }
+        }
+
+        // Check manual solar time override
+        tokenStorage.manualSleepSolarRef?.let { solarRef ->
+            val offset = tokenStorage.manualSleepSolarOffset
+            val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_SLEEP_TIME)
+            Log.d(
+                    TAG,
+                    "Using manual solar sleep time: $solarRef${formatOffset(offset)} -> $resolvedTime"
+            )
+            return resolvedTime
         }
 
         // Check config event static time
@@ -101,7 +113,10 @@ constructor(
         tokenStorage.configSleepSolarRef?.let { solarRef ->
             val offset = tokenStorage.configSleepSolarOffset
             val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_SLEEP_TIME)
-            Log.d(TAG, "Using config solar sleep time: $solarRef$offset -> $resolvedTime")
+            Log.d(
+                    TAG,
+                    "Using config solar sleep time: $solarRef${formatOffset(offset)} -> $resolvedTime"
+            )
             return resolvedTime
         }
 
@@ -113,17 +128,29 @@ constructor(
 
     /**
      * Resolve wake time with priority:
-     * 1. Manual override
-     * 2. Config event (static or dynamic)
-     * 3. Default (SUNRISE fallback to 06:00)
+     * 1. Manual override (static time)
+     * 2. Manual override (solar time)
+     * 3. Config event (static or dynamic)
+     * 4. Default (SUNRISE fallback to 06:00)
      */
     private suspend fun resolveWakeTime(): LocalTime {
-        // Check manual override first
+        // Check manual static time override first
         tokenStorage.manualWakeTime?.let { timeStr ->
             parseTime(timeStr)?.let { time ->
                 Log.d(TAG, "Using manual wake time: $time")
                 return time
             }
+        }
+
+        // Check manual solar time override
+        tokenStorage.manualWakeSolarRef?.let { solarRef ->
+            val offset = tokenStorage.manualWakeSolarOffset
+            val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_WAKE_TIME)
+            Log.d(
+                    TAG,
+                    "Using manual solar wake time: $solarRef${formatOffset(offset)} -> $resolvedTime"
+            )
+            return resolvedTime
         }
 
         // Check config event static time
@@ -138,7 +165,10 @@ constructor(
         tokenStorage.configWakeSolarRef?.let { solarRef ->
             val offset = tokenStorage.configWakeSolarOffset
             val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_WAKE_TIME)
-            Log.d(TAG, "Using config solar wake time: $solarRef$offset -> $resolvedTime")
+            Log.d(
+                    TAG,
+                    "Using config solar wake time: $solarRef${formatOffset(offset)} -> $resolvedTime"
+            )
             return resolvedTime
         }
 
@@ -266,5 +296,14 @@ constructor(
     /** Clear the solar time cache (call at midnight for fresh data). */
     fun clearSolarCache() {
         sunriseSunsetApi.clearCache()
+    }
+
+    /** Format offset for logging (e.g., +30, -15, or empty for 0). */
+    private fun formatOffset(offset: Int): String {
+        return when {
+            offset > 0 -> "+$offset"
+            offset < 0 -> "$offset"
+            else -> ""
+        }
     }
 }

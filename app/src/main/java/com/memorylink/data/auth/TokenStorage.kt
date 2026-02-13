@@ -196,6 +196,28 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getInt(KEY_MANUAL_FONT_SIZE, -1)
         set(value) = prefs.edit().putInt(KEY_MANUAL_FONT_SIZE, value).apply()
 
+    // ========== Manual Solar Time Overrides ==========
+
+    /** Manual wake solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
+    var manualWakeSolarRef: String?
+        get() = prefs.getString(KEY_MANUAL_WAKE_SOLAR_REF, null)
+        set(value) = prefs.edit().putString(KEY_MANUAL_WAKE_SOLAR_REF, value).apply()
+
+    /** Manual wake solar offset in minutes (e.g., +30 or -15). */
+    var manualWakeSolarOffset: Int
+        get() = prefs.getInt(KEY_MANUAL_WAKE_SOLAR_OFFSET, 0)
+        set(value) = prefs.edit().putInt(KEY_MANUAL_WAKE_SOLAR_OFFSET, value).apply()
+
+    /** Manual sleep solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
+    var manualSleepSolarRef: String?
+        get() = prefs.getString(KEY_MANUAL_SLEEP_SOLAR_REF, null)
+        set(value) = prefs.edit().putString(KEY_MANUAL_SLEEP_SOLAR_REF, value).apply()
+
+    /** Manual sleep solar offset in minutes (e.g., +30 or -15). */
+    var manualSleepSolarOffset: Int
+        get() = prefs.getInt(KEY_MANUAL_SLEEP_SOLAR_OFFSET, 0)
+        set(value) = prefs.edit().putInt(KEY_MANUAL_SLEEP_SOLAR_OFFSET, value).apply()
+
     /** Clear all manual config overrides, reverting to [CONFIG] event values. */
     fun clearManualOverrides() {
         prefs.edit()
@@ -204,6 +226,10 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
                 .remove(KEY_MANUAL_BRIGHTNESS)
                 .remove(KEY_MANUAL_TIME_FORMAT)
                 .remove(KEY_MANUAL_FONT_SIZE)
+                .remove(KEY_MANUAL_WAKE_SOLAR_REF)
+                .remove(KEY_MANUAL_WAKE_SOLAR_OFFSET)
+                .remove(KEY_MANUAL_SLEEP_SOLAR_REF)
+                .remove(KEY_MANUAL_SLEEP_SOLAR_OFFSET)
                 .apply()
     }
 
@@ -372,5 +398,11 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_CONFIG_WAKE_SOLAR_OFFSET = "config_wake_solar_offset"
         private const val KEY_CONFIG_SLEEP_SOLAR_REF = "config_sleep_solar_ref"
         private const val KEY_CONFIG_SLEEP_SOLAR_OFFSET = "config_sleep_solar_offset"
+
+        // Manual solar time override keys
+        private const val KEY_MANUAL_WAKE_SOLAR_REF = "manual_wake_solar_ref"
+        private const val KEY_MANUAL_WAKE_SOLAR_OFFSET = "manual_wake_solar_offset"
+        private const val KEY_MANUAL_SLEEP_SOLAR_REF = "manual_sleep_solar_ref"
+        private const val KEY_MANUAL_SLEEP_SOLAR_OFFSET = "manual_sleep_solar_offset"
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -46,8 +47,8 @@ import java.time.format.DateTimeFormatter
  * Manual configuration screen for display settings.
  *
  * Allows manual override of:
- * - Wake time
- * - Sleep time
+ * - Wake time (fixed or solar-based)
+ * - Sleep time (fixed or solar-based)
  * - Brightness
  * - Time format (12/24 hour)
  *
@@ -56,6 +57,10 @@ import java.time.format.DateTimeFormatter
  * @param configState Current configuration state
  * @param onWakeTimeChange Update wake time (null to clear override)
  * @param onSleepTimeChange Update sleep time (null to clear override)
+ * @param onWakeSolarTimeChange Update wake time to solar-based
+ * @param onSleepSolarTimeChange Update sleep time to solar-based
+ * @param onClearWakeTime Clear wake time override
+ * @param onClearSleepTime Clear sleep time override
  * @param onBrightnessChange Update brightness (null to clear override)
  * @param onTimeFormatChange Update time format (null to clear override)
  * @param onClearAll Clear all manual overrides
@@ -67,6 +72,10 @@ fun ManualConfigScreen(
         configState: ConfigState,
         onWakeTimeChange: (LocalTime?) -> Unit,
         onSleepTimeChange: (LocalTime?) -> Unit,
+        onWakeSolarTimeChange: (String, Int) -> Unit = { _, _ -> },
+        onSleepSolarTimeChange: (String, Int) -> Unit = { _, _ -> },
+        onClearWakeTime: () -> Unit = {},
+        onClearSleepTime: () -> Unit = {},
         onBrightnessChange: (Int?) -> Unit,
         onTimeFormatChange: (Boolean?) -> Unit,
         onClearAll: () -> Unit,
@@ -106,25 +115,36 @@ fun ManualConfigScreen(
                         Spacer(modifier = Modifier.height(32.dp))
 
                         // Wake Time
-                        TimeSettingItem(
+                        SolarTimeSettingItem(
                                 title = "Wake Time",
                                 description = "When display enters full brightness mode",
                                 currentTime = configState.wakeTime,
-                                defaultDescription = "Using calendar config or default (6:00 AM)",
+                                currentSolarRef = configState.wakeSolarRef,
+                                currentSolarOffset = configState.wakeSolarOffset,
+                                defaultDescription = "Using calendar config or default (Sunrise)",
                                 use24HourFormat = configState.use24HourFormat ?: false,
-                                onTimeSelected = onWakeTimeChange
+                                solarOptions = SolarTimeOption.WAKE_OPTIONS,
+                                onTimeSelected = onWakeTimeChange,
+                                onSolarTimeSelected = onWakeSolarTimeChange,
+                                onClear = onClearWakeTime
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // Sleep Time
-                        TimeSettingItem(
+                        SolarTimeSettingItem(
                                 title = "Sleep Time",
                                 description = "When display enters dimmed mode",
                                 currentTime = configState.sleepTime,
-                                defaultDescription = "Using calendar config or default (9:00 PM)",
+                                currentSolarRef = configState.sleepSolarRef,
+                                currentSolarOffset = configState.sleepSolarOffset,
+                                defaultDescription =
+                                        "Using calendar config or default (Sunset + 30 min)",
                                 use24HourFormat = configState.use24HourFormat ?: false,
-                                onTimeSelected = onSleepTimeChange
+                                solarOptions = SolarTimeOption.SLEEP_OPTIONS,
+                                onTimeSelected = onSleepTimeChange,
+                                onSolarTimeSelected = onSleepSolarTimeChange,
+                                onClear = onClearSleepTime
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -178,26 +198,46 @@ fun ManualConfigScreen(
         }
 }
 
+/** Time setting item that supports both fixed time and solar-based options. */
 @Composable
-private fun TimeSettingItem(
+private fun SolarTimeSettingItem(
         title: String,
         description: String,
         currentTime: LocalTime?,
+        currentSolarRef: String?,
+        currentSolarOffset: Int,
         defaultDescription: String,
         use24HourFormat: Boolean,
-        onTimeSelected: (LocalTime?) -> Unit
+        solarOptions: List<SolarTimeOption>,
+        onTimeSelected: (LocalTime?) -> Unit,
+        onSolarTimeSelected: (String, Int) -> Unit,
+        onClear: () -> Unit
 ) {
         var showTimePicker by remember { mutableStateOf(false) }
+        var showSolarPicker by remember { mutableStateOf(false) }
 
         // Format pattern based on time format preference
         val timePattern = if (use24HourFormat) "HH:mm" else "h:mm a"
+
+        // Determine current display value
+        val hasValue = currentTime != null || currentSolarRef != null
+        val displayValue: String =
+                when {
+                        currentTime != null ->
+                                currentTime.format(DateTimeFormatter.ofPattern(timePattern))
+                        currentSolarRef != null -> {
+                                val option = SolarTimeOption(currentSolarRef, currentSolarOffset)
+                                option.displayLabel
+                        }
+                        else -> ""
+                }
+        val isSolarTime = currentSolarRef != null
 
         Column(
                 modifier =
                         Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(Color(0xFF1E1E1E))
-                                .clickable { showTimePicker = true }
                                 .padding(16.dp)
         ) {
                 Text(
@@ -213,42 +253,83 @@ private fun TimeSettingItem(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                        if (currentTime != null) {
-                                Text(
-                                        text =
-                                                currentTime.format(
-                                                        DateTimeFormatter.ofPattern(timePattern)
-                                                ),
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AccentBlue
-                                )
-                                TextButton(onClick = { onTimeSelected(null) }) {
+                if (hasValue) {
+                        // Show current value
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                Column {
+                                        Text(
+                                                text = displayValue,
+                                                fontSize = 24.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = AccentBlue
+                                        )
+                                        if (isSolarTime) {
+                                                Text(
+                                                        text = "Solar-based",
+                                                        fontSize = 12.sp,
+                                                        color = Color.White.copy(alpha = 0.5f)
+                                                )
+                                        }
+                                }
+                                TextButton(onClick = onClear) {
                                         Text(
                                                 text = "Clear",
                                                 fontSize = 14.sp,
                                                 color = Color(0xFFEF5350)
                                         )
                                 }
-                        } else {
-                                Text(
-                                        text = defaultDescription,
-                                        fontSize = 14.sp,
-                                        color = Color.White.copy(alpha = 0.5f)
-                                )
-                                TextButton(onClick = { showTimePicker = true }) {
-                                        Text(text = "Set", fontSize = 14.sp, color = AccentBlue)
-                                }
                         }
+                } else {
+                        // Show default description
+                        Text(
+                                text = defaultDescription,
+                                fontSize = 14.sp,
+                                color = Color.White.copy(alpha = 0.5f)
+                        )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Action buttons row
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                        // Fixed Time button
+                        Button(
+                                onClick = { showTimePicker = true },
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                colors =
+                                        ButtonDefaults.buttonColors(
+                                                containerColor =
+                                                        if (!isSolarTime && currentTime != null)
+                                                                AccentBlue.copy(alpha = 0.3f)
+                                                        else Color(0xFF2A2A2A)
+                                        ),
+                                shape = RoundedCornerShape(8.dp)
+                        ) { Text(text = "Fixed Time", fontSize = 14.sp, color = Color.White) }
+
+                        // Solar Time button
+                        Button(
+                                onClick = { showSolarPicker = true },
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                colors =
+                                        ButtonDefaults.buttonColors(
+                                                containerColor =
+                                                        if (isSolarTime)
+                                                                AccentBlue.copy(alpha = 0.3f)
+                                                        else Color(0xFF2A2A2A)
+                                        ),
+                                shape = RoundedCornerShape(8.dp)
+                        ) { Text(text = "Solar Time", fontSize = 14.sp, color = Color.White) }
                 }
         }
 
-        // Simple time picker dialog
+        // Fixed time picker dialog
         if (showTimePicker) {
                 SimpleTimePickerDialog(
                         initialTime = currentTime ?: LocalTime.of(12, 0),
@@ -259,6 +340,118 @@ private fun TimeSettingItem(
                         },
                         onDismiss = { showTimePicker = false }
                 )
+        }
+
+        // Solar time picker dialog
+        if (showSolarPicker) {
+                SolarTimePickerDialog(
+                        options = solarOptions,
+                        selectedRef = currentSolarRef,
+                        selectedOffset = currentSolarOffset,
+                        onOptionSelected = { option ->
+                                onSolarTimeSelected(option.solarRef, option.offsetMinutes)
+                                showSolarPicker = false
+                        },
+                        onDismiss = { showSolarPicker = false }
+                )
+        }
+}
+
+/** Dialog for selecting solar-based time options. */
+@Composable
+private fun SolarTimePickerDialog(
+        options: List<SolarTimeOption>,
+        selectedRef: String?,
+        selectedOffset: Int,
+        onOptionSelected: (SolarTimeOption) -> Unit,
+        onDismiss: () -> Unit
+) {
+        Box(
+                modifier =
+                        Modifier.fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.7f))
+                                .clickable(onClick = onDismiss),
+                contentAlignment = Alignment.Center
+        ) {
+                Column(
+                        modifier =
+                                Modifier.clip(RoundedCornerShape(16.dp))
+                                        .background(Color(0xFF1E1E1E))
+                                        .clickable(enabled = false) {}
+                                        .padding(24.dp)
+                                        .width(280.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                        Text(
+                                text = "Select Solar Time",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                                text = "Choose relative to sunrise/sunset",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.5f)
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Options list
+                        Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                                options.forEach { option ->
+                                        val isSelected =
+                                                selectedRef == option.solarRef &&
+                                                        selectedOffset == option.offsetMinutes
+
+                                        Box(
+                                                modifier =
+                                                        Modifier.fillMaxWidth()
+                                                                .clip(RoundedCornerShape(8.dp))
+                                                                .background(
+                                                                        if (isSelected)
+                                                                                AccentBlue.copy(
+                                                                                        alpha = 0.3f
+                                                                                )
+                                                                        else Color(0xFF2A2A2A)
+                                                                )
+                                                                .clickable {
+                                                                        onOptionSelected(option)
+                                                                }
+                                                                .padding(
+                                                                        horizontal = 16.dp,
+                                                                        vertical = 12.dp
+                                                                )
+                                        ) {
+                                                Text(
+                                                        text = option.displayLabel,
+                                                        fontSize = 16.sp,
+                                                        color =
+                                                                if (isSelected) AccentBlue
+                                                                else Color.White,
+                                                        fontWeight =
+                                                                if (isSelected) FontWeight.Medium
+                                                                else FontWeight.Normal
+                                                )
+                                        }
+                                }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        TextButton(onClick = onDismiss) {
+                                Text(
+                                        "Cancel",
+                                        fontSize = 16.sp,
+                                        color = Color.White.copy(alpha = 0.7f)
+                                )
+                        }
+                }
         }
 }
 
@@ -700,6 +893,36 @@ private fun ManualConfigWithValuesPreview() {
                                         sleepTime = LocalTime.of(21, 30),
                                         brightness = 80,
                                         use24HourFormat = true
+                                ),
+                        onWakeTimeChange = {},
+                        onSleepTimeChange = {},
+                        onBrightnessChange = {},
+                        onTimeFormatChange = {},
+                        onClearAll = {},
+                        onBackClick = {}
+                )
+        }
+}
+
+@Preview(
+        name = "Manual Config - Solar Time",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 400,
+        heightDp = 800
+)
+@Composable
+private fun ManualConfigSolarTimePreview() {
+        MemoryLinkTheme {
+                ManualConfigScreen(
+                        configState =
+                                ConfigState(
+                                        wakeSolarRef = "SUNRISE",
+                                        wakeSolarOffset = 30,
+                                        sleepSolarRef = "SUNSET",
+                                        sleepSolarOffset = -15,
+                                        brightness = 90,
+                                        use24HourFormat = false
                                 ),
                         onWakeTimeChange = {},
                         onSleepTimeChange = {},

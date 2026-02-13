@@ -396,22 +396,82 @@ constructor(
                 wakeTime = wakeTimeStr?.let { parseTime(it) },
                 sleepTime = sleepTimeStr?.let { parseTime(it) },
                 brightness = tokenStorage.manualBrightness.takeIf { it >= 0 },
-                use24HourFormat = tokenStorage.manualUse24HourFormat
+                use24HourFormat = tokenStorage.manualUse24HourFormat,
+                wakeSolarRef = tokenStorage.manualWakeSolarRef,
+                wakeSolarOffset = tokenStorage.manualWakeSolarOffset,
+                sleepSolarRef = tokenStorage.manualSleepSolarRef,
+                sleepSolarOffset = tokenStorage.manualSleepSolarOffset
         )
     }
 
-    /** Update wake time override. */
+    /** Update wake time override (static time). Clears solar time if set. */
     fun setWakeTime(time: LocalTime?) {
         resetInactivityTimer()
         tokenStorage.manualWakeTime = time?.toString()
-        _configState.update { it.copy(wakeTime = time) }
+        // Clear solar time when setting static time
+        if (time != null) {
+            tokenStorage.manualWakeSolarRef = null
+            tokenStorage.manualWakeSolarOffset = 0
+        }
+        _configState.update { it.copy(wakeTime = time, wakeSolarRef = null, wakeSolarOffset = 0) }
     }
 
-    /** Update sleep time override. */
+    /** Update sleep time override (static time). Clears solar time if set. */
     fun setSleepTime(time: LocalTime?) {
         resetInactivityTimer()
         tokenStorage.manualSleepTime = time?.toString()
-        _configState.update { it.copy(sleepTime = time) }
+        // Clear solar time when setting static time
+        if (time != null) {
+            tokenStorage.manualSleepSolarRef = null
+            tokenStorage.manualSleepSolarOffset = 0
+        }
+        _configState.update {
+            it.copy(sleepTime = time, sleepSolarRef = null, sleepSolarOffset = 0)
+        }
+    }
+
+    /** Update wake time to solar-based (e.g., Sunrise +30). Clears static time. */
+    fun setWakeSolarTime(solarRef: String, offsetMinutes: Int) {
+        resetInactivityTimer()
+        tokenStorage.manualWakeSolarRef = solarRef
+        tokenStorage.manualWakeSolarOffset = offsetMinutes
+        // Clear static time when setting solar time
+        tokenStorage.manualWakeTime = null
+        _configState.update {
+            it.copy(wakeTime = null, wakeSolarRef = solarRef, wakeSolarOffset = offsetMinutes)
+        }
+    }
+
+    /** Update sleep time to solar-based (e.g., Sunset +30). Clears static time. */
+    fun setSleepSolarTime(solarRef: String, offsetMinutes: Int) {
+        resetInactivityTimer()
+        tokenStorage.manualSleepSolarRef = solarRef
+        tokenStorage.manualSleepSolarOffset = offsetMinutes
+        // Clear static time when setting solar time
+        tokenStorage.manualSleepTime = null
+        _configState.update {
+            it.copy(sleepTime = null, sleepSolarRef = solarRef, sleepSolarOffset = offsetMinutes)
+        }
+    }
+
+    /** Clear wake time override (both static and solar). */
+    fun clearWakeTime() {
+        resetInactivityTimer()
+        tokenStorage.manualWakeTime = null
+        tokenStorage.manualWakeSolarRef = null
+        tokenStorage.manualWakeSolarOffset = 0
+        _configState.update { it.copy(wakeTime = null, wakeSolarRef = null, wakeSolarOffset = 0) }
+    }
+
+    /** Clear sleep time override (both static and solar). */
+    fun clearSleepTime() {
+        resetInactivityTimer()
+        tokenStorage.manualSleepTime = null
+        tokenStorage.manualSleepSolarRef = null
+        tokenStorage.manualSleepSolarOffset = 0
+        _configState.update {
+            it.copy(sleepTime = null, sleepSolarRef = null, sleepSolarOffset = 0)
+        }
     }
 
     /** Update brightness override. */
@@ -504,8 +564,62 @@ data class ConfigState(
         val wakeTime: LocalTime? = null,
         val sleepTime: LocalTime? = null,
         val brightness: Int? = null,
-        val use24HourFormat: Boolean? = null
+        val use24HourFormat: Boolean? = null,
+        // Solar time settings
+        val wakeSolarRef: String? = null,
+        val wakeSolarOffset: Int = 0,
+        val sleepSolarRef: String? = null,
+        val sleepSolarOffset: Int = 0
 )
+
+/**
+ * Represents a solar time configuration option.
+ *
+ * @param solarRef "SUNRISE" or "SUNSET"
+ * @param offsetMinutes Offset in minutes (can be negative)
+ */
+data class SolarTimeOption(val solarRef: String, val offsetMinutes: Int) {
+    /** Display label for the option (e.g., "Sunrise", "Sunset + 30 min"). */
+    val displayLabel: String
+        get() {
+            val base = solarRef.lowercase().replaceFirstChar { it.uppercase() }
+            return when {
+                offsetMinutes == 0 -> base
+                offsetMinutes > 0 -> "$base + $offsetMinutes min"
+                else -> "$base - ${-offsetMinutes} min"
+            }
+        }
+
+    companion object {
+        /** Available wake time options (sunrise-focused). */
+        val WAKE_OPTIONS =
+                listOf(
+                        SolarTimeOption("SUNRISE", -60),
+                        SolarTimeOption("SUNRISE", -45),
+                        SolarTimeOption("SUNRISE", -30),
+                        SolarTimeOption("SUNRISE", -15),
+                        SolarTimeOption("SUNRISE", 0),
+                        SolarTimeOption("SUNRISE", 15),
+                        SolarTimeOption("SUNRISE", 30),
+                        SolarTimeOption("SUNRISE", 45),
+                        SolarTimeOption("SUNRISE", 60)
+                )
+
+        /** Available sleep time options (sunset-focused). */
+        val SLEEP_OPTIONS =
+                listOf(
+                        SolarTimeOption("SUNSET", -60),
+                        SolarTimeOption("SUNSET", -45),
+                        SolarTimeOption("SUNSET", -30),
+                        SolarTimeOption("SUNSET", -15),
+                        SolarTimeOption("SUNSET", 0),
+                        SolarTimeOption("SUNSET", 15),
+                        SolarTimeOption("SUNSET", 30),
+                        SolarTimeOption("SUNSET", 45),
+                        SolarTimeOption("SUNSET", 60)
+                )
+    }
+}
 
 data class SyncState(
         val isSyncing: Boolean = false,

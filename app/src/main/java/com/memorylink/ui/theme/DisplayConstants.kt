@@ -53,7 +53,7 @@ object DisplayConstants {
     val CLOCK_VERTICAL_SPACING: Dp = 8.dp
 
     /** Spacing between clock and event in message mode. */
-    val CLOCK_TO_EVENT_SPACING: Dp = 24.dp
+    val CLOCK_TO_EVENT_SPACING: Dp = 32.dp
 
     /** Padding inside event card. */
     val EVENT_CARD_PADDING: Dp = 12.dp
