@@ -53,11 +53,11 @@ data class ClockColorScheme(val timeColor: Color, val dateColor: Color) {
  * Displays the current time and date, centered as a unit.
  *
  * Layout behavior:
- * - **Portrait:** Time fills width, date wraps if needed
- * - **Landscape:** Date fills width, time is 30% larger than date
+ * - **Time:** Fills width as a single line (max: 150.sp)
+ * - **Date:** Fills width as a single line (max: 95.sp)
  *
- * The time and date are positioned immediately adjacent (no artificial spacing from weights). Text
- * auto-sizes to fill available space while respecting max font size limits.
+ * Both are sized independently to maximize readability. If vertical space is limited, both are
+ * scaled down proportionally to fit.
  *
  * This component is used for both AwakeNoEvent and Sleep display states.
  *
@@ -162,17 +162,13 @@ fun ClockDisplay(
 }
 
 /**
- * Calculate optimal font sizes for time and date based on available space and orientation.
+ * Calculate optimal font sizes for time and date based on available space.
  *
- * **Portrait mode:**
- * - Time takes full width, date can wrap
- * - Date is [DATE_TO_TIME_RATIO] of time size
+ * Both time and date are sized independently to fill width as a single line:
+ * - Time: capped at [DisplayConstants.MAX_TIME_FONT_SIZE] (150.sp)
+ * - Date: capped at [DisplayConstants.MAX_FONT_SIZE] (95.sp)
  *
- * **Landscape mode:**
- * - Date takes full width (it's longer)
- * - Time is [LANDSCAPE_TIME_MULTIPLIER] larger than date
- *
- * Both are capped at [DisplayConstants.MAX_FONT_SIZE].
+ * If the combined height exceeds available space, both are scaled down proportionally.
  */
 private fun calculateOptimalFontSizes(
         timeText: String,
@@ -180,85 +176,49 @@ private fun calculateOptimalFontSizes(
         textMeasurer: androidx.compose.ui.text.TextMeasurer,
         maxWidthPx: Int,
         maxHeightPx: Int,
-        isLandscape: Boolean,
+        @Suppress("UNUSED_PARAMETER") isLandscape: Boolean,
         density: androidx.compose.ui.unit.Density
 ): Pair<TextUnit, TextUnit> {
-        val maxFontSizeSp = with(density) { DisplayConstants.MAX_FONT_SIZE.toPx() / fontScale }
+        val maxTimeFontSizeSp =
+                with(density) { DisplayConstants.MAX_TIME_FONT_SIZE.toPx() / fontScale }
+        val maxDateFontSizeSp = with(density) { DisplayConstants.MAX_FONT_SIZE.toPx() / fontScale }
         val minFontSizeSp = with(density) { DisplayConstants.MIN_FONT_SIZE.toPx() / fontScale }
 
-        if (isLandscape) {
-                // Landscape: Date fills width, time is 30% larger
-                // Find the max size where date fits the width
-                val dateFontSizeSp =
-                        findMaxFontSizeThatFits(
-                                text = dateText,
-                                textMeasurer = textMeasurer,
-                                maxWidthPx = maxWidthPx,
-                                maxHeightPx = maxHeightPx / 3, // Date gets ~1/3 of height
-                                minFontSizeSp = minFontSizeSp,
-                                maxFontSizeSp = maxFontSizeSp,
-                                softWrap = false // Date should be single line in landscape
-                        )
+        // Time: sized independently to fill width as single line
+        val timeFontSizeSp =
+                findMaxFontSizeThatFits(
+                        text = timeText,
+                        textMeasurer = textMeasurer,
+                        maxWidthPx = maxWidthPx,
+                        maxHeightPx = Int.MAX_VALUE, // No height constraint for initial sizing
+                        minFontSizeSp = minFontSizeSp,
+                        maxFontSizeSp = maxTimeFontSizeSp,
+                        softWrap = false // Single line
+                )
 
-                // Time is 30% larger, but capped at max
-                val timeFontSizeSp =
-                        (dateFontSizeSp * DisplayConstants.LANDSCAPE_TIME_MULTIPLIER).coerceAtMost(
-                                maxFontSizeSp
-                        )
+        // Date: sized independently to fill width as single line
+        val dateFontSizeSp =
+                findMaxFontSizeThatFits(
+                        text = dateText,
+                        textMeasurer = textMeasurer,
+                        maxWidthPx = maxWidthPx,
+                        maxHeightPx = Int.MAX_VALUE, // No height constraint for initial sizing
+                        minFontSizeSp = minFontSizeSp,
+                        maxFontSizeSp = maxDateFontSizeSp,
+                        softWrap = false // Single line
+                )
 
-                // Verify both fit together in available height
-                val totalHeight = estimateTotalHeight(timeFontSizeSp, dateFontSizeSp, density)
+        // Verify both fit together in available height
+        val totalHeight = estimateTotalHeight(timeFontSizeSp, dateFontSizeSp, density)
 
-                return if (totalHeight <= maxHeightPx) {
-                        timeFontSizeSp.sp to dateFontSizeSp.sp
-                } else {
-                        // Scale both down proportionally
-                        val scale = maxHeightPx.toFloat() / totalHeight
-                        (timeFontSizeSp * scale).sp to (dateFontSizeSp * scale).sp
-                }
+        return if (totalHeight <= maxHeightPx) {
+                timeFontSizeSp.sp to dateFontSizeSp.sp
         } else {
-                // Portrait: Time fills width, date can wrap
-                // Find the max size where time fits the width (single line)
-                val timeFontSizeSp =
-                        findMaxFontSizeThatFits(
-                                text = timeText,
-                                textMeasurer = textMeasurer,
-                                maxWidthPx = maxWidthPx,
-                                maxHeightPx = maxHeightPx / 2, // Time gets ~half height
-                                minFontSizeSp = minFontSizeSp,
-                                maxFontSizeSp = maxFontSizeSp,
-                                softWrap = false // Time should be single line
-                        )
-
-                // Date is 70% of time size
-                val dateFontSizeSp = timeFontSizeSp * DisplayConstants.DATE_TO_TIME_RATIO
-
-                // Check if date wraps at this size and if total fits
-                val dateResult =
-                        textMeasurer.measure(
-                                text = dateText,
-                                style =
-                                        TextStyle(
-                                                fontSize = dateFontSizeSp.sp,
-                                                lineHeight = (dateFontSizeSp * 1.15f).sp
-                                        ),
-                                constraints = Constraints(maxWidth = maxWidthPx)
-                        )
-
-                val totalHeight =
-                        estimateTotalHeightWithDateMeasure(
-                                timeFontSizeSp,
-                                dateResult.size.height,
-                                density
-                        )
-
-                return if (totalHeight <= maxHeightPx) {
-                        timeFontSizeSp.sp to dateFontSizeSp.sp
-                } else {
-                        // Scale both down proportionally
-                        val scale = maxHeightPx.toFloat() / totalHeight
-                        (timeFontSizeSp * scale).sp to (dateFontSizeSp * scale).sp
-                }
+                // Scale both down proportionally to fit height
+                val scale = maxHeightPx.toFloat() / totalHeight
+                val scaledTime = (timeFontSizeSp * scale).coerceAtLeast(minFontSizeSp)
+                val scaledDate = (dateFontSizeSp * scale).coerceAtLeast(minFontSizeSp)
+                scaledTime.sp to scaledDate.sp
         }
 }
 
@@ -326,17 +286,6 @@ private fun estimateTotalHeight(
         val dateHeight = dateFontSizeSp * 1.15f
         val spacing = with(density) { DisplayConstants.CLOCK_VERTICAL_SPACING.toPx() }
         return timeHeight + dateHeight + spacing
-}
-
-/** Estimate total height using actual measured date height. */
-private fun estimateTotalHeightWithDateMeasure(
-        timeFontSizeSp: Float,
-        dateHeightPx: Int,
-        density: androidx.compose.ui.unit.Density
-): Float {
-        val timeHeight = timeFontSizeSp * 1.15f
-        val spacing = with(density) { DisplayConstants.CLOCK_VERTICAL_SPACING.toPx() }
-        return timeHeight + dateHeightPx + spacing
 }
 
 // region Previews
