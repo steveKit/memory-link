@@ -75,7 +75,7 @@ fun EventCard(
                         modifier.clip(RoundedCornerShape(16.dp))
                                 .background(DarkSurface)
                                 .padding(24.dp),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopCenter
         ) {
                 AutoSizeText(
                         text = displayText,
