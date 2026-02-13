@@ -68,7 +68,7 @@ fun EventCard(
                                         .replace("PM", "pm")
                                         .replace("a.m.", "am")
                                         .replace("p.m.", "pm")
-                        "At\u00A0$formattedTime, $title"
+                        "At $formattedTime, $title"
                 } else {
                         "Today is $title"
                 }

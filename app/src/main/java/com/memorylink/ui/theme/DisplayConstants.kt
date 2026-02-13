@@ -26,7 +26,7 @@ object DisplayConstants {
      * Applies to clock time, date, and event messages uniformly. Prevents text from becoming too
      * large on short content.
      */
-    val MAX_FONT_SIZE: TextUnit = 80.sp
+    val MAX_FONT_SIZE: TextUnit = 95.sp
 
     /**
      * Minimum font size for auto-sizing text.
@@ -43,7 +43,7 @@ object DisplayConstants {
      * Date will be this percentage of the time font size. 0.7 = 70% (e.g., if time is 100sp, date
      * is 70sp)
      */
-    const val DATE_TO_TIME_RATIO: Float = 0.7f
+    const val DATE_TO_TIME_RATIO: Float = 0.5f
 
     /**
      * Ratio for time font size increase in landscape mode.
