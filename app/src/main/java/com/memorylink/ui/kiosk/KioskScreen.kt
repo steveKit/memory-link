@@ -26,7 +26,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import com.memorylink.domain.model.DisplayState
 import com.memorylink.ui.theme.DarkBackground
 import com.memorylink.ui.theme.DarkSurface
@@ -65,7 +64,8 @@ fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
                                 AwakeNoEventContent(
                                         currentTime = displayState.currentTime,
                                         currentDate = displayState.currentDate,
-                                        use24HourFormat = displayState.use24HourFormat
+                                        use24HourFormat = displayState.use24HourFormat,
+                                        showYearInDate = displayState.showYearInDate
                                 )
                         }
                         is DisplayState.AwakeWithEvent -> {
@@ -73,6 +73,7 @@ fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
                                         currentTime = displayState.currentTime,
                                         currentDate = displayState.currentDate,
                                         use24HourFormat = displayState.use24HourFormat,
+                                        showYearInDate = displayState.showYearInDate,
                                         eventTitle = displayState.nextEventTitle,
                                         eventTime = displayState.nextEventTime
                                 )
@@ -81,7 +82,8 @@ fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
                                 SleepContent(
                                         currentTime = displayState.currentTime,
                                         currentDate = displayState.currentDate,
-                                        use24HourFormat = displayState.use24HourFormat
+                                        use24HourFormat = displayState.use24HourFormat,
+                                        showYearInDate = displayState.showYearInDate
                                 )
                         }
                 }
@@ -94,6 +96,7 @@ private fun AwakeNoEventContent(
         currentTime: LocalTime,
         currentDate: LocalDate,
         use24HourFormat: Boolean,
+        showYearInDate: Boolean = true,
         modifier: Modifier = Modifier
 ) {
         Box(
@@ -104,6 +107,7 @@ private fun AwakeNoEventContent(
                         time = currentTime,
                         date = currentDate,
                         use24HourFormat = use24HourFormat,
+                        showYearInDate = showYearInDate,
                         colorScheme = ClockColorScheme.Awake,
                         modifier = Modifier.fillMaxSize()
                 )
@@ -114,50 +118,50 @@ private fun AwakeNoEventContent(
  * Content displayed when awake with an event. Uses layered layout with dynamic background:
  * - Content is centered as a single block (clock + event)
  * - Equal space above clock = space below event text
- * - Background layer follows the EventCard's actual position
+ * - Background layer follows the EventCard's actual position (edge-to-edge, top corners rounded)
  * - Clock text is bottom-justified, event text is top-justified
+ * - Text content respects SCREEN_MARGIN, background extends to screen edges
  */
 @Composable
 private fun AwakeWithEventContent(
         currentTime: LocalTime,
         currentDate: LocalDate,
         use24HourFormat: Boolean,
+        showYearInDate: Boolean = true,
         eventTitle: String,
         eventTime: LocalTime?,
         modifier: Modifier = Modifier
 ) {
-        val density = androidx.compose.ui.platform.LocalDensity.current
-        var eventCardYOffset by
-                androidx.compose.runtime.remember {
-                        androidx.compose.runtime.mutableFloatStateOf(0f)
-                }
+        var eventCardYOffset by remember { mutableFloatStateOf(0f) }
 
-        Box(modifier = modifier.fillMaxSize().padding(DisplayConstants.SCREEN_MARGIN)) {
-                // Background layer: positioned at EventCard's Y position, extends to bottom
+        Box(modifier = modifier.fillMaxSize()) {
+                // Background layer: edge-to-edge, positioned at EventCard's Y position, extends to
+                // bottom
                 if (eventCardYOffset > 0f) {
                         Box(
                                 modifier =
                                         Modifier.fillMaxWidth()
                                                 .fillMaxSize()
-                                                .offset {
-                                                        androidx.compose.ui.unit.IntOffset(
-                                                                0,
-                                                                eventCardYOffset.toInt()
-                                                        )
-                                                }
+                                                .offset { IntOffset(0, eventCardYOffset.toInt()) }
                                                 .clip(
                                                         RoundedCornerShape(
-                                                                topStart = 16.dp,
-                                                                topEnd = 16.dp
+                                                                topStart =
+                                                                        DisplayConstants
+                                                                                .EVENT_CARD_CORNER_RADIUS,
+                                                                topEnd =
+                                                                        DisplayConstants
+                                                                                .EVENT_CARD_CORNER_RADIUS
                                                         )
                                                 )
                                                 .background(DarkSurface)
                         )
                 }
 
-                // Content layer: centered as a group with weighted spacers
+                // Content layer: centered as a group with weighted spacers, respects SCREEN_MARGIN
                 Column(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier =
+                                Modifier.fillMaxSize()
+                                        .padding(horizontal = DisplayConstants.SCREEN_MARGIN),
                         horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                         // Top spacer - creates equal margin above clock
@@ -169,6 +173,7 @@ private fun AwakeWithEventContent(
                                         time = currentTime,
                                         date = currentDate,
                                         use24HourFormat = use24HourFormat,
+                                        showYearInDate = showYearInDate,
                                         colorScheme = ClockColorScheme.Awake,
                                         modifier = Modifier.fillMaxWidth()
                                 )
@@ -208,6 +213,7 @@ private fun SleepContent(
         currentTime: LocalTime,
         currentDate: LocalDate,
         use24HourFormat: Boolean,
+        showYearInDate: Boolean = true,
         modifier: Modifier = Modifier
 ) {
         AnimatedVisibility(
@@ -243,6 +249,7 @@ private fun SleepContent(
                                 time = currentTime,
                                 date = currentDate,
                                 use24HourFormat = use24HourFormat,
+                                showYearInDate = showYearInDate,
                                 colorScheme = ClockColorScheme.Sleep,
                                 modifier = Modifier.fillMaxSize()
                         )

@@ -196,6 +196,23 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getInt(KEY_MANUAL_FONT_SIZE, -1)
         set(value) = prefs.edit().putInt(KEY_MANUAL_FONT_SIZE, value).apply()
 
+    /** Manually overridden show year in date. null = use [CONFIG], true = show, false = hide. */
+    var manualShowYear: Boolean?
+        get() {
+            return if (prefs.contains(KEY_MANUAL_SHOW_YEAR)) {
+                prefs.getBoolean(KEY_MANUAL_SHOW_YEAR, true)
+            } else {
+                null
+            }
+        }
+        set(value) {
+            if (value == null) {
+                prefs.edit().remove(KEY_MANUAL_SHOW_YEAR).apply()
+            } else {
+                prefs.edit().putBoolean(KEY_MANUAL_SHOW_YEAR, value).apply()
+            }
+        }
+
     // ========== Manual Solar Time Overrides ==========
 
     /** Manual wake solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
@@ -226,6 +243,7 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
                 .remove(KEY_MANUAL_BRIGHTNESS)
                 .remove(KEY_MANUAL_TIME_FORMAT)
                 .remove(KEY_MANUAL_FONT_SIZE)
+                .remove(KEY_MANUAL_SHOW_YEAR)
                 .remove(KEY_MANUAL_WAKE_SOLAR_REF)
                 .remove(KEY_MANUAL_WAKE_SOLAR_OFFSET)
                 .remove(KEY_MANUAL_SLEEP_SOLAR_REF)
@@ -385,6 +403,7 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_MANUAL_BRIGHTNESS = "manual_brightness"
         private const val KEY_MANUAL_TIME_FORMAT = "manual_time_format"
         private const val KEY_MANUAL_FONT_SIZE = "manual_font_size"
+        private const val KEY_MANUAL_SHOW_YEAR = "manual_show_year"
 
         // Config event-derived settings keys (from [CONFIG] calendar events)
         private const val KEY_CONFIG_WAKE_TIME = "config_wake_time"

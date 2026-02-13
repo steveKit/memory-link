@@ -397,6 +397,7 @@ constructor(
                 sleepTime = sleepTimeStr?.let { parseTime(it) },
                 brightness = tokenStorage.manualBrightness.takeIf { it >= 0 },
                 use24HourFormat = tokenStorage.manualUse24HourFormat,
+                showYearInDate = tokenStorage.manualShowYear,
                 wakeSolarRef = tokenStorage.manualWakeSolarRef,
                 wakeSolarOffset = tokenStorage.manualWakeSolarOffset,
                 sleepSolarRef = tokenStorage.manualSleepSolarRef,
@@ -488,6 +489,13 @@ constructor(
         _configState.update { it.copy(use24HourFormat = use24Hour) }
     }
 
+    /** Update show year in date override. */
+    fun setShowYearInDate(showYear: Boolean?) {
+        resetInactivityTimer()
+        tokenStorage.manualShowYear = showYear
+        _configState.update { it.copy(showYearInDate = showYear) }
+    }
+
     /** Clear all manual overrides. */
     fun clearAllOverrides() {
         resetInactivityTimer()
@@ -565,6 +573,7 @@ data class ConfigState(
         val sleepTime: LocalTime? = null,
         val brightness: Int? = null,
         val use24HourFormat: Boolean? = null,
+        val showYearInDate: Boolean? = null,
         // Solar time settings
         val wakeSolarRef: String? = null,
         val wakeSolarOffset: Int = 0,

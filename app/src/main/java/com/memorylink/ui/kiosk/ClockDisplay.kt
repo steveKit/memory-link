@@ -64,6 +64,7 @@ data class ClockColorScheme(val timeColor: Color, val dateColor: Color) {
  * @param time The current time to display
  * @param date The current date to display
  * @param use24HourFormat Whether to use 24-hour format (default: false = 12-hour)
+ * @param showYearInDate Whether to show year in date (default: true)
  * @param colorScheme Colors for time and date text
  * @param modifier Modifier for the root container
  */
@@ -72,6 +73,7 @@ fun ClockDisplay(
         time: LocalTime,
         date: LocalDate,
         use24HourFormat: Boolean = false,
+        showYearInDate: Boolean = true,
         colorScheme: ClockColorScheme = ClockColorScheme.Awake,
         modifier: Modifier = Modifier
 ) {
@@ -93,8 +95,11 @@ fun ClockDisplay(
                         .replace("a.m.", "am")
                         .replace("p.m.", "pm")
 
-        // Full date format: "Wednesday, February 11, 2026"
-        val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.getDefault())
+        // Date format: with or without year based on showYearInDate setting
+        // With year: "Wednesday, February 11, 2026"
+        // Without year: "Wednesday, February 11"
+        val datePattern = if (showYearInDate) "EEEE, MMMM d, yyyy" else "EEEE, MMMM d"
+        val dateFormatter = DateTimeFormatter.ofPattern(datePattern, Locale.getDefault())
         val formattedDate = date.format(dateFormatter)
 
         BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
