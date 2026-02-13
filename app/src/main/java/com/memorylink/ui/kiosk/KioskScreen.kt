@@ -5,7 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -114,9 +113,11 @@ private fun AwakeWithEventContent(
 ) {
         Column(
                 modifier = modifier.fillMaxSize().padding(DisplayConstants.SCREEN_MARGIN),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                horizontalAlignment = Alignment.CenterHorizontally
         ) {
+                // Top spacer - balances the EventCard weight to keep content centered
+                Spacer(modifier = Modifier.weight(1f))
+
                 // Clock area - sizes to content
                 ClockDisplay(
                         time = currentTime,
