@@ -128,12 +128,12 @@ private fun AwakeWithEventContent(
 
                 Spacer(modifier = Modifier.height(DisplayConstants.CLOCK_TO_EVENT_SPACING))
 
-                // Event area - sizes to content (fills width, wraps height)
+                // Event area - fills remaining space to bottom, text positioned at top
                 EventCard(
                         title = eventTitle,
                         startTime = eventTime,
                         use24HourFormat = use24HourFormat,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().weight(1f)
                 )
         }
 }
