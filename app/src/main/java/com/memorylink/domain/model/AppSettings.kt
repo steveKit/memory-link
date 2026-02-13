@@ -40,14 +40,7 @@ data class AppSettings(
          *
          * Default: 100 (full brightness during wake hours) Sleep mode overrides this to 10%.
          */
-        val brightness: Int = 100,
-
-        /**
-         * Percentage of screen height for the message/event area.
-         *
-         * Default: 60% (clock takes 40%, event takes 60%) Range: 20-80% via [CONFIG] MESSAGE_SIZE
-         */
-        val messageAreaPercent: Int = DEFAULT_MESSAGE_AREA_PERCENT
+        val brightness: Int = 100
 ) {
     companion object {
         /**
@@ -61,8 +54,5 @@ data class AppSettings(
          * morning default.
          */
         val DEFAULT_WAKE_TIME: LocalTime = LocalTime.of(6, 0)
-
-        /** Default message area percentage. 60% gives ample space for event display. */
-        const val DEFAULT_MESSAGE_AREA_PERCENT: Int = 60
     }
 }

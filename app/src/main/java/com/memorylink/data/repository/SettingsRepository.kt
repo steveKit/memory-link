@@ -70,8 +70,7 @@ constructor(
                 sleepTime = resolveSleepTime(),
                 wakeTime = resolveWakeTime(),
                 use24HourFormat = resolveTimeFormat(),
-                brightness = resolveBrightness(),
-                messageAreaPercent = resolveMessageSize()
+                brightness = resolveBrightness()
         )
     }
 
@@ -227,32 +226,6 @@ constructor(
         // Default: 100%
         Log.d(TAG, "Using default brightness: 100%")
         return 100
-    }
-
-    /**
-     * Resolve message area size with priority:
-     * 1. Manual override
-     * 2. Config event
-     * 3. Default (60%)
-     */
-    private fun resolveMessageSize(): Int {
-        // Manual override
-        val manual = tokenStorage.manualMessageSize
-        if (manual > 0) {
-            Log.d(TAG, "Using manual message size: $manual%")
-            return manual
-        }
-
-        // Config event
-        val config = tokenStorage.configMessageSize
-        if (config > 0) {
-            Log.d(TAG, "Using config message size: $config%")
-            return config
-        }
-
-        // Default: 60%
-        Log.d(TAG, "Using default message size: ${AppSettings.DEFAULT_MESSAGE_AREA_PERCENT}%")
-        return AppSettings.DEFAULT_MESSAGE_AREA_PERCENT
     }
 
     /**

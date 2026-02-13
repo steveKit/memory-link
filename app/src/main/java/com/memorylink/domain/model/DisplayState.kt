@@ -37,9 +37,12 @@ sealed class DisplayState {
         ) : DisplayState()
 
         /**
-         * SLEEP: Current time is within sleep period. Display: Dimmed clock only (48sp, 10%
-         * brightness), no date, no events.
+         * SLEEP: Current time is within sleep period. Display: Dimmed clock + date (same layout as
+         * AwakeNoEvent), 10% brightness.
          */
-        data class Sleep(val currentTime: LocalTime, val use24HourFormat: Boolean = false) :
-                DisplayState()
+        data class Sleep(
+                val currentTime: LocalTime,
+                val currentDate: LocalDate,
+                val use24HourFormat: Boolean = false
+        ) : DisplayState()
 }

@@ -19,7 +19,6 @@ import org.junit.Test
  * - SLEEP/WAKE with dynamic times (SUNRISE/SUNSET with offsets)
  * - BRIGHTNESS (0-100)
  * - TIME_FORMAT (12/24)
- * - MESSAGE_SIZE (20-80)
  * - Invalid syntax handling
  */
 class ConfigParserTest {
@@ -256,43 +255,6 @@ class ConfigParserTest {
     @Test
     fun `TIME_FORMAT returns invalid for missing value`() {
         val result = ConfigParser.parse("[CONFIG] TIME_FORMAT")
-        assertTrue(result is Invalid)
-    }
-
-    // endregion
-
-    // region MESSAGE_SIZE config tests
-
-    @Test
-    fun `MESSAGE_SIZE parses valid value`() {
-        val result = ConfigParser.parse("[CONFIG] MESSAGE_SIZE 60")
-        assertTrue(result is MessageSizeConfig)
-        assertEquals(60, (result as MessageSizeConfig).percent)
-    }
-
-    @Test
-    fun `MESSAGE_SIZE parses minimum value`() {
-        val result = ConfigParser.parse("[CONFIG] MESSAGE_SIZE 20")
-        assertTrue(result is MessageSizeConfig)
-        assertEquals(20, (result as MessageSizeConfig).percent)
-    }
-
-    @Test
-    fun `MESSAGE_SIZE parses maximum value`() {
-        val result = ConfigParser.parse("[CONFIG] MESSAGE_SIZE 80")
-        assertTrue(result is MessageSizeConfig)
-        assertEquals(80, (result as MessageSizeConfig).percent)
-    }
-
-    @Test
-    fun `MESSAGE_SIZE returns invalid for value below minimum`() {
-        val result = ConfigParser.parse("[CONFIG] MESSAGE_SIZE 10")
-        assertTrue(result is Invalid)
-    }
-
-    @Test
-    fun `MESSAGE_SIZE returns invalid for value above maximum`() {
-        val result = ConfigParser.parse("[CONFIG] MESSAGE_SIZE 90")
         assertTrue(result is Invalid)
     }
 
