@@ -82,9 +82,9 @@ constructor(
                     val appliedCount = parseConfigEventUseCase(configEvents)
                     Log.d(TAG, "Applied $appliedCount config settings")
 
-                    // Refresh settings after config processing
-                    val newSettings = settingsRepository.refreshSettings()
-                    updateSettings(newSettings)
+                    // Trigger settings refresh - the settings flow observation handles
+                    // state update, alarm rescheduling, etc.
+                    settingsRepository.refreshSettings()
                 }
             }
         }
