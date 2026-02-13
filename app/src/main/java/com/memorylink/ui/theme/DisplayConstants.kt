@@ -21,10 +21,16 @@ object DisplayConstants {
     // ========== Font Size Limits ==========
 
     /**
-     * Maximum font size for all auto-sizing text.
+     * Maximum font size for the clock time display.
      *
-     * Applies to clock time, date, and event messages uniformly. Prevents text from becoming too
-     * large on short content.
+     * Time is sized independently to fill width as a single line, up to this maximum.
+     */
+    val MAX_TIME_FONT_SIZE: TextUnit = 150.sp
+
+    /**
+     * Maximum font size for date and event message text.
+     *
+     * Date fills width as a single line, event messages can wrap. Both are capped at this size.
      */
     val MAX_FONT_SIZE: TextUnit = 95.sp
 
@@ -34,24 +40,6 @@ object DisplayConstants {
      * Ensures text never becomes too small to read, even with very long content.
      */
     val MIN_FONT_SIZE: TextUnit = 24.sp
-
-    // ========== Font Size Ratios ==========
-
-    /**
-     * Ratio of date font size to time font size.
-     *
-     * Date will be this percentage of the time font size. 0.7 = 70% (e.g., if time is 100sp, date
-     * is 70sp)
-     */
-    const val DATE_TO_TIME_RATIO: Float = 0.5f
-
-    /**
-     * Ratio for time font size increase in landscape mode.
-     *
-     * In landscape, time is this much larger than date. 1.3 = 30% larger (e.g., if date is 70sp,
-     * time is 91sp)
-     */
-    const val LANDSCAPE_TIME_MULTIPLIER: Float = 1.3f
 
     // ========== Layout Margins ==========
 
