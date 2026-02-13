@@ -26,7 +26,7 @@ object DisplayConstants {
      * Applies to clock time, date, and event messages uniformly. Prevents text from becoming too
      * large on short content.
      */
-    val MAX_FONT_SIZE: TextUnit = 90.sp
+    val MAX_FONT_SIZE: TextUnit = 80.sp
 
     /**
      * Minimum font size for auto-sizing text.
@@ -68,7 +68,7 @@ object DisplayConstants {
     val CLOCK_TO_EVENT_SPACING: Dp = 24.dp
 
     /** Padding inside event card. */
-    val EVENT_CARD_PADDING: Dp = 24.dp
+    val EVENT_CARD_PADDING: Dp = 12.dp
 
     /** Corner radius for event card. */
     val EVENT_CARD_CORNER_RADIUS: Dp = 16.dp
