@@ -9,6 +9,7 @@ import com.memorylink.domain.model.CalendarEvent
 import com.memorylink.domain.model.DisplayState
 import com.memorylink.domain.usecase.DetermineDisplayStateUseCase
 import com.memorylink.domain.usecase.ParseConfigEventUseCase
+import dagger.Lazy
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +30,7 @@ import kotlinx.coroutines.launch
  * State updates are triggered by:
  * - [StateTransitionScheduler] alarms (wake/sleep/minute tick)
  * - Calendar sync (Room observation)
- * - Settings changes
+ * - Settings changes (which also reschedule alarms)
  *
  * See .clinerules/40-state-machine.md for state transitions.
  */
@@ -42,6 +43,7 @@ constructor(
         private val calendarRepository: CalendarRepository,
         private val settingsRepository: SettingsRepository,
         private val parseConfigEventUseCase: ParseConfigEventUseCase,
+        private val scheduler: Lazy<StateTransitionScheduler>,
         @ApplicationScope private val applicationScope: CoroutineScope
 ) {
 
@@ -87,11 +89,21 @@ constructor(
             }
         }
 
-        // Observe settings changes
+        // Observe settings changes and notify scheduler to reschedule alarms
         applicationScope.launch {
-            settingsRepository.settings.distinctUntilChanged().collect { settings ->
-                Log.d(TAG, "Settings updated: $settings")
-                _settings.value = settings
+            settingsRepository.settings.distinctUntilChanged().collect { newSettings ->
+                Log.d(TAG, "Settings updated: $newSettings")
+                val previousSettings = _settings.value
+                _settings.value = newSettings
+
+                // If sleep/wake times changed, reschedule alarms
+                if (previousSettings.sleepTime != newSettings.sleepTime ||
+                                previousSettings.wakeTime != newSettings.wakeTime
+                ) {
+                    Log.d(TAG, "Sleep/wake times changed, rescheduling alarms")
+                    scheduler.get().onSettingsChanged(newSettings)
+                }
+
                 refreshState()
             }
         }
