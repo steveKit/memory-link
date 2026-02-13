@@ -36,6 +36,7 @@ import java.util.Locale
  * @param title The event title to display
  * @param startTime The event start time, or null for all-day events
  * @param use24HourFormat Whether to use 24-hour format (default: false = 12-hour)
+ * @param showBackground Whether to show the DarkSurface background (default: true)
  * @param modifier Modifier for the root container (should include size constraints)
  */
 @Composable
@@ -43,6 +44,7 @@ fun EventCard(
         title: String,
         startTime: LocalTime?,
         use24HourFormat: Boolean = false,
+        showBackground: Boolean = true,
         modifier: Modifier = Modifier
 ) {
         // Combine time and title into a single sentence
@@ -71,13 +73,16 @@ fun EventCard(
                         "Today is $title"
                 }
 
-        Box(
-                modifier =
+        val backgroundModifier =
+                if (showBackground) {
                         modifier.clip(RoundedCornerShape(16.dp))
                                 .background(DarkSurface)
-                                .padding(24.dp),
-                contentAlignment = Alignment.TopStart
-        ) {
+                                .padding(24.dp)
+                } else {
+                        modifier.padding(24.dp)
+                }
+
+        Box(modifier = backgroundModifier, contentAlignment = Alignment.TopStart) {
                 AutoSizeText(
                         text = displayText,
                         modifier = Modifier.fillMaxWidth(),

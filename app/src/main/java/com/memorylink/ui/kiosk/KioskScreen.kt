@@ -5,19 +5,25 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.memorylink.domain.model.DisplayState
 import com.memorylink.ui.theme.DarkBackground
+import com.memorylink.ui.theme.DarkSurface
 import com.memorylink.ui.theme.DisplayConstants
 import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.SleepBackground
@@ -99,8 +105,12 @@ private fun AwakeNoEventContent(
 }
 
 /**
- * Content displayed when awake with an event. Clock + date (with reduced space) and event card, all
- * centered together. Both sections size based on content, not fixed percentages.
+ * Content displayed when awake with an event. Uses layered layout:
+ * - Background layer: DarkSurface area extending from below clock to bottom
+ * - Content layer: Clock + event text centered as a group
+ *
+ * This creates equal visual margin above clock and below event text while the message background
+ * extends to the bottom of the screen.
  */
 @Composable
 private fun AwakeWithEventContent(
@@ -111,31 +121,43 @@ private fun AwakeWithEventContent(
         eventTime: LocalTime?,
         modifier: Modifier = Modifier
 ) {
-        Column(
-                modifier = modifier.fillMaxSize().padding(DisplayConstants.SCREEN_MARGIN),
-                horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-                // Top spacer - balances the EventCard weight to keep content centered
-                Spacer(modifier = Modifier.weight(1f))
-
-                // Clock area - sizes to content
-                ClockDisplay(
-                        time = currentTime,
-                        date = currentDate,
-                        use24HourFormat = use24HourFormat,
-                        colorScheme = ClockColorScheme.Awake,
-                        modifier = Modifier.fillMaxWidth()
+        Box(modifier = modifier.fillMaxSize().padding(DisplayConstants.SCREEN_MARGIN)) {
+                // Background layer: message area color extending from ~50% to bottom
+                Box(
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .fillMaxHeight(0.55f)
+                                        .align(Alignment.BottomCenter)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(DarkSurface)
                 )
 
-                Spacer(modifier = Modifier.height(DisplayConstants.CLOCK_TO_EVENT_SPACING))
+                // Content layer: centered clock + event text (no background on EventCard)
+                Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                ) {
+                        // Clock area
+                        ClockDisplay(
+                                time = currentTime,
+                                date = currentDate,
+                                use24HourFormat = use24HourFormat,
+                                colorScheme = ClockColorScheme.Awake,
+                                modifier = Modifier.fillMaxWidth()
+                        )
 
-                // Event area - fills remaining space to bottom, text positioned at top
-                EventCard(
-                        title = eventTitle,
-                        startTime = eventTime,
-                        use24HourFormat = use24HourFormat,
-                        modifier = Modifier.fillMaxWidth().weight(1f)
-                )
+                        Spacer(modifier = Modifier.height(DisplayConstants.CLOCK_TO_EVENT_SPACING))
+
+                        // Event text (transparent background - bg provided by layer behind)
+                        EventCard(
+                                title = eventTitle,
+                                startTime = eventTime,
+                                use24HourFormat = use24HourFormat,
+                                showBackground = false,
+                                modifier = Modifier.fillMaxWidth()
+                        )
+                }
         }
 }
 
