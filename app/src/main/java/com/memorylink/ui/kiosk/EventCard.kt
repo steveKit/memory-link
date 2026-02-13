@@ -82,7 +82,8 @@ fun EventCard(
                         modifier = Modifier.fillMaxSize(),
                         style = TextStyle(color = TextPrimary, fontWeight = FontWeight.Bold),
                         maxFontSize = DisplayConstants.MAX_FONT_SIZE,
-                        minFontSize = DisplayConstants.MIN_FONT_SIZE
+                        minFontSize = DisplayConstants.MIN_FONT_SIZE,
+                        contentAlignment = Alignment.TopCenter
                 )
         }
 }
