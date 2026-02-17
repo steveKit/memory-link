@@ -67,6 +67,11 @@ constructor(
     private val _syncState = MutableStateFlow(SyncState())
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
+    // ========== Effective Settings (Resolved) ==========
+
+    private val _effectiveSettings = MutableStateFlow(EffectiveSettingsState())
+    val effectiveSettings: StateFlow<EffectiveSettingsState> = _effectiveSettings.asStateFlow()
+
     // ========== Inactivity Timeout ==========
 
     private var inactivityJob: Job? = null
@@ -80,6 +85,20 @@ constructor(
         updateCalendarState()
         // Start inactivity timer
         resetInactivityTimer()
+
+        // Observe effective settings from SettingsRepository
+        viewModelScope.launch {
+            settingsRepository.settings.collect { appSettings ->
+                _effectiveSettings.update {
+                    EffectiveSettingsState(
+                            wakeTime = appSettings.wakeTime,
+                            sleepTime = appSettings.sleepTime,
+                            brightness = appSettings.brightness,
+                            use24HourFormat = appSettings.use24HourFormat
+                    )
+                }
+            }
+        }
     }
 
     // ========== PIN Methods ==========
@@ -647,4 +666,15 @@ data class SyncState(
         val isSyncing: Boolean = false,
         val lastResult: String? = null,
         val lastSyncTime: Long = 0L
+)
+
+/**
+ * Represents the resolved/effective settings currently being used by the app. This combines manual
+ * overrides + config events + defaults with proper priority.
+ */
+data class EffectiveSettingsState(
+        val wakeTime: LocalTime = LocalTime.of(6, 0),
+        val sleepTime: LocalTime = LocalTime.of(21, 0),
+        val brightness: Int = 100,
+        val use24HourFormat: Boolean = false
 )

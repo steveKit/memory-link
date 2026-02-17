@@ -6,6 +6,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.memorylink.data.auth.TokenStorage
 import com.memorylink.data.sync.CalendarSyncWorker
+import com.memorylink.domain.StateCoordinator
 import com.memorylink.domain.StateTransitionScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -32,6 +33,12 @@ class MemoryLinkApp : Application(), Configuration.Provider {
     @Inject lateinit var tokenStorage: TokenStorage
 
     @Inject lateinit var stateTransitionScheduler: StateTransitionScheduler
+
+    /**
+     * StateCoordinator is eagerly initialized to ensure config event observation starts immediately
+     * on app startup, not just when KioskViewModel is created.
+     */
+    @Inject lateinit var stateCoordinator: StateCoordinator
 
     override fun onCreate() {
         super.onCreate()
