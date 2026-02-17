@@ -1,73 +1,92 @@
 package com.memorylink.domain.usecase
 
 import com.memorylink.domain.model.CalendarEvent
+import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
 
 /**
- * Use case for determining which event to display next.
+ * Result of finding next events, with separate all-day and timed events.
  *
- * Implements the 2-hour preview window logic for all-day vs timed events.
- * See .clinerules/40-state-machine.md for the full algorithm.
+ * @param allDayEvent The next all-day event within 7 days, or null
+ * @param timedEvent The next timed event within 2 weeks, or null
+ */
+data class NextEventsResult(
+        val allDayEvent: CalendarEvent? = null,
+        val timedEvent: CalendarEvent? = null
+)
+
+/**
+ * Use case for determining which events to display next.
+ *
+ * Returns two separate events:
+ * - All-day event: next one within 7 days (displayed in clock area)
+ * - Timed event: next one within 2 weeks (displayed in event card)
  *
  * Rules:
- * 1. If a timed event is within 2-hour preview window, show it
- * 2. Otherwise, show all-day event if one exists
- * 3. Otherwise, show next timed event (even if >2 hours away)
- * 4. Return null if no events for today
+ * 1. All-day events are limited to 7 days lookahead
+ * 2. Timed events can look ahead up to 2 weeks
+ * 3. Both can be returned simultaneously (displayed in different areas)
+ * 4. Events that have already started are skipped (for timed events)
+ * 5. All-day events for today are included regardless of current time
  */
 class GetNextEventUseCase @Inject constructor() {
 
     companion object {
-        /**
-         * Hours before a timed event when it supersedes all-day events.
-         */
-        const val PREVIEW_WINDOW_HOURS = 2L
+        /** Maximum days to look ahead for all-day events. */
+        const val ALL_DAY_LOOKAHEAD_DAYS = 7L
+
+        /** Maximum days to look ahead for timed events. */
+        const val TIMED_LOOKAHEAD_DAYS = 14L
     }
 
     /**
-     * Get the next event to display.
+     * Get the next all-day and timed events to display.
      *
      * @param now Current date/time
-     * @param events List of all calendar events (should already be filtered to today)
-     * @return The event to display, or null if no events
+     * @param events List of all upcoming calendar events (already filtered to 2-week window)
+     * @return NextEventsResult containing both event types (either can be null)
      */
-    operator fun invoke(now: LocalDateTime, events: List<CalendarEvent>): CalendarEvent? {
-        if (events.isEmpty()) return null
+    operator fun invoke(now: LocalDateTime, events: List<CalendarEvent>): NextEventsResult {
+        if (events.isEmpty()) return NextEventsResult()
 
         val today = now.toLocalDate()
+        val allDayCutoff = today.plusDays(ALL_DAY_LOOKAHEAD_DAYS)
+        val timedCutoff = today.plusDays(TIMED_LOOKAHEAD_DAYS)
 
-        // Filter to today's events only
-        val todayEvents = events.filter { it.startTime.toLocalDate() == today }
-        if (todayEvents.isEmpty()) return null
+        // Find next all-day event within 7 days
+        // All-day events for today are valid even if "started" at midnight
+        val nextAllDayEvent =
+                events
+                        .filter { event ->
+                            event.isAllDay &&
+                                    event.startTime.toLocalDate() >= today &&
+                                    event.startTime.toLocalDate() < allDayCutoff
+                        }
+                        .minByOrNull { it.startTime }
 
-        // Separate all-day and timed events
-        // For timed events, only consider those that haven't started yet
-        val timedEvents = todayEvents
-            .filter { !it.isAllDay && it.startTime.isAfter(now) }
-            .sortedBy { it.startTime }
+        // Find next timed event within 2 weeks
+        // Must not have started yet (startTime > now)
+        val nextTimedEvent =
+                events
+                        .filter { event ->
+                            !event.isAllDay &&
+                                    event.startTime.isAfter(now) &&
+                                    event.startTime.toLocalDate() < timedCutoff
+                        }
+                        .minByOrNull { it.startTime }
 
-        val allDayEvents = todayEvents.filter { it.isAllDay }
+        return NextEventsResult(allDayEvent = nextAllDayEvent, timedEvent = nextTimedEvent)
+    }
 
-        // Find the next upcoming timed event
-        val nextTimedEvent = timedEvents.firstOrNull()
-
-        // Check if timed event is within 2-hour preview window
-        if (nextTimedEvent != null) {
-            val previewTime = nextTimedEvent.startTime.minusHours(PREVIEW_WINDOW_HOURS)
-            if (!now.isBefore(previewTime)) {
-                // We're within the preview window - show timed event
-                return nextTimedEvent
-            }
-        }
-
-        // Not in preview window - show all-day event if exists
-        if (allDayEvents.isNotEmpty()) {
-            // Return first all-day event (they're typically single per day)
-            return allDayEvents.first()
-        }
-
-        // No all-day event - show next timed event even if >2 hours away
-        return nextTimedEvent
+    /**
+     * Check if an event is happening today.
+     *
+     * @param eventDate The event's date
+     * @param today Today's date
+     * @return true if event is today
+     */
+    fun isToday(eventDate: LocalDate, today: LocalDate): Boolean {
+        return eventDate == today
     }
 }

@@ -55,6 +55,25 @@ interface EventDao {
     fun getNextEvent(currentTime: Long, dayEnd: Long): Flow<EventEntity?>
 
     /**
+     * Get all upcoming events within a time range (for 2-week lookahead). Returns non-config events
+     * that haven't started yet.
+     *
+     * @param currentTime Current time in epoch millis
+     * @param endTime End of lookahead window in epoch millis
+     * @return Flow of upcoming events sorted by start time
+     */
+    @Query(
+            """
+        SELECT * FROM cached_events 
+        WHERE start_time > :currentTime 
+        AND start_time < :endTime
+        AND is_config_event = 0
+        ORDER BY start_time ASC
+    """
+    )
+    fun getUpcomingEvents(currentTime: Long, endTime: Long): Flow<List<EventEntity>>
+
+    /**
      * Get all config events for processing. Config events are parsed for settings (SLEEP, WAKE,
      * BRIGHTNESS, etc.)
      */

@@ -14,8 +14,12 @@ import javax.inject.Inject
  *
  * States:
  * - SLEEP: current_time >= sleep_time OR current_time < wake_time
- * - AWAKE_WITH_EVENT: Within wake period AND next event exists
- * - AWAKE_NO_EVENT: Within wake period AND no events
+ * - AWAKE_WITH_EVENT: Within wake period AND at least one event exists in lookahead
+ * - AWAKE_NO_EVENT: Within wake period AND no events in lookahead
+ *
+ * Event display rules:
+ * - All-day events: shown in clock area (up to 7 days ahead)
+ * - Timed events: shown in event card (up to 2 weeks ahead)
  */
 class DetermineDisplayStateUseCase
 @Inject
@@ -29,7 +33,7 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
      * (awake/sleep/event) based on the current time.
      *
      * @param now Current date/time (used for state evaluation, not embedded in result)
-     * @param events List of calendar events for today
+     * @param events List of all upcoming calendar events (up to 2 weeks)
      * @param settings Current app settings (sleep/wake times, format)
      * @return The display state to render
      */
@@ -39,6 +43,7 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
             settings: AppSettings
     ): DisplayState {
         val currentTime = now.toLocalTime()
+        val today = now.toLocalDate()
 
         // Check if we're in sleep period
         if (isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime)) {
@@ -48,22 +53,42 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
             )
         }
 
-        // We're in wake period - check for events
-        val nextEvent = getNextEventUseCase(now, events)
+        // We're in wake period - find next events
+        val nextEvents = getNextEventUseCase(now, events)
+        val allDayEvent = nextEvents.allDayEvent
+        val timedEvent = nextEvents.timedEvent
 
-        return if (nextEvent != null) {
-            DisplayState.AwakeWithEvent(
-                    nextEventTitle = nextEvent.title,
-                    nextEventTime = getDisplayTime(nextEvent),
-                    use24HourFormat = settings.use24HourFormat,
-                    showYearInDate = settings.showYearInDate
-            )
-        } else {
-            DisplayState.AwakeNoEvent(
+        // If no events at all, return AwakeNoEvent
+        if (allDayEvent == null && timedEvent == null) {
+            return DisplayState.AwakeNoEvent(
                     use24HourFormat = settings.use24HourFormat,
                     showYearInDate = settings.showYearInDate
             )
         }
+
+        // Build AwakeWithEvent state
+        return DisplayState.AwakeWithEvent(
+                // All-day event fields
+                allDayEventTitle = allDayEvent?.title,
+                allDayEventDayOfWeek =
+                        if (allDayEvent != null && allDayEvent.startTime.toLocalDate() != today) {
+                            allDayEvent.startTime.dayOfWeek
+                        } else {
+                            null // null means "today"
+                        },
+                // Timed event fields
+                timedEventTitle = timedEvent?.title,
+                timedEventTime = timedEvent?.startTime?.toLocalTime(),
+                timedEventDate =
+                        if (timedEvent != null && timedEvent.startTime.toLocalDate() != today) {
+                            timedEvent.startTime.toLocalDate()
+                        } else {
+                            null // null means "today"
+                        },
+                // Settings
+                use24HourFormat = settings.use24HourFormat,
+                showYearInDate = settings.showYearInDate
+        )
     }
 
     /**
@@ -85,20 +110,6 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
         } else {
             // Edge case: wake time is after sleep time (e.g., both in same half of day)
             currentTime >= sleepTime && currentTime < wakeTime
-        }
-    }
-
-    /**
-     * Get the display time for an event.
-     *
-     * For all-day events, returns null (UI displays "TODAY IS" prefix). For timed events, returns
-     * the actual start time (UI displays "AT [time]" prefix).
-     */
-    private fun getDisplayTime(event: CalendarEvent): LocalTime? {
-        return if (event.isAllDay) {
-            null
-        } else {
-            event.startTime.toLocalTime()
         }
     }
 }

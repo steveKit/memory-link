@@ -64,10 +64,10 @@ constructor(
     val events: StateFlow<List<CalendarEvent>> = _events.asStateFlow()
 
     init {
-        // Start observing Room database for today's events
+        // Start observing Room database for all upcoming events (2-week lookahead)
         applicationScope.launch {
-            calendarRepository.observeTodaysEvents().distinctUntilChanged().collect { events ->
-                Log.d(TAG, "Received ${events.size} events from Room")
+            calendarRepository.observeUpcomingEvents().distinctUntilChanged().collect { events ->
+                Log.d(TAG, "Received ${events.size} upcoming events from Room")
                 _events.value = events
                 refreshState()
             }

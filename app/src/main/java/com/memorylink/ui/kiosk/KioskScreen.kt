@@ -34,6 +34,7 @@ import com.memorylink.ui.theme.DarkSurface
 import com.memorylink.ui.theme.DisplayConstants
 import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.SleepBackground
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -70,7 +71,8 @@ fun rememberLiveTime(): Pair<LocalTime, LocalDate> {
  *
  * States:
  * - AwakeNoEvent: Clock + date centered, full brightness
- * - AwakeWithEvent: Clock + date (smaller) + EventCard, all centered
+ * - AwakeWithEvent: Clock + date + optional all-day event (in clock area) + optional timed event
+ * (in event card)
  * - Sleep: Clock + date centered with dimmed colors (reuses ClockDisplay)
  *
  * Background: #121212 (DarkBackground), #0A0A0A (SleepBackground) in sleep mode
@@ -108,8 +110,13 @@ fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
                                         currentDate = currentDate,
                                         use24HourFormat = displayState.use24HourFormat,
                                         showYearInDate = displayState.showYearInDate,
-                                        eventTitle = displayState.nextEventTitle,
-                                        eventTime = displayState.nextEventTime
+                                        // All-day event (clock area)
+                                        allDayEventTitle = displayState.allDayEventTitle,
+                                        allDayEventDayOfWeek = displayState.allDayEventDayOfWeek,
+                                        // Timed event (event card)
+                                        timedEventTitle = displayState.timedEventTitle,
+                                        timedEventTime = displayState.timedEventTime,
+                                        timedEventDate = displayState.timedEventDate
                                 )
                         }
                         is DisplayState.Sleep -> {
@@ -149,7 +156,13 @@ private fun AwakeNoEventContent(
 }
 
 /**
- * Content displayed when awake with an event. Uses layered layout with dynamic background:
+ * Content displayed when awake with event(s).
+ *
+ * Layout:
+ * - Clock area (top): Time + Date + optional all-day event (in AccentBlue)
+ * - Event card (bottom): Timed event (only shown if timedEventTitle is not null)
+ *
+ * Uses layered layout with dynamic background:
  * - Content is centered as a single block (clock + event)
  * - Equal space above clock = space below event text
  * - Background layer follows the EventCard's actual position (edge-to-edge, top corners rounded)
@@ -162,16 +175,22 @@ private fun AwakeWithEventContent(
         currentDate: LocalDate,
         use24HourFormat: Boolean,
         showYearInDate: Boolean = true,
-        eventTitle: String,
-        eventTime: LocalTime?,
+        // All-day event fields
+        allDayEventTitle: String?,
+        allDayEventDayOfWeek: DayOfWeek?,
+        // Timed event fields
+        timedEventTitle: String?,
+        timedEventTime: LocalTime?,
+        timedEventDate: LocalDate?,
         modifier: Modifier = Modifier
 ) {
+        val hasTimedEvent = timedEventTitle != null && timedEventTime != null
         var eventCardYOffset by remember { mutableFloatStateOf(0f) }
 
         Box(modifier = modifier.fillMaxSize()) {
                 // Background layer: edge-to-edge, positioned at EventCard's Y position, extends to
-                // bottom
-                if (eventCardYOffset > 0f) {
+                // bottom (only if timed event exists)
+                if (hasTimedEvent && eventCardYOffset > 0f) {
                         Box(
                                 modifier =
                                         Modifier.fillMaxWidth()
@@ -202,34 +221,50 @@ private fun AwakeWithEventContent(
                         Spacer(modifier = Modifier.weight(1f))
 
                         // Clock area - bottom justified within its natural size
+                        // Includes optional all-day event text
                         Box(contentAlignment = Alignment.BottomCenter) {
                                 ClockDisplay(
                                         time = currentTime,
                                         date = currentDate,
                                         use24HourFormat = use24HourFormat,
                                         showYearInDate = showYearInDate,
+                                        allDayEventTitle = allDayEventTitle,
+                                        allDayEventDayOfWeek = allDayEventDayOfWeek,
                                         colorScheme = ClockColorScheme.Awake,
                                         modifier = Modifier.fillMaxWidth()
                                 )
                         }
 
-                        Spacer(modifier = Modifier.height(DisplayConstants.CLOCK_TO_EVENT_SPACING))
-
-                        // Event text - top justified, tracks its position for background layer
-                        Box(
-                                modifier =
-                                        Modifier.fillMaxWidth().onGloballyPositioned { coords ->
-                                                eventCardYOffset = coords.positionInParent().y
-                                        },
-                                contentAlignment = Alignment.TopStart
-                        ) {
-                                EventCard(
-                                        title = eventTitle,
-                                        startTime = eventTime,
-                                        use24HourFormat = use24HourFormat,
-                                        showBackground = false,
-                                        modifier = Modifier.fillMaxWidth()
+                        // Event card - only show if timed event exists
+                        if (hasTimedEvent) {
+                                Spacer(
+                                        modifier =
+                                                Modifier.height(
+                                                        DisplayConstants.CLOCK_TO_EVENT_SPACING
+                                                )
                                 )
+
+                                // Event text - top justified, tracks its position for background
+                                // layer
+                                Box(
+                                        modifier =
+                                                Modifier.fillMaxWidth().onGloballyPositioned {
+                                                        coords ->
+                                                        eventCardYOffset =
+                                                                coords.positionInParent().y
+                                                },
+                                        contentAlignment = Alignment.TopStart
+                                ) {
+                                        EventCard(
+                                                title = timedEventTitle!!,
+                                                startTime = timedEventTime!!,
+                                                eventDate = timedEventDate,
+                                                use24HourFormat = use24HourFormat,
+                                                showYearInDate = showYearInDate,
+                                                showBackground = false,
+                                                modifier = Modifier.fillMaxWidth()
+                                        )
+                                }
                         }
 
                         // Bottom spacer - creates equal margin below event (matches top)
@@ -322,20 +357,21 @@ private fun KioskScreenAwakeNoEventPortraitPreview() {
 }
 
 @Preview(
-        name = "Kiosk Screen - Awake With Event (Landscape)",
+        name = "Kiosk Screen - Timed Event Today (Landscape)",
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 800,
         heightDp = 480
 )
 @Composable
-private fun KioskScreenAwakeWithEventPreview() {
+private fun KioskScreenTimedEventTodayPreview() {
         MemoryLinkTheme {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        nextEventTitle = "Doctor Appointment",
-                                        nextEventTime = LocalTime.of(10, 30),
+                                        timedEventTitle = "Doctor Appointment",
+                                        timedEventTime = LocalTime.of(10, 30),
+                                        timedEventDate = null, // null = today
                                         use24HourFormat = false
                                 )
                 )
@@ -343,20 +379,21 @@ private fun KioskScreenAwakeWithEventPreview() {
 }
 
 @Preview(
-        name = "Kiosk Screen - Awake With Event (Portrait)",
+        name = "Kiosk Screen - Timed Event Future (Landscape)",
         showBackground = true,
         backgroundColor = 0xFF121212,
-        widthDp = 480,
-        heightDp = 800
+        widthDp = 800,
+        heightDp = 480
 )
 @Composable
-private fun KioskScreenAwakeWithEventPortraitPreview() {
+private fun KioskScreenTimedEventFuturePreview() {
         MemoryLinkTheme {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        nextEventTitle = "Doctor Appointment",
-                                        nextEventTime = LocalTime.of(10, 30),
+                                        timedEventTitle = "Doctor Appointment",
+                                        timedEventTime = LocalTime.of(10, 30),
+                                        timedEventDate = LocalDate.of(2026, 2, 19),
                                         use24HourFormat = false
                                 )
                 )
@@ -364,20 +401,89 @@ private fun KioskScreenAwakeWithEventPortraitPreview() {
 }
 
 @Preview(
-        name = "Kiosk Screen - All-Day Event",
+        name = "Kiosk Screen - All-Day Event Today",
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 800,
         heightDp = 480
 )
 @Composable
-private fun KioskScreenAllDayEventPreview() {
+private fun KioskScreenAllDayTodayPreview() {
         MemoryLinkTheme {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        nextEventTitle = "Mom's Birthday",
-                                        nextEventTime = null,
+                                        allDayEventTitle = "Mom's Birthday",
+                                        allDayEventDayOfWeek = null, // null = today
+                                        use24HourFormat = false
+                                )
+                )
+        }
+}
+
+@Preview(
+        name = "Kiosk Screen - All-Day Event Future",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 800,
+        heightDp = 480
+)
+@Composable
+private fun KioskScreenAllDayFuturePreview() {
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        allDayEventTitle = "Family Reunion",
+                                        allDayEventDayOfWeek = DayOfWeek.FRIDAY,
+                                        use24HourFormat = false
+                                )
+                )
+        }
+}
+
+@Preview(
+        name = "Kiosk Screen - All-Day + Timed Event",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 800,
+        heightDp = 480
+)
+@Composable
+private fun KioskScreenAllDayPlusTimedPreview() {
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        allDayEventTitle = "Mom's Birthday",
+                                        allDayEventDayOfWeek = null,
+                                        timedEventTitle = "Doctor Appointment",
+                                        timedEventTime = LocalTime.of(14, 30),
+                                        timedEventDate = null,
+                                        use24HourFormat = false
+                                )
+                )
+        }
+}
+
+@Preview(
+        name = "Kiosk Screen - All-Day Future + Timed Future",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 800,
+        heightDp = 480
+)
+@Composable
+private fun KioskScreenAllDayFuturePlusTimedFuturePreview() {
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        allDayEventTitle = "Holiday",
+                                        allDayEventDayOfWeek = DayOfWeek.FRIDAY,
+                                        timedEventTitle = "Physical Therapy",
+                                        timedEventTime = LocalTime.of(10, 0),
+                                        timedEventDate = LocalDate.of(2026, 2, 19),
                                         use24HourFormat = false
                                 )
                 )
@@ -421,8 +527,9 @@ private fun KioskScreen24HourPreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        nextEventTitle = "Lunch with Family",
-                                        nextEventTime = LocalTime.of(12, 0),
+                                        timedEventTitle = "Lunch with Family",
+                                        timedEventTime = LocalTime.of(12, 0),
+                                        timedEventDate = null,
                                         use24HourFormat = true
                                 )
                 )
@@ -442,9 +549,10 @@ private fun KioskScreenLongTitlePreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        nextEventTitle =
+                                        timedEventTitle =
                                                 "Meet Eric downstairs so he can take you to your doctors appointment",
-                                        nextEventTime = LocalTime.of(10, 0),
+                                        timedEventTime = LocalTime.of(10, 0),
+                                        timedEventDate = LocalDate.of(2026, 2, 23),
                                         use24HourFormat = false
                                 )
                 )
@@ -464,8 +572,11 @@ private fun KioskScreenTabletPreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        nextEventTitle = "Physical Therapy",
-                                        nextEventTime = LocalTime.of(11, 0),
+                                        allDayEventTitle = "Company Retreat",
+                                        allDayEventDayOfWeek = DayOfWeek.SATURDAY,
+                                        timedEventTitle = "Physical Therapy",
+                                        timedEventTime = LocalTime.of(11, 0),
+                                        timedEventDate = null,
                                         use24HourFormat = false
                                 )
                 )
