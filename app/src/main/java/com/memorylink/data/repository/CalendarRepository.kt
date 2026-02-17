@@ -17,24 +17,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /**
- * Repository for calendar events.
+ * Repository bridging GoogleCalendarService (remote) and EventDao (local cache).
  *
- * Bridges:
- * - GoogleCalendarService (remote API)
- * - EventDao (local Room cache)
- *
- * Per .clinerules/10-project-meta.md:
- * - Sync Interval: Poll every 5 minutes for new events
- * - Offline Cache: Events are cached locally. Display last-known events if offline.
- * - Cache Retention: Keep 2 weeks of events cached
- *
- * Per .clinerules/20-android.md:
- * - Eviction: Delete events older than 7 days on each sync
- *
- * Uses Google Calendar API syncToken for incremental sync:
- * - Full sync when no syncToken exists
- * - Incremental sync returns only changed/deleted events
- * - 410 response means token expired, triggers full resync
+ * Uses syncToken for incremental sync (410 triggers full resync). Syncs every 5 minutes, caches 2
+ * weeks, evicts after 7 days.
  */
 @Singleton
 class CalendarRepository
@@ -59,10 +45,7 @@ constructor(
         OFFLINE // Last sync > 60 minutes ago or network error
     }
 
-    /**
-     * Observe today's events (non-config events only). Returns cached events from Room database as
-     * a Flow.
-     */
+    /** Observe today's displayable events (excludes [CONFIG] events). */
     fun observeTodaysEvents(): Flow<List<CalendarEvent>> {
         val zoneId = ZoneId.systemDefault()
         val today = LocalDate.now()
@@ -74,14 +57,7 @@ constructor(
         }
     }
 
-    /**
-     * Observe all upcoming events within the 2-week lookahead window. Returns non-config events
-     * that haven't started yet.
-     *
-     * Used for the lookahead feature:
-     * - Timed events: up to 2 weeks ahead
-     * - All-day events: up to 7 days ahead (filtered at use-case level)
-     */
+    /** Observe upcoming events (2-week window). All-day filtering at use-case level. */
     fun observeUpcomingEvents(): Flow<List<CalendarEvent>> {
         val zoneId = ZoneId.systemDefault()
         val now = LocalDateTime.now(zoneId)
@@ -98,17 +74,7 @@ constructor(
         return eventDao.getConfigEvents().map { entities -> entities.map { it.toDomainModel() } }
     }
 
-    /**
-     * Sync events from Google Calendar API to local cache using incremental sync.
-     *
-     * Uses syncToken for efficient incremental sync:
-     * - If syncToken exists: fetch only changes since last sync
-     * - If no syncToken: perform full sync
-     * - Handles deleted events by removing them from cache
-     * - 410 response: clears token and performs full resync
-     *
-     * @return SyncResult indicating success or failure
-     */
+    /** Sync events using incremental sync. Handles 410 by clearing token and retrying. */
     suspend fun syncEvents(): SyncResult {
         val calendarId = tokenStorage.selectedCalendarId
         if (calendarId.isNullOrBlank()) {
@@ -193,13 +159,7 @@ constructor(
         }
     }
 
-    /**
-     * Legacy sync method using date range (for backward compatibility).
-     *
-     * @param forceFullSync If true, fetch 2 weeks of events; otherwise just today
-     * @return SyncResult indicating success or failure
-     * @deprecated Use syncEvents() instead for incremental sync support
-     */
+    /** @deprecated Use syncEvents() for incremental sync. */
     @Deprecated("Use syncEvents() for incremental sync", ReplaceWith("syncEvents()"))
     suspend fun syncEventsLegacy(forceFullSync: Boolean = false): SyncResult {
         val calendarId = tokenStorage.selectedCalendarId
@@ -271,16 +231,7 @@ constructor(
         return calendarService.getCalendarList()
     }
 
-    /**
-     * Select a calendar for syncing.
-     *
-     * If the calendar changes, clears the existing cache and sync token so the next sync will be a
-     * full sync from the new calendar.
-     *
-     * @param calendarId The calendar ID to select
-     * @param calendarName Display name for the calendar
-     * @return true if calendar changed (cache was cleared), false if same calendar
-     */
+    /** Select a calendar. Clears cache if calendar changes (forces full resync). */
     suspend fun selectCalendar(calendarId: String, calendarName: String): Boolean {
         val previousCalendarId = tokenStorage.selectedCalendarId
         val calendarChanged = previousCalendarId != calendarId

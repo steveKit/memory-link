@@ -7,24 +7,10 @@ import com.memorylink.domain.model.SolarReference
 import java.time.LocalTime
 
 /**
- * Parser for [CONFIG] calendar event syntax.
+ * Parser for [CONFIG] calendar event syntax. See: 10-project-meta.md
  *
- * Parses event titles that start with "[CONFIG]" into structured ConfigResult objects.
- *
- * Supported syntax (case-insensitive):
- * - `[CONFIG] SLEEP 21:00` - Set sleep time (HH:MM)
- * - `[CONFIG] WAKE 07:00` - Set wake time (HH:MM)
- * - `[CONFIG] SLEEP SUNSET` - Sleep at sunset
- * - `[CONFIG] SLEEP SUNSET+30` - Sleep 30 min after sunset
- * - `[CONFIG] WAKE SUNRISE` - Wake at sunrise
- * - `[CONFIG] WAKE SUNRISE-15` - Wake 15 min before sunrise
- * - `[CONFIG] BRIGHTNESS 80` - Screen brightness (0-100)
- * - `[CONFIG] TIME_FORMAT 12` - 12-hour clock format
- * - `[CONFIG] TIME_FORMAT 24` - 24-hour clock format
- *
- * Invalid syntax is logged but returns ConfigResult.Invalid.
- *
- * See .clinerules/10-project-meta.md for full documentation.
+ * Supports: SLEEP/WAKE (static time or SUNRISE/SUNSET±offset), BRIGHTNESS (0-100), TIME_FORMAT
+ * (12/24). Invalid syntax is logged and returns ConfigResult.Invalid.
  */
 object ConfigParser {
 

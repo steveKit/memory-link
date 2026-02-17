@@ -20,19 +20,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
- * Central coordinator for the display state machine.
+ * Central coordinator for display state. Single source of truth via StateFlow.
  *
- * Manages:
- * - Display state (single source of truth via StateFlow)
- * - Calendar events (observed reactively from Room)
- * - App settings (sleep/wake times, format)
- *
- * State updates are triggered by:
- * - [StateTransitionScheduler] alarms (wake/sleep/minute tick)
- * - Calendar sync (Room observation)
- * - Settings changes (which also reschedule alarms)
- *
- * See .clinerules/40-state-machine.md for state transitions.
+ * Observes Room for events, processes [CONFIG] events, responds to alarm triggers.
  */
 @Singleton
 class StateCoordinator

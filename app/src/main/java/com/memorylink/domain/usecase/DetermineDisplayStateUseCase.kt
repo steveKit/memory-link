@@ -8,35 +8,16 @@ import java.time.LocalTime
 import javax.inject.Inject
 
 /**
- * Use case for determining the current display state based on time and events.
+ * Determines display state based on time and events. See: 40-state-machine.md
  *
- * See .clinerules/40-state-machine.md for the state diagram and transition rules.
- *
- * States:
- * - SLEEP: current_time >= sleep_time OR current_time < wake_time
- * - AWAKE_WITH_EVENT: Within wake period AND at least one event exists in lookahead
- * - AWAKE_NO_EVENT: Within wake period AND no events in lookahead
- *
- * Event display rules:
- * - All-day events: shown in clock area (up to 7 days ahead)
- * - Timed events: shown in event card (up to 2 weeks ahead)
+ * States: SLEEP (outside wake period), AWAKE_WITH_EVENT, AWAKE_NO_EVENT. UI reads live system time
+ * directly for clock display.
  */
 class DetermineDisplayStateUseCase
 @Inject
 constructor(private val getNextEventUseCase: GetNextEventUseCase) {
 
-    /**
-     * Determine the current display state.
-     *
-     * Note: Time is NOT embedded in the returned DisplayState. The UI reads live system time
-     * directly for accurate clock display. This use case only determines the logical state
-     * (awake/sleep/event) based on the current time.
-     *
-     * @param now Current date/time (used for state evaluation, not embedded in result)
-     * @param events List of all upcoming calendar events (up to 2 weeks)
-     * @param settings Current app settings (sleep/wake times, format)
-     * @return The display state to render
-     */
+    /** Determine display state. Time is NOT embedded in result (UI uses live clock). */
     operator fun invoke(
             now: LocalDateTime,
             events: List<CalendarEvent>,

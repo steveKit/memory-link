@@ -20,16 +20,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * Manages Google OAuth2 authentication for Calendar API access.
- *
- * Uses Google Sign-In API for authentication flow.
- *
- * Per .clinerules/20-android.md:
- * - Auth: OAuth2 with offline access token
- * - Permissions: calendar.readonly only
- * - Tokens stored in EncryptedSharedPreferences via TokenStorage
- */
+/** Manages Google OAuth2 authentication for Calendar API (calendar.readonly). */
 @Singleton
 class GoogleAuthManager
 @Inject
@@ -55,18 +46,10 @@ constructor(
         data object NeedsSignIn : AuthResult()
     }
 
-    /**
-     * Get the sign-in intent to launch from an Activity. The Activity should launch this with
-     * startActivityForResult and call handleSignInResult with the result.
-     */
+    /** Get sign-in intent for launching from Activity with startActivityForResult. */
     fun getSignInIntent(): Intent = googleSignInClient.signInIntent
 
-    /**
-     * Handle the result from the sign-in activity.
-     *
-     * @param data The intent data from onActivityResult
-     * @return AuthResult indicating success or failure
-     */
+    /** Handle result from sign-in activity. */
     suspend fun handleSignInResult(data: Intent?): AuthResult =
             withContext(Dispatchers.IO) {
                 try {
@@ -159,11 +142,7 @@ constructor(
                 Log.d(TAG, "Tokens stored successfully")
             }
 
-    /**
-     * Refresh the access token using stored refresh token.
-     *
-     * @return true if refresh successful, false otherwise
-     */
+    /** Refresh access token using stored refresh token. Returns true on success. */
     suspend fun refreshAccessToken(): Boolean =
             withContext(Dispatchers.IO) {
                 val refreshToken = tokenStorage.refreshToken
@@ -197,11 +176,7 @@ constructor(
                 }
             }
 
-    /**
-     * Get valid access token, refreshing if necessary.
-     *
-     * @return Access token or null if not available/refresh failed
-     */
+    /** Get valid access token, refreshing if necessary. */
     suspend fun getValidAccessToken(): String? {
         if (!tokenStorage.isSignedIn) {
             return null
