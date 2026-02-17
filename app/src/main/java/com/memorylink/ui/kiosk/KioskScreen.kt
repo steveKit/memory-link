@@ -112,6 +112,7 @@ fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
                                         // All-day event (clock area)
                                         allDayEventTitle = displayState.allDayEventTitle,
                                         allDayEventDate = displayState.allDayEventDate,
+                                        allDayEventEndDate = displayState.allDayEventEndDate,
                                         // Timed event (event card)
                                         timedEventTitle = displayState.timedEventTitle,
                                         timedEventTime = displayState.timedEventTime,
@@ -177,6 +178,7 @@ private fun AwakeWithEventContent(
         // All-day event fields
         allDayEventTitle: String?,
         allDayEventDate: LocalDate?,
+        allDayEventEndDate: LocalDate?,
         // Timed event fields
         timedEventTitle: String?,
         timedEventTime: LocalTime?,
@@ -229,6 +231,7 @@ private fun AwakeWithEventContent(
                                         showYearInDate = showYearInDate,
                                         allDayEventTitle = allDayEventTitle,
                                         allDayEventDate = allDayEventDate,
+                                        allDayEventEndDate = allDayEventEndDate,
                                         colorScheme = ClockColorScheme.Awake,
                                         modifier = Modifier.fillMaxWidth()
                                 )
