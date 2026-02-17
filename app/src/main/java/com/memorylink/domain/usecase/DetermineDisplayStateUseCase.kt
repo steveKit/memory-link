@@ -61,11 +61,18 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
         return DisplayState.AwakeWithEvent(
                 // All-day event fields
                 allDayEventTitle = allDayEvent?.title,
+                // For multi-day events: null if ongoing (started today or earlier), date if future
+                // For single-day events: null if today, date if future
                 allDayEventDate =
-                        if (allDayEvent != null && allDayStartDate != today) {
+                        if (allDayEvent != null &&
+                                        allDayStartDate != null &&
+                                        allDayStartDate.isAfter(today)
+                        ) {
+                            // Future event - show start date
                             allDayStartDate
                         } else {
-                            null // null means "today"
+                            // Today or past (ongoing multi-day) - null signals "active now"
+                            null
                         },
                 // End date for multi-day events (exclusive, so subtract 1 for display)
                 allDayEventEndDate =
