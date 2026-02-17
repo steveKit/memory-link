@@ -28,7 +28,6 @@ import com.memorylink.ui.theme.DisplayConstants
 import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.SleepText
 import com.memorylink.ui.theme.TextDate
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -73,6 +72,7 @@ data class ClockColorScheme(
  * - **Date:** Fills width as a single line (max: 95.sp)
  * - **All-day event:** Displayed below date in AccentBlue (max: 60.sp)
  * - Today: "Today is {title}"
+ * - Tomorrow: "Tomorrow is {title}"
  * - Future: "{Day of week} is {title}"
  *
  * Both are sized independently to maximize readability. If vertical space is limited, all elements
@@ -85,7 +85,7 @@ data class ClockColorScheme(
  * @param use24HourFormat Whether to use 24-hour format (default: false = 12-hour)
  * @param showYearInDate Whether to show year in date (default: true)
  * @param allDayEventTitle Optional all-day event title to display
- * @param allDayEventDayOfWeek Day of week for future all-day event, or null if today
+ * @param allDayEventDate Date of all-day event, or null if today
  * @param colorScheme Colors for time, date, and all-day event text
  * @param modifier Modifier for the root container
  */
@@ -96,7 +96,7 @@ fun ClockDisplay(
         use24HourFormat: Boolean = false,
         showYearInDate: Boolean = true,
         allDayEventTitle: String? = null,
-        allDayEventDayOfWeek: DayOfWeek? = null,
+        allDayEventDate: LocalDate? = null,
         colorScheme: ClockColorScheme = ClockColorScheme.Awake,
         modifier: Modifier = Modifier
 ) {
@@ -126,19 +126,27 @@ fun ClockDisplay(
         val formattedDate = date.format(dateFormatter)
 
         // Format all-day event text if present
+        val tomorrow = LocalDate.now().plusDays(1)
         val formattedAllDayEvent =
                 if (allDayEventTitle != null) {
-                        if (allDayEventDayOfWeek != null) {
-                                // Future day: "{Day of week} is {title}"
-                                val dayName =
-                                        allDayEventDayOfWeek.getDisplayName(
-                                                JavaTextStyle.FULL,
-                                                Locale.getDefault()
-                                        )
-                                "$dayName is $allDayEventTitle"
-                        } else {
-                                // Today: "Today is {title}"
-                                "Today is $allDayEventTitle"
+                        when {
+                                allDayEventDate == null -> {
+                                        // Today: "Today is {title}"
+                                        "Today is $allDayEventTitle"
+                                }
+                                allDayEventDate == tomorrow -> {
+                                        // Tomorrow: "Tomorrow is {title}"
+                                        "Tomorrow is $allDayEventTitle"
+                                }
+                                else -> {
+                                        // Future day: "{Day of week} is {title}"
+                                        val dayName =
+                                                allDayEventDate.dayOfWeek.getDisplayName(
+                                                        JavaTextStyle.FULL,
+                                                        Locale.getDefault()
+                                                )
+                                        "$dayName is $allDayEventTitle"
+                                }
                         }
                 } else {
                         null
@@ -464,7 +472,28 @@ private fun ClockDisplayAllDayTodayPreview() {
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
                         allDayEventTitle = "Mom's Birthday",
-                        allDayEventDayOfWeek = null, // null = today
+                        allDayEventDate = null, // null = today
+                        colorScheme = ClockColorScheme.Awake
+                )
+        }
+}
+
+@Preview(
+        name = "Clock Display - With All-Day Event Tomorrow",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 800,
+        heightDp = 480
+)
+@Composable
+private fun ClockDisplayAllDayTomorrowPreview() {
+        MemoryLinkTheme {
+                ClockDisplay(
+                        time = LocalTime.of(10, 30),
+                        date = LocalDate.of(2026, 2, 11),
+                        use24HourFormat = false,
+                        allDayEventTitle = "Family Reunion",
+                        allDayEventDate = LocalDate.now().plusDays(1), // tomorrow
                         colorScheme = ClockColorScheme.Awake
                 )
         }
@@ -484,8 +513,8 @@ private fun ClockDisplayAllDayFuturePreview() {
                         time = LocalTime.of(10, 30),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
-                        allDayEventTitle = "Family Reunion",
-                        allDayEventDayOfWeek = DayOfWeek.FRIDAY,
+                        allDayEventTitle = "Company Retreat",
+                        allDayEventDate = LocalDate.of(2026, 2, 13), // Friday (future)
                         colorScheme = ClockColorScheme.Awake
                 )
         }
@@ -582,7 +611,7 @@ private fun ClockDisplayLongAllDayPreview() {
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
                         allDayEventTitle = "Annual Family Reunion at Grandma's House",
-                        allDayEventDayOfWeek = DayOfWeek.SATURDAY,
+                        allDayEventDate = LocalDate.of(2026, 2, 14), // Saturday (future)
                         colorScheme = ClockColorScheme.Awake
                 )
         }

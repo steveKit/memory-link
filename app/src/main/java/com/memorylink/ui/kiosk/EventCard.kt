@@ -70,20 +70,32 @@ fun EventCard(
                         .replace("a.m.", "am")
                         .replace("p.m.", "pm")
 
-        // Build display text based on whether event is today or future
+        // Build display text based on whether event is today, tomorrow, or further future
+        val tomorrow = LocalDate.now().plusDays(1)
         val displayText =
-                if (eventDate != null) {
-                        // Future date: "On {day}, {date} at {time}, {title}"
-                        val datePattern =
-                                if (showYearInDate) "EEEE, MMMM d, yyyy" else "EEEE, MMMM d"
-                        val dateFormatter =
-                                DateTimeFormatter.ofPattern(datePattern, Locale.getDefault())
-                        val formattedDate = eventDate.format(dateFormatter)
-                        "On $formattedDate at $formattedTime, $title"
-                } else {
-                        // Today: "At {time}, {title}"
-                        // Use non-breaking spaces in "At {time}," so it won't wrap mid-phrase
-                        "At $formattedTime, $title"
+                when {
+                        eventDate == null -> {
+                                // Today: "At {time}, {title}"
+                                // Use non-breaking spaces in "At {time}," so it won't wrap
+                                // mid-phrase
+                                "At $formattedTime, $title"
+                        }
+                        eventDate == tomorrow -> {
+                                // Tomorrow: "Tomorrow, at {time}, {title}"
+                                "Tomorrow, at $formattedTime, $title"
+                        }
+                        else -> {
+                                // Future date: "On {day}, {date} at {time}, {title}"
+                                val datePattern =
+                                        if (showYearInDate) "EEEE, MMMM d, yyyy" else "EEEE, MMMM d"
+                                val dateFormatter =
+                                        DateTimeFormatter.ofPattern(
+                                                datePattern,
+                                                Locale.getDefault()
+                                        )
+                                val formattedDate = eventDate.format(dateFormatter)
+                                "On $formattedDate at $formattedTime, $title"
+                        }
                 }
 
         val backgroundModifier =
@@ -123,6 +135,26 @@ private fun EventCardTodayPreview() {
                         title = "Doctor Appointment",
                         startTime = LocalTime.of(10, 30),
                         eventDate = null, // null = today
+                        use24HourFormat = false,
+                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                )
+        }
+}
+
+@Preview(
+        name = "Event Card - Tomorrow Event",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 400,
+        heightDp = 300
+)
+@Composable
+private fun EventCardTomorrowPreview() {
+        MemoryLinkTheme {
+                EventCard(
+                        title = "Grocery Shopping",
+                        startTime = LocalTime.of(11, 0),
+                        eventDate = LocalDate.now().plusDays(1), // tomorrow
                         use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )

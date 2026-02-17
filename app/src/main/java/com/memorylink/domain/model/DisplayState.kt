@@ -1,6 +1,5 @@
 package com.memorylink.domain.model
 
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -34,14 +33,16 @@ sealed class DisplayState {
          *
          * All-day event display rules:
          * - Today: "Today is {title}"
+         * - Tomorrow: "Tomorrow is {title}"
          * - Future (within 7 days): "{Day of week} is {title}"
          *
          * Timed event display rules:
          * - Today: "At {time}, {title}"
+         * - Tomorrow: "Tomorrow, at {time}, {title}"
          * - Future (within 2 weeks): "On {day}, {date} at {time}, {title}"
          *
          * @param allDayEventTitle Title of next all-day event, or null if none
-         * @param allDayEventDayOfWeek Day of week for future all-day event, or null if today
+         * @param allDayEventDate Date of all-day event, or null if today
          * @param timedEventTitle Title of next timed event, or null if none
          * @param timedEventTime Start time of timed event, or null if none
          * @param timedEventDate Date of timed event, or null if today
@@ -49,7 +50,7 @@ sealed class DisplayState {
         data class AwakeWithEvent(
                 // All-day event (displays in clock area)
                 val allDayEventTitle: String? = null,
-                val allDayEventDayOfWeek: DayOfWeek? = null,
+                val allDayEventDate: LocalDate? = null,
                 // Timed event (displays in event card)
                 val timedEventTitle: String? = null,
                 val timedEventTime: LocalTime? = null,
@@ -65,7 +66,7 @@ sealed class DisplayState {
 
                 /** Returns true if the all-day event is today (not a future day). */
                 val isAllDayEventToday: Boolean
-                        get() = allDayEventTitle != null && allDayEventDayOfWeek == null
+                        get() = allDayEventTitle != null && allDayEventDate == null
 
                 /** Returns true if there's a timed event to display. */
                 val hasTimedEvent: Boolean
