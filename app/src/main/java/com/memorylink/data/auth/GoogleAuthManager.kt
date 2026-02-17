@@ -33,7 +33,12 @@ constructor(
                 GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                         .requestServerAuthCode(getWebClientId(), true) // forceCodeForRefreshToken
                         .requestEmail()
-                        .requestScopes(Scope(CalendarScopes.CALENDAR_EVENTS))
+                        .requestScopes(
+                                Scope(
+                                        CalendarScopes.CALENDAR_READONLY
+                                ), // List calendars + read events
+                                Scope(CalendarScopes.CALENDAR_EVENTS) // Write/delete events
+                        )
                         .build()
         GoogleSignIn.getClient(context, gso)
     }
