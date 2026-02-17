@@ -296,9 +296,23 @@ class GoogleCalendarService @Inject constructor(private val authManager: GoogleA
 
         if (isAllDay) {
             // All-day events use date (not dateTime)
-            // The .value property returns epoch millis directly
-            startMillis = event.start.date.value
-            endMillis = event.end.date.value
+            // The .value property returns epoch millis for midnight UTC on that date.
+            // We need to convert to LOCAL midnight on the same calendar date to avoid
+            // timezone issues (e.g., Feb 17 UTC becoming Feb 16 in America/Toronto).
+            val zoneId = ZoneId.systemDefault()
+
+            // Extract the calendar date from UTC, then convert to local midnight
+            val startDateUtc =
+                    java.time.Instant.ofEpochMilli(event.start.date.value)
+                            .atZone(java.time.ZoneOffset.UTC)
+                            .toLocalDate()
+            val endDateUtc =
+                    java.time.Instant.ofEpochMilli(event.end.date.value)
+                            .atZone(java.time.ZoneOffset.UTC)
+                            .toLocalDate()
+
+            startMillis = startDateUtc.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            endMillis = endDateUtc.atStartOfDay(zoneId).toInstant().toEpochMilli()
         } else {
             // Timed events use dateTime
             startMillis = event.start?.dateTime?.value ?: return null
