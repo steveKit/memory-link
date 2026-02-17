@@ -172,6 +172,51 @@ class GoogleCalendarService @Inject constructor(private val authManager: GoogleA
             }
 
     /**
+     * Delete a calendar event by ID.
+     *
+     * @param calendarId The calendar ID containing the event
+     * @param eventId The event ID to delete
+     * @return ApiResult indicating success or failure
+     */
+    suspend fun deleteEvent(calendarId: String, eventId: String): ApiResult<Unit> =
+            withContext(Dispatchers.IO) {
+                val calendarService =
+                        getCalendarService() ?: return@withContext ApiResult.NotAuthenticated
+
+                retryWithBackoff {
+                    try {
+                        calendarService.events().delete(calendarId, eventId).execute()
+                        Log.d(TAG, "Deleted event: $eventId")
+                        ApiResult.Success(Unit)
+                    } catch (e: com.google.api.client.googleapis.json.GoogleJsonResponseException) {
+                        when (e.statusCode) {
+                            401 -> {
+                                Log.w(TAG, "Token expired during delete, attempting refresh")
+                                val refreshed = authManager.refreshAccessToken()
+                                if (refreshed) {
+                                    throw e // Will retry via backoff
+                                } else {
+                                    ApiResult.NotAuthenticated
+                                }
+                            }
+                            404, 410 -> {
+                                // Event already deleted or doesn't exist - treat as success
+                                Log.d(TAG, "Event $eventId already deleted or not found")
+                                ApiResult.Success(Unit)
+                            }
+                            else -> {
+                                Log.e(TAG, "Delete API error: ${e.statusCode}", e)
+                                ApiResult.Error("Failed to delete event: ${e.message}", e)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to delete event", e)
+                        ApiResult.Error("Failed to delete event: ${e.message}", e)
+                    }
+                }
+            }
+
+    /**
      * Fetch events using incremental sync with syncToken.
      *
      * Per Google Calendar API docs:

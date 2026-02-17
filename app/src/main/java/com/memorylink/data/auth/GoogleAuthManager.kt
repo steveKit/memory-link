@@ -20,7 +20,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Manages Google OAuth2 authentication for Calendar API (calendar.readonly). */
+/** Manages Google OAuth2 authentication for Calendar API (calendar.events). */
 @Singleton
 class GoogleAuthManager
 @Inject
@@ -33,7 +33,7 @@ constructor(
                 GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                         .requestServerAuthCode(getWebClientId(), true) // forceCodeForRefreshToken
                         .requestEmail()
-                        .requestScopes(Scope(CalendarScopes.CALENDAR_READONLY))
+                        .requestScopes(Scope(CalendarScopes.CALENDAR_EVENTS))
                         .build()
         GoogleSignIn.getClient(context, gso)
     }

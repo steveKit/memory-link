@@ -23,9 +23,10 @@ import javax.inject.Inject
  *
  * Flow:
  * 1. CalendarSyncWorker syncs events → triggers this use case
- * 2. This use case parses [CONFIG] events
+ * 2. This use case parses [CONFIG] events (chronologically by startTime)
  * 3. Settings are stored in TokenStorage
  * 4. SettingsRepository refreshes to combine with manual overrides
+ * 5. Successfully processed event IDs are returned for deletion
  */
 class ParseConfigEventUseCase
 @Inject
@@ -39,33 +40,51 @@ constructor(
     }
 
     /**
+     * Result of processing config events.
+     *
+     * @param appliedCount Number of config settings successfully applied
+     * @param processedEventIds IDs of events that were successfully processed (for deletion)
+     */
+    data class ProcessResult(val appliedCount: Int, val processedEventIds: List<String>)
+
+    /**
      * Process a list of config events and update settings.
      *
+     * Events are processed chronologically (oldest first) to ensure proper ordering when multiple
+     * config events modify the same setting.
+     *
      * @param configEvents List of calendar events that are config events
-     * @return Number of config settings successfully applied
+     * @return ProcessResult with count and IDs of successfully processed events
      */
-    suspend operator fun invoke(configEvents: List<CalendarEvent>): Int {
+    suspend operator fun invoke(configEvents: List<CalendarEvent>): ProcessResult {
         if (configEvents.isEmpty()) {
             Log.d(TAG, "No config events to process")
-            return 0
+            return ProcessResult(0, emptyList())
         }
 
         Log.d(TAG, "Processing ${configEvents.size} config events")
 
+        // Sort by startTime ascending (chronological order - oldest first)
+        val sortedEvents = configEvents.sortedBy { it.startTime }
+
+        val processedEventIds = mutableListOf<String>()
         var appliedCount = 0
 
-        // Parse and apply each config event
-        for (event in configEvents) {
+        // Parse and apply each config event in chronological order
+        for (event in sortedEvents) {
             val result = ConfigParser.parse(event.title)
 
             if (result is Invalid) {
                 Log.w(TAG, "Invalid config: '${event.title}' - ${result.reason}")
+                // Don't add to processedEventIds - invalid configs stay in cache
+                // (they won't be retried since parsing will always fail)
                 continue
             }
 
             applyConfig(result)
+            processedEventIds.add(event.id)
             appliedCount++
-            Log.d(TAG, "Applied config: ${event.title}")
+            Log.d(TAG, "Applied config: ${event.title} (id: ${event.id})")
         }
 
         // Refresh settings after processing all configs
@@ -73,8 +92,11 @@ constructor(
             settingsRepository.refreshSettings()
         }
 
-        Log.d(TAG, "Applied $appliedCount config settings")
-        return appliedCount
+        Log.d(
+                TAG,
+                "Applied $appliedCount config settings, ${processedEventIds.size} events to delete"
+        )
+        return ProcessResult(appliedCount, processedEventIds)
     }
 
     /**

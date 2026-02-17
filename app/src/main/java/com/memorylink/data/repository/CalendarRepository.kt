@@ -78,6 +78,48 @@ constructor(
         return eventDao.getConfigEvents().map { entities -> entities.map { it.toDomainModel() } }
     }
 
+    /**
+     * Delete a config event from both Google Calendar and local cache.
+     *
+     * Called after a config event has been successfully processed. Deletes from Google Calendar API
+     * first, then removes from local Room cache.
+     *
+     * @param eventId The event ID to delete
+     * @return true if deletion was successful (or event already deleted), false if API error
+     */
+    suspend fun deleteConfigEvent(eventId: String): Boolean {
+        val calendarId = tokenStorage.selectedCalendarId
+        if (calendarId.isNullOrBlank()) {
+            Log.w(TAG, "Cannot delete config event: no calendar selected")
+            return false
+        }
+
+        // Delete from Google Calendar API first
+        val result = calendarService.deleteEvent(calendarId, eventId)
+
+        return when (result) {
+            is ApiResult.Success -> {
+                // API delete successful, now remove from local cache
+                eventDao.deleteEventById(eventId)
+                Log.d(TAG, "Config event deleted: $eventId")
+                true
+            }
+            is ApiResult.NotAuthenticated -> {
+                Log.w(TAG, "Cannot delete config event: not authenticated")
+                false
+            }
+            is ApiResult.SyncTokenExpired -> {
+                // Shouldn't happen for delete, but handle anyway
+                Log.w(TAG, "Unexpected sync token error during delete")
+                false
+            }
+            is ApiResult.Error -> {
+                Log.e(TAG, "Failed to delete config event $eventId: ${result.message}")
+                false
+            }
+        }
+    }
+
     /** Sync events using incremental sync. Handles 410 by clearing token and retrying. */
     suspend fun syncEvents(): SyncResult {
         val calendarId = tokenStorage.selectedCalendarId
