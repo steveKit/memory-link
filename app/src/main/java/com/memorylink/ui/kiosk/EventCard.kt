@@ -19,6 +19,7 @@ import com.memorylink.ui.theme.DarkSurface
 import com.memorylink.ui.theme.DisplayConstants
 import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.TextPrimary
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -27,50 +28,62 @@ import java.util.Locale
  * Displays the next calendar event with time and title as a single flowing sentence.
  *
  * Format:
- * - Timed events: "At 10:30 AM, Event Title"
- * - All-day events: "Today is Event Title"
+ * - Timed event today: "At 10:30 am, Event Title"
+ * - Timed event future: "On Wednesday, February 18 at 10:30 am, Event Title"
+ * - Timed event future (with year): "On Wednesday, February 18, 2026 at 10:30 am, Event Title"
  *
  * Text auto-sizes to fill the available space while wrapping naturally. Designed for
  * elderly/sight-challenged users - text is always as large as possible.
  *
  * @param title The event title to display
- * @param startTime The event start time, or null for all-day events
+ * @param startTime The event start time
+ * @param eventDate The event date, or null if the event is today
  * @param use24HourFormat Whether to use 24-hour format (default: false = 12-hour)
+ * @param showYearInDate Whether to show year in date for future events (default: true)
  * @param showBackground Whether to show the DarkSurface background (default: true)
  * @param modifier Modifier for the root container (should include size constraints)
  */
 @Composable
 fun EventCard(
         title: String,
-        startTime: LocalTime?,
+        startTime: LocalTime,
+        eventDate: LocalDate? = null,
         use24HourFormat: Boolean = false,
+        showYearInDate: Boolean = true,
         showBackground: Boolean = true,
         modifier: Modifier = Modifier
 ) {
-        // Combine time and title into a single sentence
-        // Use non-breaking spaces (\u00A0) in "At {time}," so it won't wrap mid-phrase
-        val displayText =
-                if (startTime != null) {
-                        val timeFormatter =
-                                if (use24HourFormat) {
-                                        DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
-                                } else {
-                                        DateTimeFormatter.ofPattern(
-                                                "h:mm\u00A0a",
-                                                Locale.getDefault()
-                                        )
-                                }
-                        // Format time and normalize AM/PM to lowercase without periods
-                        val formattedTime =
-                                startTime
-                                        .format(timeFormatter)
-                                        .replace("AM", "am")
-                                        .replace("PM", "pm")
-                                        .replace("a.m.", "am")
-                                        .replace("p.m.", "pm")
-                        "At $formattedTime, $title"
+        // Format time
+        val timeFormatter =
+                if (use24HourFormat) {
+                        DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
                 } else {
-                        "Today is $title"
+                        DateTimeFormatter.ofPattern("h:mm\u00A0a", Locale.getDefault())
+                }
+
+        // Format time and normalize AM/PM to lowercase without periods
+        val formattedTime =
+                startTime
+                        .format(timeFormatter)
+                        .replace("AM", "am")
+                        .replace("PM", "pm")
+                        .replace("a.m.", "am")
+                        .replace("p.m.", "pm")
+
+        // Build display text based on whether event is today or future
+        val displayText =
+                if (eventDate != null) {
+                        // Future date: "On {day}, {date} at {time}, {title}"
+                        val datePattern =
+                                if (showYearInDate) "EEEE, MMMM d, yyyy" else "EEEE, MMMM d"
+                        val dateFormatter =
+                                DateTimeFormatter.ofPattern(datePattern, Locale.getDefault())
+                        val formattedDate = eventDate.format(dateFormatter)
+                        "On $formattedDate at $formattedTime, $title"
+                } else {
+                        // Today: "At {time}, {title}"
+                        // Use non-breaking spaces in "At {time}," so it won't wrap mid-phrase
+                        "At $formattedTime, $title"
                 }
 
         val backgroundModifier =
@@ -97,37 +110,19 @@ fun EventCard(
 // region Previews
 
 @Preview(
-        name = "Event Card - Short Title (Timed)",
+        name = "Event Card - Today Event",
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 400,
         heightDp = 300
 )
 @Composable
-private fun EventCardShortTitlePreview() {
-        MemoryLinkTheme {
-                EventCard(
-                        title = "Doctor",
-                        startTime = LocalTime.of(10, 30),
-                        use24HourFormat = false,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
-                )
-        }
-}
-
-@Preview(
-        name = "Event Card - Medium Title (Timed)",
-        showBackground = true,
-        backgroundColor = 0xFF121212,
-        widthDp = 400,
-        heightDp = 300
-)
-@Composable
-private fun EventCardMediumTitlePreview() {
+private fun EventCardTodayPreview() {
         MemoryLinkTheme {
                 EventCard(
                         title = "Doctor Appointment",
                         startTime = LocalTime.of(10, 30),
+                        eventDate = null, // null = today
                         use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
@@ -135,39 +130,64 @@ private fun EventCardMediumTitlePreview() {
 }
 
 @Preview(
-        name = "Event Card - Long Title (Timed)",
+        name = "Event Card - Future Event (With Year)",
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 400,
         heightDp = 300
 )
 @Composable
-private fun EventCardLongTitlePreview() {
+private fun EventCardFutureWithYearPreview() {
         MemoryLinkTheme {
                 EventCard(
-                        title = "Family Dinner at Sarah's House",
-                        startTime = LocalTime.of(18, 0),
+                        title = "Doctor Appointment",
+                        startTime = LocalTime.of(10, 30),
+                        eventDate = LocalDate.of(2026, 2, 19),
                         use24HourFormat = false,
+                        showYearInDate = true,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
         }
 }
 
 @Preview(
-        name = "Event Card - Very Long Title (Timed)",
+        name = "Event Card - Future Event (No Year)",
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 400,
         heightDp = 300
 )
 @Composable
-private fun EventCardVeryLongTitlePreview() {
+private fun EventCardFutureNoYearPreview() {
+        MemoryLinkTheme {
+                EventCard(
+                        title = "Doctor Appointment",
+                        startTime = LocalTime.of(10, 30),
+                        eventDate = LocalDate.of(2026, 2, 19),
+                        use24HourFormat = false,
+                        showYearInDate = false,
+                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                )
+        }
+}
+
+@Preview(
+        name = "Event Card - Long Future Event",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 400,
+        heightDp = 300
+)
+@Composable
+private fun EventCardLongFuturePreview() {
         MemoryLinkTheme {
                 EventCard(
                         title =
                                 "Meet Eric downstairs so he can take you to your doctors appointment",
                         startTime = LocalTime.of(15, 0),
+                        eventDate = LocalDate.of(2026, 2, 23),
                         use24HourFormat = false,
+                        showYearInDate = true,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
         }
@@ -186,45 +206,8 @@ private fun EventCard24HourPreview() {
                 EventCard(
                         title = "Lunch",
                         startTime = LocalTime.of(12, 0),
+                        eventDate = null,
                         use24HourFormat = true,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
-                )
-        }
-}
-
-@Preview(
-        name = "Event Card - All-Day Event",
-        showBackground = true,
-        backgroundColor = 0xFF121212,
-        widthDp = 400,
-        heightDp = 300
-)
-@Composable
-private fun EventCardAllDayPreview() {
-        MemoryLinkTheme {
-                EventCard(
-                        title = "Mom's Birthday",
-                        startTime = null,
-                        use24HourFormat = false,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
-                )
-        }
-}
-
-@Preview(
-        name = "Event Card - All-Day Long Title",
-        showBackground = true,
-        backgroundColor = 0xFF121212,
-        widthDp = 400,
-        heightDp = 300
-)
-@Composable
-private fun EventCardAllDayLongPreview() {
-        MemoryLinkTheme {
-                EventCard(
-                        title = "Family Reunion at the Park",
-                        startTime = null,
-                        use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
         }
@@ -243,6 +226,7 @@ private fun EventCardTabletPreview() {
                 EventCard(
                         title = "Physical Therapy Session",
                         startTime = LocalTime.of(14, 30),
+                        eventDate = LocalDate.of(2026, 2, 20),
                         use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
@@ -262,6 +246,7 @@ private fun EventCardSmallAreaPreview() {
                 EventCard(
                         title = "Lunch",
                         startTime = LocalTime.of(12, 0),
+                        eventDate = null,
                         use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(8.dp)
                 )
@@ -281,6 +266,7 @@ private fun EventCardLargeAreaPreview() {
                 EventCard(
                         title = "Doctor Appointment",
                         startTime = LocalTime.of(10, 30),
+                        eventDate = null,
                         use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )

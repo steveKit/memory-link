@@ -1,14 +1,20 @@
 package com.memorylink.domain.model
 
+import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.LocalTime
 
 /**
- * Represents the three display states of the kiosk screen. See .clinerules/40-state-machine.md for
- * the full state diagram.
+ * Represents the display states of the kiosk screen. See .clinerules/40-state-machine.md for the
+ * full state diagram.
  *
  * Note: Time is NOT embedded in DisplayState. The UI reads live system time directly for accurate
  * clock display. DisplayState only tracks the logical state (awake/sleep/event) and display
  * settings.
+ *
+ * Layout areas:
+ * - Clock area (top): Shows time, date, and optional all-day event
+ * - Event card (bottom): Shows next timed event (if any)
  */
 sealed class DisplayState {
 
@@ -17,8 +23,8 @@ sealed class DisplayState {
         abstract val showYearInDate: Boolean
 
         /**
-         * AWAKE_NO_EVENT: Within wake period but no future events today. Display: Full clock (72sp)
-         * + date (36sp), full brightness.
+         * AWAKE_NO_EVENT: Within wake period but no future events in lookahead window. Display:
+         * Full clock (72sp) + date (36sp), full brightness.
          */
         data class AwakeNoEvent(
                 override val use24HourFormat: Boolean = false,
@@ -26,20 +32,55 @@ sealed class DisplayState {
         ) : DisplayState()
 
         /**
-         * AWAKE_WITH_EVENT: Within wake period and next event exists today. Display: Clock + Date +
-         * Event Card (title + time).
+         * AWAKE_WITH_EVENT: Within wake period and at least one event exists in lookahead window.
          *
-         * @param nextEventTime The event start time, or null for all-day events.
-         * ```
-         *                      All-day events display as "TODAY IS [title]".
-         * ```
+         * Layout:
+         * - Clock area: Time + Date + optional all-day event (in AccentBlue)
+         * - Event card: Next timed event (only shown if timedEventTitle is set)
+         *
+         * All-day event display rules:
+         * - Today: "Today is {title}"
+         * - Future (within 7 days): "{Day of week} is {title}"
+         *
+         * Timed event display rules:
+         * - Today: "At {time}, {title}"
+         * - Future (within 2 weeks): "On {day}, {date} at {time}, {title}"
+         *
+         * @param allDayEventTitle Title of next all-day event, or null if none
+         * @param allDayEventDayOfWeek Day of week for future all-day event, or null if today
+         * @param timedEventTitle Title of next timed event, or null if none
+         * @param timedEventTime Start time of timed event, or null if none
+         * @param timedEventDate Date of timed event, or null if today
          */
         data class AwakeWithEvent(
-                val nextEventTitle: String,
-                val nextEventTime: LocalTime?,
+                // All-day event (displays in clock area)
+                val allDayEventTitle: String? = null,
+                val allDayEventDayOfWeek: DayOfWeek? = null,
+                // Timed event (displays in event card)
+                val timedEventTitle: String? = null,
+                val timedEventTime: LocalTime? = null,
+                val timedEventDate: LocalDate? = null,
+                // Settings
                 override val use24HourFormat: Boolean = false,
                 override val showYearInDate: Boolean = true
-        ) : DisplayState()
+        ) : DisplayState() {
+
+                /** Returns true if there's an all-day event to display. */
+                val hasAllDayEvent: Boolean
+                        get() = allDayEventTitle != null
+
+                /** Returns true if the all-day event is today (not a future day). */
+                val isAllDayEventToday: Boolean
+                        get() = allDayEventTitle != null && allDayEventDayOfWeek == null
+
+                /** Returns true if there's a timed event to display. */
+                val hasTimedEvent: Boolean
+                        get() = timedEventTitle != null
+
+                /** Returns true if the timed event is today (not a future day). */
+                val isTimedEventToday: Boolean
+                        get() = timedEventTitle != null && timedEventDate == null
+        }
 
         /**
          * SLEEP: Current time is within sleep period. Display: Dimmed clock + date (same layout as

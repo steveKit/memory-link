@@ -74,6 +74,25 @@ constructor(
         }
     }
 
+    /**
+     * Observe all upcoming events within the 2-week lookahead window. Returns non-config events
+     * that haven't started yet.
+     *
+     * Used for the lookahead feature:
+     * - Timed events: up to 2 weeks ahead
+     * - All-day events: up to 7 days ahead (filtered at use-case level)
+     */
+    fun observeUpcomingEvents(): Flow<List<CalendarEvent>> {
+        val zoneId = ZoneId.systemDefault()
+        val now = LocalDateTime.now(zoneId)
+        val currentTime = now.atZone(zoneId).toInstant().toEpochMilli()
+        val twoWeeksLater = now.plusWeeks(2).atZone(zoneId).toInstant().toEpochMilli()
+
+        return eventDao.getUpcomingEvents(currentTime, twoWeeksLater).map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
     /** Observe config events for settings processing. */
     fun observeConfigEvents(): Flow<List<CalendarEvent>> {
         return eventDao.getConfigEvents().map { entities -> entities.map { it.toDomainModel() } }

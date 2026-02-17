@@ -35,6 +35,13 @@ object DisplayConstants {
     val MAX_FONT_SIZE: TextUnit = 95.sp
 
     /**
+     * Maximum font size for all-day event text displayed in clock area.
+     *
+     * Slightly smaller than date to create visual hierarchy.
+     */
+    val MAX_ALL_DAY_FONT_SIZE: TextUnit = 60.sp
+
+    /**
      * Minimum font size for auto-sizing text.
      *
      * Ensures text never becomes too small to read, even with very long content.
