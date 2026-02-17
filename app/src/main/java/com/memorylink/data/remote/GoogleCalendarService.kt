@@ -211,10 +211,10 @@ class GoogleCalendarService @Inject constructor(private val authManager: GoogleA
                             // Incremental sync - use syncToken
                             request.syncToken = syncToken
                         } else {
-                            // Full sync - set date range (2 weeks back, 2 weeks forward)
+                            // Full sync - set date range (today to 2 weeks forward)
                             val zoneId = ZoneId.systemDefault()
                             val today = LocalDate.now()
-                            val startDateTime = today.minusDays(7).atStartOfDay(zoneId).toInstant()
+                            val startDateTime = today.atStartOfDay(zoneId).toInstant()
                             val endDateTime = today.plusDays(14).atStartOfDay(zoneId).toInstant()
                             request.setTimeMin(DateTime(startDateTime.toEpochMilli()))
                             request.setTimeMax(DateTime(endDateTime.toEpochMilli()))
@@ -296,21 +296,9 @@ class GoogleCalendarService @Inject constructor(private val authManager: GoogleA
 
         if (isAllDay) {
             // All-day events use date (not dateTime)
-            // Date is in YYYY-MM-DD format, represents start of day in local timezone
-            val startDate = event.start.date.value
-            val endDate = event.end.date.value
-
-            val zoneId = ZoneId.systemDefault()
-            startMillis =
-                    LocalDate.parse(startDate.toString())
-                            .atStartOfDay(zoneId)
-                            .toInstant()
-                            .toEpochMilli()
-            endMillis =
-                    LocalDate.parse(endDate.toString())
-                            .atStartOfDay(zoneId)
-                            .toInstant()
-                            .toEpochMilli()
+            // The .value property returns epoch millis directly
+            startMillis = event.start.date.value
+            endMillis = event.end.date.value
         } else {
             // Timed events use dateTime
             startMillis = event.start?.dateTime?.value ?: return null
