@@ -65,21 +65,33 @@ constructor(
 
         // Start observing config events and process them
         applicationScope.launch {
+            Log.d(TAG, "Starting config events observation...")
             calendarRepository.observeConfigEvents().distinctUntilChanged().collect { configEvents
                 ->
+                Log.d(TAG, "Config events flow emitted: ${configEvents.size} event(s)")
+
                 if (configEvents.isNotEmpty()) {
+                    // Log each config event for debugging
+                    configEvents.forEach { event ->
+                        Log.d(TAG, "  - Config event: '${event.title}' (id: ${event.id})")
+                    }
+
                     Log.d(TAG, "Processing ${configEvents.size} config events")
                     val result = parseConfigEventUseCase(configEvents)
                     Log.d(TAG, "Applied ${result.appliedCount} config settings")
 
                     // Delete successfully processed config events from Google Calendar and cache
                     if (result.processedEventIds.isNotEmpty()) {
+                        Log.d(TAG, "Deleting ${result.processedEventIds.size} processed events...")
                         deleteProcessedConfigEvents(result.processedEventIds)
                     }
 
                     // Trigger settings refresh - the settings flow observation handles
                     // state update, alarm rescheduling, etc.
+                    Log.d(TAG, "Triggering settings refresh after config processing")
                     settingsRepository.refreshSettings()
+                } else {
+                    Log.d(TAG, "No config events to process")
                 }
             }
         }
