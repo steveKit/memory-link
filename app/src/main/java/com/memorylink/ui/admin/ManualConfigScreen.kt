@@ -64,7 +64,6 @@ import java.time.format.DateTimeFormatter
  * @param onBrightnessChange Update brightness (null to clear override)
  * @param onTimeFormatChange Update time format (null to clear override)
  * @param onShowYearChange Update show year in date (null to clear override)
- * @param onClearAll Clear all manual overrides
  * @param onBackClick Navigate back to admin home
  * @param modifier Modifier for the screen
  */
@@ -80,7 +79,6 @@ fun ManualConfigScreen(
         onBrightnessChange: (Int?) -> Unit,
         onTimeFormatChange: (Boolean?) -> Unit,
         onShowYearChange: (Boolean?) -> Unit = {},
-        onClearAll: () -> Unit,
         onBackClick: () -> Unit,
         modifier: Modifier = Modifier
 ) {
@@ -180,32 +178,6 @@ fun ManualConfigScreen(
                         )
 
                         Spacer(modifier = Modifier.height(48.dp))
-
-                        // Clear All button
-                        Button(
-                                onClick = onClearAll,
-                                modifier = Modifier.fillMaxWidth().height(56.dp),
-                                colors =
-                                        ButtonDefaults.buttonColors(
-                                                containerColor = Color(0xFF2A2A2A)
-                                        ),
-                                shape = RoundedCornerShape(12.dp)
-                        ) {
-                                Text(
-                                        text = "Clear All Overrides",
-                                        fontSize = 16.sp,
-                                        color = Color(0xFFEF5350)
-                                )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                                text = "Removes manual settings and uses calendar [CONFIG] events",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.5f),
-                                modifier = Modifier.padding(horizontal = 8.dp)
-                        )
                 }
         }
 }
@@ -990,7 +962,6 @@ private fun ManualConfigWithValuesPreview() {
                         onSleepTimeChange = {},
                         onBrightnessChange = {},
                         onTimeFormatChange = {},
-                        onClearAll = {},
                         onBackClick = {}
                 )
         }
@@ -1020,7 +991,6 @@ private fun ManualConfigSolarTimePreview() {
                         onSleepTimeChange = {},
                         onBrightnessChange = {},
                         onTimeFormatChange = {},
-                        onClearAll = {},
                         onBackClick = {}
                 )
         }
@@ -1042,7 +1012,6 @@ private fun ManualConfigDefaultsPreview() {
                         onSleepTimeChange = {},
                         onBrightnessChange = {},
                         onTimeFormatChange = {},
-                        onClearAll = {},
                         onBackClick = {}
                 )
         }
@@ -1070,7 +1039,6 @@ private fun ManualConfig12HourPreview() {
                         onSleepTimeChange = {},
                         onBrightnessChange = {},
                         onTimeFormatChange = {},
-                        onClearAll = {},
                         onBackClick = {}
                 )
         }

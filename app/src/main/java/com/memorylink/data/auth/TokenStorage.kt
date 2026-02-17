@@ -235,22 +235,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getInt(KEY_MANUAL_SLEEP_SOLAR_OFFSET, 0)
         set(value) = prefs.edit().putInt(KEY_MANUAL_SLEEP_SOLAR_OFFSET, value).apply()
 
-    /** Clear all manual config overrides, reverting to [CONFIG] event values. */
-    fun clearManualOverrides() {
-        prefs.edit()
-                .remove(KEY_MANUAL_WAKE_TIME)
-                .remove(KEY_MANUAL_SLEEP_TIME)
-                .remove(KEY_MANUAL_BRIGHTNESS)
-                .remove(KEY_MANUAL_TIME_FORMAT)
-                .remove(KEY_MANUAL_FONT_SIZE)
-                .remove(KEY_MANUAL_SHOW_YEAR)
-                .remove(KEY_MANUAL_WAKE_SOLAR_REF)
-                .remove(KEY_MANUAL_WAKE_SOLAR_OFFSET)
-                .remove(KEY_MANUAL_SLEEP_SOLAR_REF)
-                .remove(KEY_MANUAL_SLEEP_SOLAR_OFFSET)
-                .apply()
-    }
-
     // ========== [CONFIG] Event Settings ==========
     // These are set when parsing [CONFIG] calendar events.
     // Priority: Manual Override > Config Event > Default

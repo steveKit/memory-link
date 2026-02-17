@@ -134,7 +134,6 @@ fun AdminNavGraph(
                     onBrightnessChange = viewModel::setBrightness,
                     onTimeFormatChange = viewModel::setUse24HourFormat,
                     onShowYearChange = viewModel::setShowYearInDate,
-                    onClearAll = viewModel::clearAllOverrides,
                     onBackClick = { navController.popBackStack() }
             )
         }
