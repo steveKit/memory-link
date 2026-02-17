@@ -24,7 +24,11 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
     /**
      * Determine the current display state.
      *
-     * @param now Current date/time
+     * Note: Time is NOT embedded in the returned DisplayState. The UI reads live system time
+     * directly for accurate clock display. This use case only determines the logical state
+     * (awake/sleep/event) based on the current time.
+     *
+     * @param now Current date/time (used for state evaluation, not embedded in result)
      * @param events List of calendar events for today
      * @param settings Current app settings (sleep/wake times, format)
      * @return The display state to render
@@ -35,13 +39,10 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
             settings: AppSettings
     ): DisplayState {
         val currentTime = now.toLocalTime()
-        val currentDate = now.toLocalDate()
 
         // Check if we're in sleep period
         if (isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime)) {
             return DisplayState.Sleep(
-                    currentTime = currentTime,
-                    currentDate = currentDate,
                     use24HourFormat = settings.use24HourFormat,
                     showYearInDate = settings.showYearInDate
             )
@@ -52,8 +53,6 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
 
         return if (nextEvent != null) {
             DisplayState.AwakeWithEvent(
-                    currentTime = currentTime,
-                    currentDate = currentDate,
                     nextEventTitle = nextEvent.title,
                     nextEventTime = getDisplayTime(nextEvent),
                     use24HourFormat = settings.use24HourFormat,
@@ -61,8 +60,6 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
             )
         } else {
             DisplayState.AwakeNoEvent(
-                    currentTime = currentTime,
-                    currentDate = currentDate,
                     use24HourFormat = settings.use24HourFormat,
                     showYearInDate = settings.showYearInDate
             )

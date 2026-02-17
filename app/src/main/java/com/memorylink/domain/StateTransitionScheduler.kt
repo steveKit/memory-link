@@ -16,16 +16,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Schedules precise state transitions using AlarmManager.
+ * Schedules wake/sleep state transitions using AlarmManager.
  *
- * This replaces the unreliable Flow-based minuteTicks() approach with system-level alarms that fire
- * precisely at:
- * - Wake time: Transition to awake state + trigger calendar sync
- * - Sleep time: Transition to sleep state + cancel calendar sync
- * - Minute boundaries: Update clock display (only during awake period)
+ * Schedules alarms for:
+ * - Wake time: Transition to awake state, start KioskForegroundService
+ * - Sleep time: Transition to sleep state, stop KioskForegroundService
+ *
+ * Note: Minute ticks and calendar sync are handled by KioskForegroundService, which provides more
+ * reliable 5-minute sync intervals than WorkManager and 1-minute state refresh for event time
+ * checking.
  *
  * Per .clinerules/40-state-machine.md:
- * - Every 1 minute: Re-evaluate display state (for event time passing)
  * - At wake/sleep boundary: Immediate state transition
  */
 @Singleton
@@ -43,19 +44,15 @@ constructor(
         // Alarm request codes
         const val ALARM_REQUEST_WAKE = 1001
         const val ALARM_REQUEST_SLEEP = 1002
-        const val ALARM_REQUEST_MINUTE_TICK = 1003
 
         // Intent actions
         const val ACTION_WAKE = "com.memorylink.ACTION_WAKE"
         const val ACTION_SLEEP = "com.memorylink.ACTION_SLEEP"
-        const val ACTION_MINUTE_TICK = "com.memorylink.ACTION_MINUTE_TICK"
     }
 
     private val alarmManager: AlarmManager by lazy {
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
     }
-
-    private var isMinuteTickActive = false
 
     /**
      * Initialize the scheduler with current settings. Call this on app startup and when settings
@@ -70,13 +67,6 @@ constructor(
 
         scheduleWakeAlarm(settings)
         scheduleSleepAlarm(settings)
-
-        // Start minute ticks if we're currently in awake period
-        if (isAwakePeriod(settings)) {
-            startMinuteTicks()
-        } else {
-            stopMinuteTicks()
-        }
     }
 
     /** Reschedule all alarms when settings change. */
@@ -84,48 +74,22 @@ constructor(
         Log.d(TAG, "Settings changed, rescheduling alarms")
         scheduleWakeAlarm(newSettings)
         scheduleSleepAlarm(newSettings)
-
-        // Update minute tick state based on new settings
-        if (isAwakePeriod(newSettings)) {
-            startMinuteTicks()
-        } else {
-            stopMinuteTicks()
-        }
     }
 
-    /** Called when wake alarm fires. Starts minute ticks for clock updates during awake period. */
+    /** Called when wake alarm fires. Reschedules wake alarm for tomorrow. */
     fun onWakeAlarmFired() {
         Log.d(TAG, "Wake alarm fired")
-        startMinuteTicks()
-
         // Reschedule wake alarm for tomorrow
         val settings = settingsRepository.currentSettings
         scheduleWakeAlarm(settings)
     }
 
-    /** Called when sleep alarm fires. Stops minute ticks to save battery during sleep period. */
+    /** Called when sleep alarm fires. Reschedules sleep alarm for tomorrow. */
     fun onSleepAlarmFired() {
         Log.d(TAG, "Sleep alarm fired")
-        stopMinuteTicks()
-
         // Reschedule sleep alarm for tomorrow
         val settings = settingsRepository.currentSettings
         scheduleSleepAlarm(settings)
-    }
-
-    /**
-     * Called when minute tick alarm fires. Reschedules the next minute tick (only if still in awake
-     * period).
-     */
-    fun onMinuteTickFired() {
-        val settings = settingsRepository.currentSettings
-        if (isAwakePeriod(settings)) {
-            scheduleNextMinuteTick()
-        } else {
-            // We've somehow entered sleep period, stop ticking
-            Log.d(TAG, "Minute tick fired but in sleep period, stopping ticks")
-            isMinuteTickActive = false
-        }
     }
 
     /** Check if current time is within the awake period. */
@@ -139,8 +103,6 @@ constructor(
         Log.d(TAG, "Cancelling all alarms")
         cancelAlarm(ALARM_REQUEST_WAKE, ACTION_WAKE)
         cancelAlarm(ALARM_REQUEST_SLEEP, ACTION_SLEEP)
-        cancelAlarm(ALARM_REQUEST_MINUTE_TICK, ACTION_MINUTE_TICK)
-        isMinuteTickActive = false
     }
 
     private fun scheduleWakeAlarm(settings: AppSettings) {
@@ -174,36 +136,6 @@ constructor(
                 sleepDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         scheduleExactAlarm(ALARM_REQUEST_SLEEP, ACTION_SLEEP, triggerAtMillis)
         Log.d(TAG, "Scheduled sleep alarm for $sleepDateTime")
-    }
-
-    private fun startMinuteTicks() {
-        if (isMinuteTickActive) {
-            Log.d(TAG, "Minute ticks already active")
-            return
-        }
-        Log.d(TAG, "Starting minute ticks")
-        isMinuteTickActive = true
-        scheduleNextMinuteTick()
-    }
-
-    private fun stopMinuteTicks() {
-        if (!isMinuteTickActive) {
-            return
-        }
-        Log.d(TAG, "Stopping minute ticks")
-        cancelAlarm(ALARM_REQUEST_MINUTE_TICK, ACTION_MINUTE_TICK)
-        isMinuteTickActive = false
-    }
-
-    private fun scheduleNextMinuteTick() {
-        val now = timeProvider.now()
-
-        // Calculate milliseconds until next minute boundary
-        val nextMinute = now.plusMinutes(1).withSecond(0).withNano(0)
-        val triggerAtMillis = nextMinute.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-
-        scheduleExactAlarm(ALARM_REQUEST_MINUTE_TICK, ACTION_MINUTE_TICK, triggerAtMillis)
-        Log.d(TAG, "Scheduled minute tick for $nextMinute")
     }
 
     private fun scheduleExactAlarm(requestCode: Int, action: String, triggerAtMillis: Long) {
