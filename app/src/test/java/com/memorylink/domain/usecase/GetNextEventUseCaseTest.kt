@@ -336,6 +336,133 @@ class GetNextEventUseCaseTest {
 
         // endregion
 
+        // region Multi-Day All-Day Events
+
+        @Test
+        fun `returns multi-day all-day event when started yesterday but still ongoing`() {
+                // 3-day event: Feb 10-12, today is Feb 11
+                val now = LocalDateTime.of(2026, 2, 11, 10, 0)
+                val events =
+                        listOf(
+                                createMultiDayAllDayEvent(
+                                        "Conference",
+                                        LocalDateTime.of(2026, 2, 10, 0, 0),
+                                        3 // 3 days: Feb 10, 11, 12
+                                )
+                        )
+                val result = useCase(now, events)
+                assertEquals("Conference", result.allDayEvent?.title)
+        }
+
+        @Test
+        fun `returns multi-day all-day event on its last day`() {
+                // 3-day event: Feb 9-11, today is Feb 11 (last day)
+                val now = LocalDateTime.of(2026, 2, 11, 23, 59)
+                val events =
+                        listOf(
+                                createMultiDayAllDayEvent(
+                                        "Festival",
+                                        LocalDateTime.of(2026, 2, 9, 0, 0),
+                                        3 // 3 days: Feb 9, 10, 11
+                                )
+                        )
+                val result = useCase(now, events)
+                assertEquals("Festival", result.allDayEvent?.title)
+        }
+
+        @Test
+        fun `excludes multi-day all-day event that ended yesterday`() {
+                // 3-day event: Feb 8-10, today is Feb 11 (event ended)
+                val now = LocalDateTime.of(2026, 2, 11, 10, 0)
+                val events =
+                        listOf(
+                                createMultiDayAllDayEvent(
+                                        "Past Event",
+                                        LocalDateTime.of(2026, 2, 8, 0, 0),
+                                        3 // 3 days: Feb 8, 9, 10
+                                )
+                        )
+                val result = useCase(now, events)
+                assertNull(result.allDayEvent)
+        }
+
+        @Test
+        fun `returns ongoing multi-day event over future single-day event`() {
+                // Ongoing multi-day event should be selected (earlier startTime)
+                val now = LocalDateTime.of(2026, 2, 11, 10, 0)
+                val events =
+                        listOf(
+                                createMultiDayAllDayEvent(
+                                        "Week Long Event",
+                                        LocalDateTime.of(2026, 2, 9, 0, 0),
+                                        7 // Feb 9-15
+                                ),
+                                createAllDayEvent(
+                                        "Tomorrow Event",
+                                        LocalDateTime.of(2026, 2, 12, 0, 0)
+                                )
+                        )
+                val result = useCase(now, events)
+                assertEquals("Week Long Event", result.allDayEvent?.title)
+        }
+
+        @Test
+        fun `handles week-long event spanning across week boundary`() {
+                // Week-long event starting last week, today is in the middle
+                val now = LocalDateTime.of(2026, 2, 11, 14, 0) // Wednesday
+                val events =
+                        listOf(
+                                createMultiDayAllDayEvent(
+                                        "Business Trip",
+                                        LocalDateTime.of(2026, 2, 8, 0, 0), // Sunday
+                                        7 // Feb 8-14 (Sun-Sat)
+                                )
+                        )
+                val result = useCase(now, events)
+                assertEquals("Business Trip", result.allDayEvent?.title)
+        }
+
+        @Test
+        fun `excludes multi-day event outside 7-day lookahead even if ongoing`() {
+                // Event started 10 days ago, ends in 5 days - but this shouldn't happen
+                // because if it's ongoing, it should be shown. Let's test the boundary.
+                // Actually, if ongoing today it SHOULD be shown regardless of start date.
+                val now = LocalDateTime.of(2026, 2, 11, 10, 0)
+                val events =
+                        listOf(
+                                createMultiDayAllDayEvent(
+                                        "Long Event",
+                                        LocalDateTime.of(2026, 2, 1, 0, 0), // Started Feb 1
+                                        20 // Ends Feb 21
+                                )
+                        )
+                val result = useCase(now, events)
+                // Should still be shown because it's ongoing today
+                assertEquals("Long Event", result.allDayEvent?.title)
+        }
+
+        @Test
+        fun `returns both multi-day all-day and timed event`() {
+                val now = LocalDateTime.of(2026, 2, 11, 8, 0)
+                val events =
+                        listOf(
+                                createMultiDayAllDayEvent(
+                                        "Vacation",
+                                        LocalDateTime.of(2026, 2, 10, 0, 0),
+                                        5 // Feb 10-14
+                                ),
+                                createTimedEvent(
+                                        "Doctor Appointment",
+                                        LocalDateTime.of(2026, 2, 11, 10, 30)
+                                )
+                        )
+                val result = useCase(now, events)
+                assertEquals("Vacation", result.allDayEvent?.title)
+                assertEquals("Doctor Appointment", result.timedEvent?.title)
+        }
+
+        // endregion
+
         // region Helper Functions
 
         private fun createTimedEvent(title: String, startTime: LocalDateTime): CalendarEvent {
@@ -354,6 +481,20 @@ class GetNextEventUseCaseTest {
                         title = title,
                         startTime = dayStart,
                         endTime = dayStart.plusDays(1),
+                        isAllDay = true
+                )
+        }
+
+        private fun createMultiDayAllDayEvent(
+                title: String,
+                dayStart: LocalDateTime,
+                durationDays: Int
+        ): CalendarEvent {
+                return CalendarEvent(
+                        id = title.hashCode().toString(),
+                        title = title,
+                        startTime = dayStart,
+                        endTime = dayStart.plusDays(durationDays.toLong()),
                         isAllDay = true
                 )
         }

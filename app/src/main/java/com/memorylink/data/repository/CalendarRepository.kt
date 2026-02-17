@@ -58,9 +58,10 @@ constructor(
     }
 
     /**
-     * Observe upcoming events (2-week window). Uses date boundaries to include all-day events.
-     * Filtering for "has not started yet" is done at use-case level since all-day events
-     * technically start at midnight but should display all day.
+     * Observe upcoming events (2-week window). Uses overlap-based query to include multi-day
+     * all-day events that started before today but haven't ended yet. Filtering for "has not
+     * started yet" (for timed events) is done at use-case level since all-day events technically
+     * start at midnight but should display all day.
      */
     fun observeUpcomingEvents(): Flow<List<CalendarEvent>> {
         val zoneId = ZoneId.systemDefault()
@@ -68,7 +69,9 @@ constructor(
         val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
         val twoWeeksLater = today.plusWeeks(2).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
-        return eventDao.getEventsInRange(dayStart, twoWeeksLater).map { entities ->
+        // Use getActiveEventsInRange to include multi-day events that started before today
+        // but are still active (end_time > dayStart)
+        return eventDao.getActiveEventsInRange(dayStart, twoWeeksLater).map { entities ->
             entities.map { it.toDomainModel() }
         }
     }
