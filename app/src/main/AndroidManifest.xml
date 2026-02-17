@@ -12,8 +12,9 @@
     <!-- Coarse location for sunrise/sunset calculation -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Foreground service for sync (if needed) -->
+    <!-- Foreground service for kiosk mode sync -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Exact alarms for precise wake/sleep transitions (Android 12+) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
@@ -68,7 +69,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- State transition receiver for wake/sleep/minute alarms -->
+        <!-- State transition receiver for wake/sleep alarms -->
         <receiver
             android:name=".service.StateTransitionReceiver"
             android:enabled="true"
@@ -76,9 +77,15 @@
             <intent-filter>
                 <action android:name="com.memorylink.ACTION_WAKE" />
                 <action android:name="com.memorylink.ACTION_SLEEP" />
-                <action android:name="com.memorylink.ACTION_MINUTE_TICK" />
             </intent-filter>
         </receiver>
+
+        <!-- Kiosk foreground service for calendar sync and state refresh -->
+        <service
+            android:name=".service.KioskForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- WorkManager initialization -->
         <provider

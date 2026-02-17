@@ -1,23 +1,28 @@
 package com.memorylink.domain.model
 
-import java.time.LocalDate
 import java.time.LocalTime
 
 /**
  * Represents the three display states of the kiosk screen. See .clinerules/40-state-machine.md for
  * the full state diagram.
+ *
+ * Note: Time is NOT embedded in DisplayState. The UI reads live system time directly for accurate
+ * clock display. DisplayState only tracks the logical state (awake/sleep/event) and display
+ * settings.
  */
 sealed class DisplayState {
+
+        /** Common display settings shared by all states. */
+        abstract val use24HourFormat: Boolean
+        abstract val showYearInDate: Boolean
 
         /**
          * AWAKE_NO_EVENT: Within wake period but no future events today. Display: Full clock (72sp)
          * + date (36sp), full brightness.
          */
         data class AwakeNoEvent(
-                val currentTime: LocalTime,
-                val currentDate: LocalDate,
-                val use24HourFormat: Boolean = false,
-                val showYearInDate: Boolean = true
+                override val use24HourFormat: Boolean = false,
+                override val showYearInDate: Boolean = true
         ) : DisplayState()
 
         /**
@@ -30,12 +35,10 @@ sealed class DisplayState {
          * ```
          */
         data class AwakeWithEvent(
-                val currentTime: LocalTime,
-                val currentDate: LocalDate,
                 val nextEventTitle: String,
                 val nextEventTime: LocalTime?,
-                val use24HourFormat: Boolean = false,
-                val showYearInDate: Boolean = true
+                override val use24HourFormat: Boolean = false,
+                override val showYearInDate: Boolean = true
         ) : DisplayState()
 
         /**
@@ -43,9 +46,7 @@ sealed class DisplayState {
          * AwakeNoEvent), 10% brightness.
          */
         data class Sleep(
-                val currentTime: LocalTime,
-                val currentDate: LocalDate,
-                val use24HourFormat: Boolean = false,
-                val showYearInDate: Boolean = true
+                override val use24HourFormat: Boolean = false,
+                override val showYearInDate: Boolean = true
         ) : DisplayState()
 }

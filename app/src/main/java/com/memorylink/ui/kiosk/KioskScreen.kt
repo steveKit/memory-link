@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -34,6 +36,34 @@ import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.SleepBackground
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
+import kotlinx.coroutines.delay
+
+/**
+ * Composable that provides live system time, updating every second.
+ *
+ * This ensures the clock display is always accurate regardless of when state evaluations occur
+ * (which may be delayed by Doze mode, etc.).
+ *
+ * @return Pair of (currentTime, currentDate) that updates every second
+ */
+@Composable
+fun rememberLiveTime(): Pair<LocalTime, LocalDate> {
+        val zoneId = ZoneId.systemDefault()
+        var currentTime by remember { mutableStateOf(LocalTime.now(zoneId)) }
+        var currentDate by remember { mutableStateOf(LocalDate.now(zoneId)) }
+
+        LaunchedEffect(Unit) {
+                while (true) {
+                        currentTime = LocalTime.now(zoneId)
+                        currentDate = LocalDate.now(zoneId)
+                        // Update every second for smooth clock display
+                        delay(1000L)
+                }
+        }
+
+        return currentTime to currentDate
+}
 
 /**
  * Main kiosk screen that renders the appropriate UI based on DisplayState.
@@ -49,12 +79,16 @@ import java.time.LocalTime
  * - All content is centered as a unit (no fixed percentage splits)
  * - Text auto-sizes to fill available space with max limits
  * - Same ClockDisplay component used for all states (DRY)
+ * - Time is read live from system clock (not from DisplayState)
  *
  * @param displayState The current display state to render
  * @param modifier Modifier for the root Box
  */
 @Composable
 fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
+        // Always use live system time for accurate clock display
+        val (currentTime, currentDate) = rememberLiveTime()
+
         Box(
                 modifier = modifier.fillMaxSize().background(DarkBackground),
                 contentAlignment = Alignment.Center
@@ -62,16 +96,16 @@ fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
                 when (displayState) {
                         is DisplayState.AwakeNoEvent -> {
                                 AwakeNoEventContent(
-                                        currentTime = displayState.currentTime,
-                                        currentDate = displayState.currentDate,
+                                        currentTime = currentTime,
+                                        currentDate = currentDate,
                                         use24HourFormat = displayState.use24HourFormat,
                                         showYearInDate = displayState.showYearInDate
                                 )
                         }
                         is DisplayState.AwakeWithEvent -> {
                                 AwakeWithEventContent(
-                                        currentTime = displayState.currentTime,
-                                        currentDate = displayState.currentDate,
+                                        currentTime = currentTime,
+                                        currentDate = currentDate,
                                         use24HourFormat = displayState.use24HourFormat,
                                         showYearInDate = displayState.showYearInDate,
                                         eventTitle = displayState.nextEventTitle,
@@ -80,8 +114,8 @@ fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
                         }
                         is DisplayState.Sleep -> {
                                 SleepContent(
-                                        currentTime = displayState.currentTime,
-                                        currentDate = displayState.currentDate,
+                                        currentTime = currentTime,
+                                        currentDate = currentDate,
                                         use24HourFormat = displayState.use24HourFormat,
                                         showYearInDate = displayState.showYearInDate
                                 )
@@ -269,14 +303,7 @@ private fun SleepContent(
 @Composable
 private fun KioskScreenAwakeNoEventPreview() {
         MemoryLinkTheme {
-                KioskScreen(
-                        displayState =
-                                DisplayState.AwakeNoEvent(
-                                        currentTime = LocalTime.of(10, 30),
-                                        currentDate = LocalDate.of(2026, 2, 11),
-                                        use24HourFormat = false
-                                )
-                )
+                KioskScreen(displayState = DisplayState.AwakeNoEvent(use24HourFormat = false))
         }
 }
 
@@ -290,14 +317,7 @@ private fun KioskScreenAwakeNoEventPreview() {
 @Composable
 private fun KioskScreenAwakeNoEventPortraitPreview() {
         MemoryLinkTheme {
-                KioskScreen(
-                        displayState =
-                                DisplayState.AwakeNoEvent(
-                                        currentTime = LocalTime.of(10, 30),
-                                        currentDate = LocalDate.of(2026, 2, 11),
-                                        use24HourFormat = false
-                                )
-                )
+                KioskScreen(displayState = DisplayState.AwakeNoEvent(use24HourFormat = false))
         }
 }
 
@@ -314,8 +334,6 @@ private fun KioskScreenAwakeWithEventPreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        currentTime = LocalTime.of(9, 15),
-                                        currentDate = LocalDate.of(2026, 2, 11),
                                         nextEventTitle = "Doctor Appointment",
                                         nextEventTime = LocalTime.of(10, 30),
                                         use24HourFormat = false
@@ -337,8 +355,6 @@ private fun KioskScreenAwakeWithEventPortraitPreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        currentTime = LocalTime.of(9, 15),
-                                        currentDate = LocalDate.of(2026, 2, 11),
                                         nextEventTitle = "Doctor Appointment",
                                         nextEventTime = LocalTime.of(10, 30),
                                         use24HourFormat = false
@@ -360,8 +376,6 @@ private fun KioskScreenAllDayEventPreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        currentTime = LocalTime.of(10, 0),
-                                        currentDate = LocalDate.of(2026, 2, 11),
                                         nextEventTitle = "Mom's Birthday",
                                         nextEventTime = null,
                                         use24HourFormat = false
@@ -379,16 +393,7 @@ private fun KioskScreenAllDayEventPreview() {
 )
 @Composable
 private fun KioskScreenSleepPreview() {
-        MemoryLinkTheme {
-                KioskScreen(
-                        displayState =
-                                DisplayState.Sleep(
-                                        currentTime = LocalTime.of(22, 45),
-                                        currentDate = LocalDate.of(2026, 2, 11),
-                                        use24HourFormat = false
-                                )
-                )
-        }
+        MemoryLinkTheme { KioskScreen(displayState = DisplayState.Sleep(use24HourFormat = false)) }
 }
 
 @Preview(
@@ -400,16 +405,7 @@ private fun KioskScreenSleepPreview() {
 )
 @Composable
 private fun KioskScreenSleepPortraitPreview() {
-        MemoryLinkTheme {
-                KioskScreen(
-                        displayState =
-                                DisplayState.Sleep(
-                                        currentTime = LocalTime.of(22, 45),
-                                        currentDate = LocalDate.of(2026, 2, 11),
-                                        use24HourFormat = false
-                                )
-                )
-        }
+        MemoryLinkTheme { KioskScreen(displayState = DisplayState.Sleep(use24HourFormat = false)) }
 }
 
 @Preview(
@@ -425,8 +421,6 @@ private fun KioskScreen24HourPreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        currentTime = LocalTime.of(14, 30),
-                                        currentDate = LocalDate.of(2026, 2, 11),
                                         nextEventTitle = "Lunch with Family",
                                         nextEventTime = LocalTime.of(12, 0),
                                         use24HourFormat = true
@@ -448,8 +442,6 @@ private fun KioskScreenLongTitlePreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        currentTime = LocalTime.of(9, 0),
-                                        currentDate = LocalDate.of(2026, 2, 11),
                                         nextEventTitle =
                                                 "Meet Eric downstairs so he can take you to your doctors appointment",
                                         nextEventTime = LocalTime.of(10, 0),
@@ -472,8 +464,6 @@ private fun KioskScreenTabletPreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        currentTime = LocalTime.of(10, 30),
-                                        currentDate = LocalDate.of(2026, 2, 11),
                                         nextEventTitle = "Physical Therapy",
                                         nextEventTime = LocalTime.of(11, 0),
                                         use24HourFormat = false

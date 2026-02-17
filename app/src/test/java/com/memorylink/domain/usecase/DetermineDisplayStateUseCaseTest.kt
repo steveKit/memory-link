@@ -20,6 +20,10 @@ import org.junit.Test
  * - AWAKE_NO_EVENT state (wake period, no events)
  * - AWAKE_WITH_EVENT state (wake period, with events)
  * - Boundary conditions at sleep/wake times
+ *
+ * Note: DisplayState no longer contains time fields (currentTime, currentDate). The UI reads live
+ * system time directly for accurate clock display. These tests verify the logical state transitions
+ * only.
  */
 class DetermineDisplayStateUseCaseTest {
 
@@ -44,7 +48,6 @@ class DetermineDisplayStateUseCaseTest {
         val result = useCase(now, emptyList(), settings)
 
         assertTrue(result is DisplayState.Sleep)
-        assertEquals(LocalTime.of(23, 0), (result as DisplayState.Sleep).currentTime)
     }
 
     @Test
@@ -69,9 +72,6 @@ class DetermineDisplayStateUseCaseTest {
         val result = useCase(now, emptyList(), settings)
 
         assertTrue(result is DisplayState.AwakeNoEvent)
-        val state = result as DisplayState.AwakeNoEvent
-        assertEquals(LocalTime.of(10, 0), state.currentTime)
-        assertEquals(now.toLocalDate(), state.currentDate)
     }
 
     @Test
@@ -306,6 +306,34 @@ class DetermineDisplayStateUseCaseTest {
         val result = useCase(now, emptyList(), settings)
 
         assertTrue(result is DisplayState.Sleep)
+    }
+
+    // endregion
+
+    // region showYearInDate Setting
+
+    @Test
+    fun `respects showYearInDate setting true`() {
+        val now = LocalDateTime.of(2026, 2, 11, 10, 0)
+        val settings = AppSettings(showYearInDate = true)
+        every { mockGetNextEventUseCase(any(), any()) } returns null
+
+        val result = useCase(now, emptyList(), settings)
+
+        assertTrue(result is DisplayState.AwakeNoEvent)
+        assertEquals(true, (result as DisplayState.AwakeNoEvent).showYearInDate)
+    }
+
+    @Test
+    fun `respects showYearInDate setting false`() {
+        val now = LocalDateTime.of(2026, 2, 11, 10, 0)
+        val settings = AppSettings(showYearInDate = false)
+        every { mockGetNextEventUseCase(any(), any()) } returns null
+
+        val result = useCase(now, emptyList(), settings)
+
+        assertTrue(result is DisplayState.AwakeNoEvent)
+        assertEquals(false, (result as DisplayState.AwakeNoEvent).showYearInDate)
     }
 
     // endregion
