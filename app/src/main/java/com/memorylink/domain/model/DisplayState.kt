@@ -32,9 +32,10 @@ sealed class DisplayState {
          * - Event card: Next timed event (only shown if timedEventTitle is set)
          *
          * All-day event display rules:
-         * - Today: "Today is {title}"
-         * - Tomorrow: "Tomorrow is {title}"
-         * - Future (within 7 days): "{Day of week} is {title}"
+         * - Today (single-day): "Today is {title}"
+         * - Tomorrow (single-day): "Tomorrow is {title}"
+         * - Future (within 7 days, single-day): "{Day of week} is {title}"
+         * - Ongoing multi-day (started before today): "{title} until {end day/date}"
          *
          * Timed event display rules:
          * - Today: "At {time}, {title}"
@@ -42,7 +43,8 @@ sealed class DisplayState {
          * - Future (within 2 weeks): "On {day}, {date} at {time}, {title}"
          *
          * @param allDayEventTitle Title of next all-day event, or null if none
-         * @param allDayEventDate Date of all-day event, or null if today
+         * @param allDayEventDate Start date of all-day event, or null if today
+         * @param allDayEventEndDate End date of multi-day event (exclusive), or null if single-day
          * @param timedEventTitle Title of next timed event, or null if none
          * @param timedEventTime Start time of timed event, or null if none
          * @param timedEventDate Date of timed event, or null if today
@@ -51,6 +53,7 @@ sealed class DisplayState {
                 // All-day event (displays in clock area)
                 val allDayEventTitle: String? = null,
                 val allDayEventDate: LocalDate? = null,
+                val allDayEventEndDate: LocalDate? = null,
                 // Timed event (displays in event card)
                 val timedEventTitle: String? = null,
                 val timedEventTime: LocalTime? = null,

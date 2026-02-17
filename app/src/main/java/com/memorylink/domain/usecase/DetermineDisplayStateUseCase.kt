@@ -48,14 +48,33 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
         }
 
         // Build AwakeWithEvent state
+        // For multi-day all-day events, we need to pass both start and end dates
+        // to enable "until" formatting for ongoing events
+        val allDayStartDate = allDayEvent?.startTime?.toLocalDate()
+        val allDayEndDate = allDayEvent?.endTime?.toLocalDate()
+        val isMultiDayEvent =
+                allDayEvent != null &&
+                        allDayStartDate != null &&
+                        allDayEndDate != null &&
+                        allDayEndDate.minusDays(1) > allDayStartDate // endDate is exclusive
+
         return DisplayState.AwakeWithEvent(
                 // All-day event fields
                 allDayEventTitle = allDayEvent?.title,
                 allDayEventDate =
-                        if (allDayEvent != null && allDayEvent.startTime.toLocalDate() != today) {
-                            allDayEvent.startTime.toLocalDate()
+                        if (allDayEvent != null && allDayStartDate != today) {
+                            allDayStartDate
                         } else {
                             null // null means "today"
+                        },
+                // End date for multi-day events (exclusive, so subtract 1 for display)
+                allDayEventEndDate =
+                        if (isMultiDayEvent) {
+                            allDayEndDate?.minusDays(
+                                    1
+                            ) // Convert exclusive to inclusive for display
+                        } else {
+                            null
                         },
                 // Timed event fields
                 timedEventTitle = timedEvent?.title,

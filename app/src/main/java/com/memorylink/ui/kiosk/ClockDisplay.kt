@@ -71,10 +71,16 @@ data class ClockColorScheme(
  * - **Time:** Fills width as a single line (max: 150.sp)
  * - **Date:** Fills width as a single line (max: 95.sp)
  * - **All-day event:** Displayed below date in AccentBlue (max: 60.sp)
- * - Today: "Today is {title}"
- * - Tomorrow: "Tomorrow is {title}"
- * - Future: "{Day of week} is {title}"
- *
+ * - Single-day events:
+ * ```
+ *     - Today: "Today is {title}"
+ *     - Tomorrow: "Tomorrow is {title}"
+ *     - Future: "{Day of week} is {title}"
+ * ```
+ * - Multi-day events (ongoing, started before today):
+ * ```
+ *     - "{title} until {end day/date}"
+ * ```
  * Both are sized independently to maximize readability. If vertical space is limited, all elements
  * are scaled down proportionally to fit.
  *
@@ -85,7 +91,8 @@ data class ClockColorScheme(
  * @param use24HourFormat Whether to use 24-hour format (default: false = 12-hour)
  * @param showYearInDate Whether to show year in date (default: true)
  * @param allDayEventTitle Optional all-day event title to display
- * @param allDayEventDate Date of all-day event, or null if today
+ * @param allDayEventDate Start date of all-day event, or null if today
+ * @param allDayEventEndDate End date for multi-day events (inclusive), or null if single-day
  * @param colorScheme Colors for time, date, and all-day event text
  * @param modifier Modifier for the root container
  */
@@ -97,6 +104,7 @@ fun ClockDisplay(
         showYearInDate: Boolean = true,
         allDayEventTitle: String? = null,
         allDayEventDate: LocalDate? = null,
+        allDayEventEndDate: LocalDate? = null,
         colorScheme: ClockColorScheme = ClockColorScheme.Awake,
         modifier: Modifier = Modifier
 ) {
@@ -126,12 +134,25 @@ fun ClockDisplay(
         val formattedDate = date.format(dateFormatter)
 
         // Format all-day event text if present
-        val tomorrow = LocalDate.now().plusDays(1)
+        val today = LocalDate.now()
+        val tomorrow = today.plusDays(1)
         val formattedAllDayEvent =
                 if (allDayEventTitle != null) {
+                        // Check if this is an ongoing multi-day event (started before today)
+                        // Indicated by: allDayEventEndDate is set AND allDayEventDate is null
+                        // (null date means "today or earlier" in this context)
+                        val isOngoingMultiDay =
+                                allDayEventEndDate != null && allDayEventDate == null
+
                         when {
+                                isOngoingMultiDay -> {
+                                        // Ongoing multi-day event: "{title} until {end day/date}"
+                                        val endDateText =
+                                                formatEndDate(allDayEventEndDate!!, today, tomorrow)
+                                        "$allDayEventTitle until $endDateText"
+                                }
                                 allDayEventDate == null -> {
-                                        // Today: "Today is {title}"
+                                        // Single-day event today: "Today is {title}"
                                         "Today is $allDayEventTitle"
                                 }
                                 allDayEventDate == tomorrow -> {
@@ -139,7 +160,8 @@ fun ClockDisplay(
                                         "Tomorrow is $allDayEventTitle"
                                 }
                                 else -> {
-                                        // Future day: "{Day of week} is {title}"
+                                        // Future day (including future multi-day events):
+                                        // "{Day of week} is {title}"
                                         val dayName =
                                                 allDayEventDate.dayOfWeek.getDisplayName(
                                                         JavaTextStyle.FULL,
@@ -415,6 +437,36 @@ private fun estimateTotalHeight(
         }
 
         return total
+}
+
+/**
+ * Format the end date for multi-day events.
+ *
+ * Uses friendly terms when appropriate:
+ * - "today" if end date is today
+ * - "tomorrow" if end date is tomorrow
+ * - Day name (e.g., "Wednesday") if within 7 days
+ * - Full date (e.g., "February 21") if further out
+ *
+ * @param endDate The end date to format (inclusive)
+ * @param today Today's date
+ * @param tomorrow Tomorrow's date
+ * @return Formatted end date string
+ */
+private fun formatEndDate(endDate: LocalDate, today: LocalDate, tomorrow: LocalDate): String {
+        return when {
+                endDate == today -> "today"
+                endDate == tomorrow -> "tomorrow"
+                endDate.isBefore(today.plusDays(7)) -> {
+                        // Within a week - use day name
+                        endDate.dayOfWeek.getDisplayName(JavaTextStyle.FULL, Locale.getDefault())
+                }
+                else -> {
+                        // Further out - use "Month day" format
+                        val formatter = DateTimeFormatter.ofPattern("MMMM d", Locale.getDefault())
+                        endDate.format(formatter)
+                }
+        }
 }
 
 // region Previews
