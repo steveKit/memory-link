@@ -34,13 +34,14 @@ class GetNextEventUseCase @Inject constructor() {
         val timedCutoff = today.plusDays(TIMED_LOOKAHEAD_DAYS)
 
         // Find next all-day event within 7 days
-        // All-day events for today are valid even if "started" at midnight
+        // An all-day event is valid if it's "active today" OR starts within the lookahead window.
+        // For multi-day events, check if event overlaps with today:
+        //   - Event starts on or before today AND ends after today (endTime is exclusive)
+        // For future events, check if they start within the lookahead window.
         val nextAllDayEvent =
                 events
                         .filter { event ->
-                            event.isAllDay &&
-                                    event.startTime.toLocalDate() >= today &&
-                                    event.startTime.toLocalDate() < allDayCutoff
+                            event.isAllDay && isAllDayEventActive(event, today, allDayCutoff)
                         }
                         .minByOrNull { it.startTime }
 
@@ -56,6 +57,39 @@ class GetNextEventUseCase @Inject constructor() {
                         .minByOrNull { it.startTime }
 
         return NextEventsResult(allDayEvent = nextAllDayEvent, timedEvent = nextTimedEvent)
+    }
+
+    /**
+     * Check if an all-day event is active (should be displayed).
+     *
+     * An all-day event is active if:
+     * 1. It's currently ongoing (started on or before today AND ends after today), OR
+     * 2. It starts within the lookahead window
+     *
+     * For multi-day all-day events, endTime is exclusive (e.g., a Feb 15-17 event has endTime of
+     * Feb 18 00:00:00).
+     *
+     * @param event The all-day event to check
+     * @param today Today's date
+     * @param cutoff The lookahead cutoff date
+     * @return true if the event should be displayed
+     */
+    private fun isAllDayEventActive(
+            event: CalendarEvent,
+            today: LocalDate,
+            cutoff: LocalDate
+    ): Boolean {
+        val eventStartDate = event.startTime.toLocalDate()
+        val eventEndDate = event.endTime.toLocalDate()
+
+        // Check if event is currently ongoing (multi-day event that started before today)
+        // endTime is exclusive, so endDate > today means the event is still active today
+        val isOngoing = eventStartDate <= today && eventEndDate > today
+
+        // Check if event starts within the lookahead window
+        val startsInWindow = eventStartDate >= today && eventStartDate < cutoff
+
+        return isOngoing || startsInWindow
     }
 
     /**

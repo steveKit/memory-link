@@ -63,6 +63,25 @@ interface EventDao {
     )
     fun getEventsInRange(startTime: Long, endTime: Long): Flow<List<EventEntity>>
 
+    /**
+     * Get all events active during a date range, including multi-day events that started before the
+     * range but haven't ended yet. An event is "active" if it overlaps with the time window:
+     * - Event starts before window ends (start_time < endTime)
+     * - Event ends after window starts (end_time > startTime)
+     *
+     * This is essential for multi-day all-day events where the start date has passed.
+     */
+    @Query(
+            """
+        SELECT * FROM cached_events 
+        WHERE start_time < :endTime 
+        AND end_time > :startTime
+        AND is_config_event = 0
+        ORDER BY start_time ASC
+    """
+    )
+    fun getActiveEventsInRange(startTime: Long, endTime: Long): Flow<List<EventEntity>>
+
     /** Get all [CONFIG] events for settings parsing. */
     @Query(
             """
