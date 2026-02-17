@@ -47,6 +47,22 @@ interface EventDao {
     )
     fun getUpcomingEvents(currentTime: Long, endTime: Long): Flow<List<EventEntity>>
 
+    /**
+     * Get all events in a date range (inclusive of start boundary). Uses >= for start to include
+     * all-day events that start at midnight. Filtering for "not yet started" timed events is done
+     * at use-case level.
+     */
+    @Query(
+            """
+        SELECT * FROM cached_events 
+        WHERE start_time >= :startTime 
+        AND start_time < :endTime
+        AND is_config_event = 0
+        ORDER BY start_time ASC
+    """
+    )
+    fun getEventsInRange(startTime: Long, endTime: Long): Flow<List<EventEntity>>
+
     /** Get all [CONFIG] events for settings parsing. */
     @Query(
             """

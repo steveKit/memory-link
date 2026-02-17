@@ -57,14 +57,18 @@ constructor(
         }
     }
 
-    /** Observe upcoming events (2-week window). All-day filtering at use-case level. */
+    /**
+     * Observe upcoming events (2-week window). Uses date boundaries to include all-day events.
+     * Filtering for "has not started yet" is done at use-case level since all-day events
+     * technically start at midnight but should display all day.
+     */
     fun observeUpcomingEvents(): Flow<List<CalendarEvent>> {
         val zoneId = ZoneId.systemDefault()
-        val now = LocalDateTime.now(zoneId)
-        val currentTime = now.atZone(zoneId).toInstant().toEpochMilli()
-        val twoWeeksLater = now.plusWeeks(2).atZone(zoneId).toInstant().toEpochMilli()
+        val today = LocalDate.now()
+        val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val twoWeeksLater = today.plusWeeks(2).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
-        return eventDao.getUpcomingEvents(currentTime, twoWeeksLater).map { entities ->
+        return eventDao.getEventsInRange(dayStart, twoWeeksLater).map { entities ->
             entities.map { it.toDomainModel() }
         }
     }
