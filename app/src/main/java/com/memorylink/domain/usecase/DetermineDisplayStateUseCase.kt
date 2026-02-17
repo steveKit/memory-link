@@ -51,9 +51,9 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
         return DisplayState.AwakeWithEvent(
                 // All-day event fields
                 allDayEventTitle = allDayEvent?.title,
-                allDayEventDayOfWeek =
+                allDayEventDate =
                         if (allDayEvent != null && allDayEvent.startTime.toLocalDate() != today) {
-                            allDayEvent.startTime.dayOfWeek
+                            allDayEvent.startTime.toLocalDate()
                         } else {
                             null // null means "today"
                         },

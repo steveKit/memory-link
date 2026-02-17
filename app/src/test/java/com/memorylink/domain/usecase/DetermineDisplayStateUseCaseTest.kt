@@ -3,7 +3,6 @@ package com.memorylink.domain.usecase
 import com.memorylink.domain.model.AppSettings
 import com.memorylink.domain.model.CalendarEvent
 import com.memorylink.domain.model.DisplayState
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -196,7 +195,7 @@ class DetermineDisplayStateUseCaseTest {
     // region All-Day Event Display
 
     @Test
-    fun `all-day event today shows with null dayOfWeek`() {
+    fun `all-day event today shows with null date`() {
         val now = LocalDateTime.of(2026, 2, 11, 10, 0)
         val settings = AppSettings(wakeTime = LocalTime.of(7, 0))
         val allDayEvent =
@@ -213,11 +212,11 @@ class DetermineDisplayStateUseCaseTest {
         assertTrue(result is DisplayState.AwakeWithEvent)
         val state = result as DisplayState.AwakeWithEvent
         assertEquals("Birthday Party", state.allDayEventTitle)
-        assertNull(state.allDayEventDayOfWeek) // null means today
+        assertNull(state.allDayEventDate) // null means today
     }
 
     @Test
-    fun `all-day event future shows with dayOfWeek`() {
+    fun `all-day event future shows with date`() {
         val now = LocalDateTime.of(2026, 2, 11, 10, 0) // Wednesday
         val settings = AppSettings()
         val allDayEvent =
@@ -234,7 +233,7 @@ class DetermineDisplayStateUseCaseTest {
         assertTrue(result is DisplayState.AwakeWithEvent)
         val state = result as DisplayState.AwakeWithEvent
         assertEquals("Holiday", state.allDayEventTitle)
-        assertEquals(DayOfWeek.FRIDAY, state.allDayEventDayOfWeek)
+        assertEquals(LocalDate.of(2026, 2, 13), state.allDayEventDate)
     }
 
     // endregion
@@ -315,7 +314,7 @@ class DetermineDisplayStateUseCaseTest {
         assertTrue(result is DisplayState.AwakeWithEvent)
         val state = result as DisplayState.AwakeWithEvent
         assertEquals("Birthday", state.allDayEventTitle)
-        assertNull(state.allDayEventDayOfWeek) // today
+        assertNull(state.allDayEventDate) // today
         assertEquals("Doctor", state.timedEventTitle)
         assertEquals(LocalTime.of(14, 0), state.timedEventTime)
         assertNull(state.timedEventDate) // today
@@ -347,7 +346,7 @@ class DetermineDisplayStateUseCaseTest {
         assertTrue(result is DisplayState.AwakeWithEvent)
         val state = result as DisplayState.AwakeWithEvent
         assertEquals("Birthday", state.allDayEventTitle)
-        assertNull(state.allDayEventDayOfWeek) // today
+        assertNull(state.allDayEventDate) // today
         assertEquals("Tomorrow Event", state.timedEventTitle)
         assertEquals(LocalDate.of(2026, 2, 12), state.timedEventDate) // tomorrow
     }

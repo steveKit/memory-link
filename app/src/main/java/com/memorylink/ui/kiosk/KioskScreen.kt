@@ -34,7 +34,6 @@ import com.memorylink.ui.theme.DarkSurface
 import com.memorylink.ui.theme.DisplayConstants
 import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.SleepBackground
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -112,7 +111,7 @@ fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
                                         showYearInDate = displayState.showYearInDate,
                                         // All-day event (clock area)
                                         allDayEventTitle = displayState.allDayEventTitle,
-                                        allDayEventDayOfWeek = displayState.allDayEventDayOfWeek,
+                                        allDayEventDate = displayState.allDayEventDate,
                                         // Timed event (event card)
                                         timedEventTitle = displayState.timedEventTitle,
                                         timedEventTime = displayState.timedEventTime,
@@ -177,7 +176,7 @@ private fun AwakeWithEventContent(
         showYearInDate: Boolean = true,
         // All-day event fields
         allDayEventTitle: String?,
-        allDayEventDayOfWeek: DayOfWeek?,
+        allDayEventDate: LocalDate?,
         // Timed event fields
         timedEventTitle: String?,
         timedEventTime: LocalTime?,
@@ -229,7 +228,7 @@ private fun AwakeWithEventContent(
                                         use24HourFormat = use24HourFormat,
                                         showYearInDate = showYearInDate,
                                         allDayEventTitle = allDayEventTitle,
-                                        allDayEventDayOfWeek = allDayEventDayOfWeek,
+                                        allDayEventDate = allDayEventDate,
                                         colorScheme = ClockColorScheme.Awake,
                                         modifier = Modifier.fillMaxWidth()
                                 )
@@ -414,7 +413,28 @@ private fun KioskScreenAllDayTodayPreview() {
                         displayState =
                                 DisplayState.AwakeWithEvent(
                                         allDayEventTitle = "Mom's Birthday",
-                                        allDayEventDayOfWeek = null, // null = today
+                                        allDayEventDate = null, // null = today
+                                        use24HourFormat = false
+                                )
+                )
+        }
+}
+
+@Preview(
+        name = "Kiosk Screen - All-Day Event Tomorrow",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 800,
+        heightDp = 480
+)
+@Composable
+private fun KioskScreenAllDayTomorrowPreview() {
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.AwakeWithEvent(
+                                        allDayEventTitle = "Family Reunion",
+                                        allDayEventDate = LocalDate.now().plusDays(1), // tomorrow
                                         use24HourFormat = false
                                 )
                 )
@@ -434,8 +454,9 @@ private fun KioskScreenAllDayFuturePreview() {
                 KioskScreen(
                         displayState =
                                 DisplayState.AwakeWithEvent(
-                                        allDayEventTitle = "Family Reunion",
-                                        allDayEventDayOfWeek = DayOfWeek.FRIDAY,
+                                        allDayEventTitle = "Company Party",
+                                        allDayEventDate =
+                                                LocalDate.of(2026, 2, 20), // future Friday
                                         use24HourFormat = false
                                 )
                 )
@@ -456,7 +477,7 @@ private fun KioskScreenAllDayPlusTimedPreview() {
                         displayState =
                                 DisplayState.AwakeWithEvent(
                                         allDayEventTitle = "Mom's Birthday",
-                                        allDayEventDayOfWeek = null,
+                                        allDayEventDate = null,
                                         timedEventTitle = "Doctor Appointment",
                                         timedEventTime = LocalTime.of(14, 30),
                                         timedEventDate = null,
@@ -480,7 +501,7 @@ private fun KioskScreenAllDayFuturePlusTimedFuturePreview() {
                         displayState =
                                 DisplayState.AwakeWithEvent(
                                         allDayEventTitle = "Holiday",
-                                        allDayEventDayOfWeek = DayOfWeek.FRIDAY,
+                                        allDayEventDate = LocalDate.of(2026, 2, 20),
                                         timedEventTitle = "Physical Therapy",
                                         timedEventTime = LocalTime.of(10, 0),
                                         timedEventDate = LocalDate.of(2026, 2, 19),
@@ -573,7 +594,7 @@ private fun KioskScreenTabletPreview() {
                         displayState =
                                 DisplayState.AwakeWithEvent(
                                         allDayEventTitle = "Company Retreat",
-                                        allDayEventDayOfWeek = DayOfWeek.SATURDAY,
+                                        allDayEventDate = LocalDate.of(2026, 2, 21), // Saturday
                                         timedEventTitle = "Physical Therapy",
                                         timedEventTime = LocalTime.of(11, 0),
                                         timedEventDate = null,
