@@ -5,16 +5,10 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 /**
- * Represents the display states of the kiosk screen. See .clinerules/40-state-machine.md for the
- * full state diagram.
+ * Kiosk display states. See: 40-state-machine.md
  *
- * Note: Time is NOT embedded in DisplayState. The UI reads live system time directly for accurate
- * clock display. DisplayState only tracks the logical state (awake/sleep/event) and display
- * settings.
- *
- * Layout areas:
- * - Clock area (top): Shows time, date, and optional all-day event
- * - Event card (bottom): Shows next timed event (if any)
+ * Time is NOT embedded here—UI reads live system time. Clock area shows time/date/all-day event;
+ * event card shows next timed event.
  */
 sealed class DisplayState {
 

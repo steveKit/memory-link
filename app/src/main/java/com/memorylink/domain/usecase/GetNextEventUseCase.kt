@@ -5,48 +5,27 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
 
-/**
- * Result of finding next events, with separate all-day and timed events.
- *
- * @param allDayEvent The next all-day event within 7 days, or null
- * @param timedEvent The next timed event within 2 weeks, or null
- */
+/** Result containing next all-day event (7-day window) and timed event (2-week window). */
 data class NextEventsResult(
         val allDayEvent: CalendarEvent? = null,
         val timedEvent: CalendarEvent? = null
 )
 
 /**
- * Use case for determining which events to display next.
+ * Determines which events to display next.
  *
- * Returns two separate events:
- * - All-day event: next one within 7 days (displayed in clock area)
- * - Timed event: next one within 2 weeks (displayed in event card)
- *
- * Rules:
- * 1. All-day events are limited to 7 days lookahead
- * 2. Timed events can look ahead up to 2 weeks
- * 3. Both can be returned simultaneously (displayed in different areas)
- * 4. Events that have already started are skipped (for timed events)
- * 5. All-day events for today are included regardless of current time
+ * All-day events: 7-day lookahead, shown in clock area. Timed events: 2-week lookahead, shown in
+ * event card. Both can be returned simultaneously. Past timed events are skipped; today's all-day
+ * events are always valid.
  */
 class GetNextEventUseCase @Inject constructor() {
 
     companion object {
-        /** Maximum days to look ahead for all-day events. */
         const val ALL_DAY_LOOKAHEAD_DAYS = 7L
-
-        /** Maximum days to look ahead for timed events. */
         const val TIMED_LOOKAHEAD_DAYS = 14L
     }
 
-    /**
-     * Get the next all-day and timed events to display.
-     *
-     * @param now Current date/time
-     * @param events List of all upcoming calendar events (already filtered to 2-week window)
-     * @return NextEventsResult containing both event types (either can be null)
-     */
+    /** Get next all-day and timed events from the provided list. */
     operator fun invoke(now: LocalDateTime, events: List<CalendarEvent>): NextEventsResult {
         if (events.isEmpty()) return NextEventsResult()
 
