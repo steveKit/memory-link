@@ -88,5 +88,9 @@ interface EventDao {
     @Query("DELETE FROM cached_events WHERE id IN (:ids)")
     suspend fun deleteEventsByIds(ids: List<String>): Int
 
+    /** Delete a single event by ID (for config event cleanup after processing). */
+    @Query("DELETE FROM cached_events WHERE id = :eventId")
+    suspend fun deleteEventById(eventId: String): Int
+
     @Query("SELECT COUNT(*) FROM cached_events") suspend fun getEventCount(): Int
 }

@@ -69,8 +69,13 @@ constructor(
                 ->
                 if (configEvents.isNotEmpty()) {
                     Log.d(TAG, "Processing ${configEvents.size} config events")
-                    val appliedCount = parseConfigEventUseCase(configEvents)
-                    Log.d(TAG, "Applied $appliedCount config settings")
+                    val result = parseConfigEventUseCase(configEvents)
+                    Log.d(TAG, "Applied ${result.appliedCount} config settings")
+
+                    // Delete successfully processed config events from Google Calendar and cache
+                    if (result.processedEventIds.isNotEmpty()) {
+                        deleteProcessedConfigEvents(result.processedEventIds)
+                    }
 
                     // Trigger settings refresh - the settings flow observation handles
                     // state update, alarm rescheduling, etc.
@@ -147,5 +152,37 @@ constructor(
     private fun createInitialState(): DisplayState {
         val now = timeProvider.now()
         return determineDisplayStateUseCase(now, emptyList(), AppSettings())
+    }
+
+    /**
+     * Delete processed config events from Google Calendar and local cache.
+     *
+     * This signals to remote caregivers that the config has been consumed and settings updated.
+     * Deletions are best-effort: failures are logged but don't block other operations. Failed
+     * deletions will be retried on the next sync cycle.
+     *
+     * @param eventIds List of event IDs to delete
+     */
+    private fun deleteProcessedConfigEvents(eventIds: List<String>) {
+        applicationScope.launch {
+            var successCount = 0
+            var failCount = 0
+
+            for (eventId in eventIds) {
+                val deleted = calendarRepository.deleteConfigEvent(eventId)
+                if (deleted) {
+                    successCount++
+                } else {
+                    failCount++
+                }
+            }
+
+            if (successCount > 0) {
+                Log.d(TAG, "Deleted $successCount config events from calendar")
+            }
+            if (failCount > 0) {
+                Log.w(TAG, "Failed to delete $failCount config events (will retry on next sync)")
+            }
+        }
     }
 }
