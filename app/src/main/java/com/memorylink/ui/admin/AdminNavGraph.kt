@@ -1,8 +1,13 @@
 package com.memorylink.ui.admin
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -50,7 +55,24 @@ fun AdminNavGraph(
         }
     }
 
-    NavHost(navController = navController, startDestination = AdminRoutes.PIN_ENTRY) {
+    // Wrap NavHost in a Box that intercepts all touch events to reset the inactivity timer.
+    // This ensures scrolling, dragging, and any touch resets the timer, not just button clicks.
+    Box(
+            modifier =
+                    Modifier.fillMaxSize().pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                // Intercept at Initial pass to see events before children
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                // Reset timer on any touch (don't consume, just observe)
+                                if (event.changes.any { it.pressed }) {
+                                    viewModel.resetInactivityTimer()
+                                }
+                            }
+                        }
+                    }
+    ) {
+        NavHost(navController = navController, startDestination = AdminRoutes.PIN_ENTRY) {
         composable(AdminRoutes.PIN_ENTRY) {
             val pinState by viewModel.pinState.collectAsStateWithLifecycle()
 
@@ -135,6 +157,7 @@ fun AdminNavGraph(
                     onShowEventsDuringSleepChange = viewModel::setShowEventsDuringSleep,
                     onBackClick = { navController.popBackStack() }
             )
+        }
         }
     }
 }
