@@ -112,8 +112,12 @@ constructor(
         _pinState.update { it.copy(enteredPin = newPin, error = null) }
 
         // Auto-validate when 4 digits entered
+        // Delay briefly to allow the 4th dot to render before validation clears the PIN
         if (newPin.length == 4) {
-            validateOrSetupPin(newPin)
+            viewModelScope.launch {
+                delay(PIN_VALIDATION_DELAY_MS)
+                validateOrSetupPin(newPin)
+            }
         }
     }
 
@@ -527,6 +531,9 @@ constructor(
     companion object {
         /** 5 minutes inactivity timeout per .clinerules/20-android.md */
         const val INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000L
+
+        /** Delay before validating PIN to allow 4th dot to render */
+        const val PIN_VALIDATION_DELAY_MS = 150L
     }
 }
 
