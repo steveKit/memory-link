@@ -13,12 +13,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Repository for aggregating app settings from multiple sources.
+ * Repository for app settings.
  *
- * Priority (highest to lowest):
- * 1. Manual overrides (set in admin mode)
- * 2. [CONFIG] calendar event settings
- * 3. Default values
+ * Settings are unified - both admin panel and [CONFIG] calendar events write to the same storage.
+ * Last write wins, no priority system.
  *
  * For dynamic times (SUNRISE/SUNSET), the SunriseSunsetApi is used to resolve the actual time, with
  * fallbacks to defaults.
@@ -37,10 +35,7 @@ constructor(
         private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
     }
 
-    /**
-     * Current resolved settings. Updated when config events are processed or manual settings
-     * change.
-     */
+    /** Current resolved settings. Updated when settings change. */
     private val _settings = MutableStateFlow(AppSettings())
     val settings: Flow<AppSettings> = _settings.asStateFlow()
 
@@ -49,8 +44,8 @@ constructor(
         get() = _settings.value
 
     /**
-     * Refresh settings by re-evaluating all sources. Call this after config events are processed or
-     * manual settings change.
+     * Refresh settings by re-evaluating storage. Call this after settings are changed (via admin
+     * panel or [CONFIG] events).
      *
      * @return The updated AppSettings
      */
@@ -61,63 +56,35 @@ constructor(
         return newSettings
     }
 
-    /**
-     * Build AppSettings by combining all sources with priority: Manual Override > Config Event >
-     * Default
-     */
+    /** Build AppSettings by reading from storage and resolving solar times. */
     private suspend fun buildSettings(): AppSettings {
         return AppSettings(
                 sleepTime = resolveSleepTime(),
                 wakeTime = resolveWakeTime(),
-                use24HourFormat = resolveTimeFormat(),
-                brightness = resolveBrightness(),
-                showYearInDate = resolveShowYear()
+                use24HourFormat = tokenStorage.use24HourFormat ?: false,
+                brightness = tokenStorage.brightness.takeIf { it >= 0 } ?: 100,
+                showYearInDate = tokenStorage.showYear ?: true
         )
     }
 
     /**
-     * Resolve sleep time with priority:
-     * 1. Manual override (static time)
-     * 2. Manual override (solar time)
-     * 3. Config event (static or dynamic)
-     * 4. Default (SUNSET+30 fallback to 21:00)
+     * Resolve sleep time - either from static time or solar calculation. Falls back to default
+     * (SUNSET+30 or 21:00) if nothing is set.
      */
     private suspend fun resolveSleepTime(): LocalTime {
-        // Check manual static time override first
-        tokenStorage.manualSleepTime?.let { timeStr ->
+        // Check for static time
+        tokenStorage.sleepTime?.let { timeStr ->
             parseTime(timeStr)?.let { time ->
-                Log.d(TAG, "Using manual sleep time: $time")
+                Log.d(TAG, "Using static sleep time: $time")
                 return time
             }
         }
 
-        // Check manual solar time override
-        tokenStorage.manualSleepSolarRef?.let { solarRef ->
-            val offset = tokenStorage.manualSleepSolarOffset
+        // Check for solar time
+        tokenStorage.sleepSolarRef?.let { solarRef ->
+            val offset = tokenStorage.sleepSolarOffset
             val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_SLEEP_TIME)
-            Log.d(
-                    TAG,
-                    "Using manual solar sleep time: $solarRef${formatOffset(offset)} -> $resolvedTime"
-            )
-            return resolvedTime
-        }
-
-        // Check config event static time
-        tokenStorage.configSleepTime?.let { timeStr ->
-            parseTime(timeStr)?.let { time ->
-                Log.d(TAG, "Using config sleep time: $time")
-                return time
-            }
-        }
-
-        // Check config event solar time
-        tokenStorage.configSleepSolarRef?.let { solarRef ->
-            val offset = tokenStorage.configSleepSolarOffset
-            val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_SLEEP_TIME)
-            Log.d(
-                    TAG,
-                    "Using config solar sleep time: $solarRef${formatOffset(offset)} -> $resolvedTime"
-            )
+            Log.d(TAG, "Using solar sleep time: $solarRef${formatOffset(offset)} -> $resolvedTime")
             return resolvedTime
         }
 
@@ -128,48 +95,23 @@ constructor(
     }
 
     /**
-     * Resolve wake time with priority:
-     * 1. Manual override (static time)
-     * 2. Manual override (solar time)
-     * 3. Config event (static or dynamic)
-     * 4. Default (SUNRISE fallback to 06:00)
+     * Resolve wake time - either from static time or solar calculation. Falls back to default
+     * (SUNRISE or 06:00) if nothing is set.
      */
     private suspend fun resolveWakeTime(): LocalTime {
-        // Check manual static time override first
-        tokenStorage.manualWakeTime?.let { timeStr ->
+        // Check for static time
+        tokenStorage.wakeTime?.let { timeStr ->
             parseTime(timeStr)?.let { time ->
-                Log.d(TAG, "Using manual wake time: $time")
+                Log.d(TAG, "Using static wake time: $time")
                 return time
             }
         }
 
-        // Check manual solar time override
-        tokenStorage.manualWakeSolarRef?.let { solarRef ->
-            val offset = tokenStorage.manualWakeSolarOffset
+        // Check for solar time
+        tokenStorage.wakeSolarRef?.let { solarRef ->
+            val offset = tokenStorage.wakeSolarOffset
             val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_WAKE_TIME)
-            Log.d(
-                    TAG,
-                    "Using manual solar wake time: $solarRef${formatOffset(offset)} -> $resolvedTime"
-            )
-            return resolvedTime
-        }
-
-        // Check config event static time
-        tokenStorage.configWakeTime?.let { timeStr ->
-            parseTime(timeStr)?.let { time ->
-                Log.d(TAG, "Using config wake time: $time")
-                return time
-            }
-        }
-
-        // Check config event solar time
-        tokenStorage.configWakeSolarRef?.let { solarRef ->
-            val offset = tokenStorage.configWakeSolarOffset
-            val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_WAKE_TIME)
-            Log.d(
-                    TAG,
-                    "Using config solar wake time: $solarRef${formatOffset(offset)} -> $resolvedTime"
-            )
+            Log.d(TAG, "Using solar wake time: $solarRef${formatOffset(offset)} -> $resolvedTime")
             return resolvedTime
         }
 
@@ -210,75 +152,6 @@ constructor(
     }
 
     /**
-     * Resolve time format with priority:
-     * 1. Manual override
-     * 2. Config event
-     * 3. Default (12-hour)
-     */
-    private fun resolveTimeFormat(): Boolean {
-        // Manual override
-        tokenStorage.manualUse24HourFormat?.let { format ->
-            Log.d(TAG, "Using manual time format: ${if (format) "24h" else "12h"}")
-            return format
-        }
-
-        // Config event
-        tokenStorage.configUse24HourFormat?.let { format ->
-            Log.d(TAG, "Using config time format: ${if (format) "24h" else "12h"}")
-            return format
-        }
-
-        // Default: 12-hour
-        Log.d(TAG, "Using default time format: 12h")
-        return false
-    }
-
-    /**
-     * Resolve brightness with priority:
-     * 1. Manual override
-     * 2. Config event
-     * 3. Default (100%)
-     */
-    private fun resolveBrightness(): Int {
-        // Manual override
-        val manual = tokenStorage.manualBrightness
-        if (manual >= 0) {
-            Log.d(TAG, "Using manual brightness: $manual%")
-            return manual
-        }
-
-        // Config event
-        val config = tokenStorage.configBrightness
-        if (config >= 0) {
-            Log.d(TAG, "Using config brightness: $config%")
-            return config
-        }
-
-        // Default: 100%
-        Log.d(TAG, "Using default brightness: 100%")
-        return 100
-    }
-
-    /**
-     * Resolve show year in date with priority:
-     * 1. Manual override
-     * 2. Default (true - show year)
-     *
-     * Note: Config event support can be added later via [CONFIG] SHOW_YEAR ON|OFF
-     */
-    private fun resolveShowYear(): Boolean {
-        // Manual override
-        tokenStorage.manualShowYear?.let { showYear ->
-            Log.d(TAG, "Using manual show year: $showYear")
-            return showYear
-        }
-
-        // Default: show year
-        Log.d(TAG, "Using default show year: true")
-        return true
-    }
-
-    /**
      * Parse a time string in HH:mm format.
      *
      * @param timeStr Time string like "21:00" or "7:30"
@@ -305,11 +178,8 @@ constructor(
         }
     }
 
-    /**
-     * Update settings from a manual override change. Call this from admin mode when user changes a
-     * setting.
-     */
-    suspend fun onManualSettingsChanged() {
+    /** Notify that settings have changed. Call after admin panel or [CONFIG] event changes. */
+    suspend fun onSettingsChanged() {
         refreshSettings()
     }
 

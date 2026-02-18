@@ -44,44 +44,33 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 /**
- * Manual configuration screen for display settings.
+ * Settings screen for display configuration.
  *
- * Allows manual override of:
+ * Shows current settings and allows editing:
  * - Wake time (fixed or solar-based)
  * - Sleep time (fixed or solar-based)
  * - Brightness
  * - Time format (12/24 hour)
+ * - Show year in date
  *
- * These override [CONFIG] calendar events.
- *
- * @param configState Current configuration state
- * @param onWakeTimeChange Update wake time (null to clear override)
- * @param onSleepTimeChange Update sleep time (null to clear override)
- * @param onWakeSolarTimeChange Update wake time to solar-based
- * @param onSleepSolarTimeChange Update sleep time to solar-based
- * @param onClearWakeTime Clear wake time override
- * @param onClearSleepTime Clear sleep time override
- * @param onBrightnessChange Update brightness (null to clear override)
- * @param onTimeFormatChange Update time format (null to clear override)
- * @param onShowYearChange Update show year in date (null to clear override)
- * @param onBackClick Navigate back to admin home
- * @param modifier Modifier for the screen
+ * Settings can be changed here or via [CONFIG] calendar events - last write wins.
  */
 @Composable
-fun ManualConfigScreen(
-        configState: ConfigState,
+fun SettingsScreen(
+        settingsState: SettingsState,
         onWakeTimeChange: (LocalTime?) -> Unit,
         onSleepTimeChange: (LocalTime?) -> Unit,
-        onWakeSolarTimeChange: (String, Int) -> Unit = { _, _ -> },
-        onSleepSolarTimeChange: (String, Int) -> Unit = { _, _ -> },
-        onClearWakeTime: () -> Unit = {},
-        onClearSleepTime: () -> Unit = {},
+        onWakeSolarTimeChange: (String, Int) -> Unit,
+        onSleepSolarTimeChange: (String, Int) -> Unit,
         onBrightnessChange: (Int?) -> Unit,
         onTimeFormatChange: (Boolean?) -> Unit,
-        onShowYearChange: (Boolean?) -> Unit = {},
+        onShowYearChange: (Boolean?) -> Unit,
         onBackClick: () -> Unit,
         modifier: Modifier = Modifier
 ) {
+        // Determine effective time format for display
+        val use24Hour = settingsState.use24HourFormat ?: false
+
         Box(modifier = modifier.fillMaxSize().background(DarkBackground).padding(24.dp)) {
                 Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         // Header with back button
@@ -104,56 +93,43 @@ fun ManualConfigScreen(
                                 color = Color.White
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                                text = "Manual overrides (takes priority over calendar configs)",
-                                fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.7f)
-                        )
-
                         Spacer(modifier = Modifier.height(32.dp))
 
                         // Wake Time
-                        SolarTimeSettingItem(
+                        TimeSettingItem(
                                 title = "Wake Time",
                                 description = "When display enters full brightness mode",
-                                currentTime = configState.wakeTime,
-                                currentSolarRef = configState.wakeSolarRef,
-                                currentSolarOffset = configState.wakeSolarOffset,
-                                defaultDescription = "Using calendar config or default (Sunrise)",
-                                use24HourFormat = configState.use24HourFormat ?: false,
+                                currentTime = settingsState.wakeTime,
+                                currentSolarRef = settingsState.wakeSolarRef,
+                                currentSolarOffset = settingsState.wakeSolarOffset,
+                                resolvedTime = settingsState.resolvedWakeTime,
+                                use24HourFormat = use24Hour,
                                 solarOptions = SolarTimeOption.WAKE_OPTIONS,
                                 onTimeSelected = onWakeTimeChange,
-                                onSolarTimeSelected = onWakeSolarTimeChange,
-                                onClear = onClearWakeTime
+                                onSolarTimeSelected = onWakeSolarTimeChange
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // Sleep Time
-                        SolarTimeSettingItem(
+                        TimeSettingItem(
                                 title = "Sleep Time",
                                 description = "When display enters dimmed mode",
-                                currentTime = configState.sleepTime,
-                                currentSolarRef = configState.sleepSolarRef,
-                                currentSolarOffset = configState.sleepSolarOffset,
-                                defaultDescription =
-                                        "Using calendar config or default (Sunset + 30 min)",
-                                use24HourFormat = configState.use24HourFormat ?: false,
+                                currentTime = settingsState.sleepTime,
+                                currentSolarRef = settingsState.sleepSolarRef,
+                                currentSolarOffset = settingsState.sleepSolarOffset,
+                                resolvedTime = settingsState.resolvedSleepTime,
+                                use24HourFormat = use24Hour,
                                 solarOptions = SolarTimeOption.SLEEP_OPTIONS,
                                 onTimeSelected = onSleepTimeChange,
-                                onSolarTimeSelected = onSleepSolarTimeChange,
-                                onClear = onClearSleepTime
+                                onSolarTimeSelected = onSleepSolarTimeChange
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // Brightness
                         BrightnessSettingItem(
-                                title = "Brightness",
-                                description = "Screen brightness during wake hours",
-                                currentValue = configState.brightness,
+                                currentValue = settingsState.brightness ?: 100,
                                 onValueChange = onBrightnessChange
                         )
 
@@ -161,19 +137,15 @@ fun ManualConfigScreen(
 
                         // Time Format
                         TimeFormatSettingItem(
-                                title = "Time Format",
-                                description = "Clock display format",
-                                use24Hour = configState.use24HourFormat,
+                                use24Hour = use24Hour,
                                 onFormatChange = onTimeFormatChange
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Show Year in Date
+                        // Show Year
                         ShowYearSettingItem(
-                                title = "Show Year",
-                                description = "Display year in date",
-                                showYear = configState.showYearInDate,
+                                showYear = settingsState.showYearInDate ?: true,
                                 onShowYearChange = onShowYearChange
                         )
 
@@ -184,38 +156,31 @@ fun ManualConfigScreen(
 
 /** Time setting item that supports both fixed time and solar-based options. */
 @Composable
-private fun SolarTimeSettingItem(
+private fun TimeSettingItem(
         title: String,
         description: String,
         currentTime: LocalTime?,
         currentSolarRef: String?,
         currentSolarOffset: Int,
-        defaultDescription: String,
+        resolvedTime: LocalTime,
         use24HourFormat: Boolean,
         solarOptions: List<SolarTimeOption>,
         onTimeSelected: (LocalTime?) -> Unit,
-        onSolarTimeSelected: (String, Int) -> Unit,
-        onClear: () -> Unit
+        onSolarTimeSelected: (String, Int) -> Unit
 ) {
         var showTimePicker by remember { mutableStateOf(false) }
         var showSolarPicker by remember { mutableStateOf(false) }
 
-        // Format pattern based on time format preference
         val timePattern = if (use24HourFormat) "HH:mm" else "h:mm a"
-
-        // Determine current display value
-        val hasValue = currentTime != null || currentSolarRef != null
-        val displayValue: String =
-                when {
-                        currentTime != null ->
-                                currentTime.format(DateTimeFormatter.ofPattern(timePattern))
-                        currentSolarRef != null -> {
-                                val option = SolarTimeOption(currentSolarRef, currentSolarOffset)
-                                option.displayLabel
-                        }
-                        else -> ""
-                }
         val isSolarTime = currentSolarRef != null
+
+        // Display value: show solar label if using solar, otherwise show resolved time
+        val displayValue: String =
+                if (isSolarTime) {
+                        SolarTimeOption(currentSolarRef!!, currentSolarOffset).displayLabel
+                } else {
+                        resolvedTime.format(DateTimeFormatter.ofPattern(timePattern))
+                }
 
         Column(
                 modifier =
@@ -237,43 +202,23 @@ private fun SolarTimeSettingItem(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                if (hasValue) {
-                        // Show current value
-                        Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                        ) {
-                                Column {
-                                        Text(
-                                                text = displayValue,
-                                                fontSize = 24.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = AccentBlue
-                                        )
-                                        if (isSolarTime) {
-                                                Text(
-                                                        text = "Solar-based",
-                                                        fontSize = 12.sp,
-                                                        color = Color.White.copy(alpha = 0.5f)
-                                                )
-                                        }
-                                }
-                                TextButton(onClick = onClear) {
-                                        Text(
-                                                text = "Clear",
-                                                fontSize = 14.sp,
-                                                color = Color(0xFFEF5350)
-                                        )
-                                }
-                        }
-                } else {
-                        // Show default description
+                // Current value display
+                Column {
                         Text(
-                                text = defaultDescription,
-                                fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.5f)
+                                text = displayValue,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentBlue
                         )
+                        if (isSolarTime) {
+                                // Show resolved time for solar
+                                Text(
+                                        text =
+                                                "Today: ${resolvedTime.format(DateTimeFormatter.ofPattern(timePattern))}",
+                                        fontSize = 12.sp,
+                                        color = Color.White.copy(alpha = 0.5f)
+                                )
+                        }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -283,21 +228,19 @@ private fun SolarTimeSettingItem(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                        // Fixed Time button
                         Button(
                                 onClick = { showTimePicker = true },
                                 modifier = Modifier.weight(1f).height(48.dp),
                                 colors =
                                         ButtonDefaults.buttonColors(
                                                 containerColor =
-                                                        if (!isSolarTime && currentTime != null)
+                                                        if (!isSolarTime)
                                                                 AccentBlue.copy(alpha = 0.3f)
                                                         else Color(0xFF2A2A2A)
                                         ),
                                 shape = RoundedCornerShape(8.dp)
                         ) { Text(text = "Fixed Time", fontSize = 14.sp, color = Color.White) }
 
-                        // Solar Time button
                         Button(
                                 onClick = { showSolarPicker = true },
                                 modifier = Modifier.weight(1f).height(48.dp),
@@ -313,10 +256,9 @@ private fun SolarTimeSettingItem(
                 }
         }
 
-        // Fixed time picker dialog
         if (showTimePicker) {
                 SimpleTimePickerDialog(
-                        initialTime = currentTime ?: LocalTime.of(12, 0),
+                        initialTime = currentTime ?: resolvedTime,
                         use24HourFormat = use24HourFormat,
                         onTimeSelected = {
                                 onTimeSelected(it)
@@ -326,7 +268,6 @@ private fun SolarTimeSettingItem(
                 )
         }
 
-        // Solar time picker dialog
         if (showSolarPicker) {
                 SolarTimePickerDialog(
                         options = solarOptions,
@@ -341,7 +282,6 @@ private fun SolarTimeSettingItem(
         }
 }
 
-/** Dialog for selecting solar-based time options. */
 @Composable
 private fun SolarTimePickerDialog(
         options: List<SolarTimeOption>,
@@ -375,15 +315,6 @@ private fun SolarTimePickerDialog(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                                text = "Choose relative to sunrise/sunset",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.5f)
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Options list
                         Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -417,10 +348,7 @@ private fun SolarTimePickerDialog(
                                                         fontSize = 16.sp,
                                                         color =
                                                                 if (isSelected) AccentBlue
-                                                                else Color.White,
-                                                        fontWeight =
-                                                                if (isSelected) FontWeight.Medium
-                                                                else FontWeight.Normal
+                                                                else Color.White
                                                 )
                                         }
                                 }
@@ -446,37 +374,29 @@ private fun SimpleTimePickerDialog(
         onTimeSelected: (LocalTime) -> Unit,
         onDismiss: () -> Unit
 ) {
-        // For 24-hour mode: hour is 0-23
-        // For 12-hour mode: displayHour is 1-12, isAm tracks AM/PM
         var hour24 by remember { mutableIntStateOf(initialTime.hour) }
         var minute by remember { mutableIntStateOf(initialTime.minute) }
 
-        // Derived state for 12-hour display
         val displayHour =
-                if (use24HourFormat) {
-                        hour24
-                } else {
+                if (use24HourFormat) hour24
+                else
                         when (hour24) {
                                 0 -> 12
                                 in 1..12 -> hour24
                                 else -> hour24 - 12
                         }
-                }
         val isAm = hour24 < 12
 
-        // Convert 12-hour display to 24-hour internal representation
         fun updateHour24(newDisplayHour: Int, newIsAm: Boolean) {
                 hour24 =
-                        if (use24HourFormat) {
-                                newDisplayHour
-                        } else {
+                        if (use24HourFormat) newDisplayHour
+                        else
                                 when {
                                         newDisplayHour == 12 && newIsAm -> 0
                                         newDisplayHour == 12 && !newIsAm -> 12
                                         newIsAm -> newDisplayHour
                                         else -> newDisplayHour + 12
                                 }
-                        }
         }
 
         Box(
@@ -490,7 +410,7 @@ private fun SimpleTimePickerDialog(
                         modifier =
                                 Modifier.clip(RoundedCornerShape(16.dp))
                                         .background(Color(0xFF1E1E1E))
-                                        .clickable(enabled = false) {} // Prevent click through
+                                        .clickable(enabled = false) {}
                                         .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -507,44 +427,37 @@ private fun SimpleTimePickerDialog(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                         ) {
-                                // Hour picker
+                                // Hour
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         TextButton(
                                                 onClick = {
-                                                        if (use24HourFormat) {
-                                                                hour24 = (hour24 + 1) % 24
-                                                        } else {
-                                                                // In 12-hour mode, cycle 1-12
-                                                                val newDisplayHour =
+                                                        if (use24HourFormat) hour24 = (hour24 + 1) % 24
+                                                        else {
+                                                                val newHour =
                                                                         if (displayHour == 12) 1
                                                                         else displayHour + 1
-                                                                updateHour24(newDisplayHour, isAm)
+                                                                updateHour24(newHour, isAm)
                                                         }
                                                 }
                                         ) { Text("▲", fontSize = 24.sp, color = AccentBlue) }
                                         Text(
                                                 text =
-                                                        if (use24HourFormat) {
+                                                        if (use24HourFormat)
                                                                 hour24.toString().padStart(2, '0')
-                                                        } else {
-                                                                displayHour.toString()
-                                                        },
+                                                        else displayHour.toString(),
                                                 fontSize = 48.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color.White
                                         )
                                         TextButton(
                                                 onClick = {
-                                                        if (use24HourFormat) {
-                                                                hour24 =
-                                                                        if (hour24 > 0) hour24 - 1
-                                                                        else 23
-                                                        } else {
-                                                                // In 12-hour mode, cycle 12-1
-                                                                val newDisplayHour =
+                                                        if (use24HourFormat)
+                                                                hour24 = if (hour24 > 0) hour24 - 1 else 23
+                                                        else {
+                                                                val newHour =
                                                                         if (displayHour == 1) 12
                                                                         else displayHour - 1
-                                                                updateHour24(newDisplayHour, isAm)
+                                                                updateHour24(newHour, isAm)
                                                         }
                                                 }
                                         ) { Text("▼", fontSize = 24.sp, color = AccentBlue) }
@@ -558,7 +471,7 @@ private fun SimpleTimePickerDialog(
                                         modifier = Modifier.padding(horizontal = 8.dp)
                                 )
 
-                                // Minute picker
+                                // Minute
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         TextButton(onClick = { minute = (minute + 5) % 60 }) {
                                                 Text("▲", fontSize = 24.sp, color = AccentBlue)
@@ -576,87 +489,55 @@ private fun SimpleTimePickerDialog(
                                         ) { Text("▼", fontSize = 24.sp, color = AccentBlue) }
                                 }
 
-                                // AM/PM selector (only in 12-hour mode)
+                                // AM/PM
                                 if (!use24HourFormat) {
                                         Spacer(modifier = Modifier.padding(start = 16.dp))
-
-                                        Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.Center
-                                        ) {
-                                                // AM button
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                                 TextButton(
-                                                        onClick = {
-                                                                updateHour24(displayHour, true)
-                                                        },
+                                                        onClick = { updateHour24(displayHour, true) },
                                                         modifier =
-                                                                Modifier.clip(
-                                                                                RoundedCornerShape(
-                                                                                        8.dp
-                                                                                )
-                                                                        )
+                                                                Modifier.clip(RoundedCornerShape(8.dp))
                                                                         .background(
                                                                                 if (isAm)
-                                                                                        AccentBlue
-                                                                                                .copy(
-                                                                                                        alpha =
-                                                                                                                0.3f
-                                                                                                )
-                                                                                else
-                                                                                        Color.Transparent
+                                                                                        AccentBlue.copy(
+                                                                                                alpha = 0.3f
+                                                                                        )
+                                                                                else Color.Transparent
                                                                         )
                                                 ) {
                                                         Text(
-                                                                text = "AM",
+                                                                "AM",
                                                                 fontSize = 20.sp,
                                                                 fontWeight =
                                                                         if (isAm) FontWeight.Bold
                                                                         else FontWeight.Normal,
                                                                 color =
                                                                         if (isAm) AccentBlue
-                                                                        else
-                                                                                Color.White.copy(
-                                                                                        alpha = 0.5f
-                                                                                )
+                                                                        else Color.White.copy(alpha = 0.5f)
                                                         )
                                                 }
-
                                                 Spacer(modifier = Modifier.height(8.dp))
-
-                                                // PM button
                                                 TextButton(
-                                                        onClick = {
-                                                                updateHour24(displayHour, false)
-                                                        },
+                                                        onClick = { updateHour24(displayHour, false) },
                                                         modifier =
-                                                                Modifier.clip(
-                                                                                RoundedCornerShape(
-                                                                                        8.dp
-                                                                                )
-                                                                        )
+                                                                Modifier.clip(RoundedCornerShape(8.dp))
                                                                         .background(
                                                                                 if (!isAm)
-                                                                                        AccentBlue
-                                                                                                .copy(
-                                                                                                        alpha =
-                                                                                                                0.3f
-                                                                                                )
-                                                                                else
-                                                                                        Color.Transparent
+                                                                                        AccentBlue.copy(
+                                                                                                alpha = 0.3f
+                                                                                        )
+                                                                                else Color.Transparent
                                                                         )
                                                 ) {
                                                         Text(
-                                                                text = "PM",
+                                                                "PM",
                                                                 fontSize = 20.sp,
                                                                 fontWeight =
                                                                         if (!isAm) FontWeight.Bold
                                                                         else FontWeight.Normal,
                                                                 color =
                                                                         if (!isAm) AccentBlue
-                                                                        else
-                                                                                Color.White.copy(
-                                                                                        alpha = 0.5f
-                                                                                )
+                                                                        else Color.White.copy(alpha = 0.5f)
                                                         )
                                                 }
                                         }
@@ -689,13 +570,8 @@ private fun SimpleTimePickerDialog(
 }
 
 @Composable
-private fun BrightnessSettingItem(
-        title: String,
-        description: String,
-        currentValue: Int?,
-        onValueChange: (Int?) -> Unit
-) {
-        var sliderValue by remember(currentValue) { mutableIntStateOf(currentValue ?: 100) }
+private fun BrightnessSettingItem(currentValue: Int, onValueChange: (Int?) -> Unit) {
+        var sliderValue by remember(currentValue) { mutableIntStateOf(currentValue) }
 
         Column(
                 modifier =
@@ -704,53 +580,29 @@ private fun BrightnessSettingItem(
                                 .background(Color(0xFF1E1E1E))
                                 .padding(16.dp)
         ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                        Column {
-                                Text(
-                                        text = title,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color.White
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                        text = description,
-                                        fontSize = 12.sp,
-                                        color = Color.White.copy(alpha = 0.5f)
-                                )
-                        }
+                Text(
+                        text = "Brightness",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                )
 
-                        if (currentValue != null) {
-                                TextButton(onClick = { onValueChange(null) }) {
-                                        Text(
-                                                text = "Clear",
-                                                fontSize = 14.sp,
-                                                color = Color(0xFFEF5350)
-                                        )
-                                }
-                        }
-                }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                        text = "Screen brightness during wake hours",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (currentValue != null) {
-                        Text(
-                                text = "$currentValue%",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentBlue
-                        )
-                } else {
-                        Text(
-                                text = "Using calendar config or default (100%)",
-                                fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.5f)
-                        )
-                }
+                Text(
+                        text = "$currentValue%",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentBlue
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -779,12 +631,7 @@ private fun BrightnessSettingItem(
 }
 
 @Composable
-private fun TimeFormatSettingItem(
-        title: String,
-        description: String,
-        use24Hour: Boolean?,
-        onFormatChange: (Boolean?) -> Unit
-) {
+private fun TimeFormatSettingItem(use24Hour: Boolean, onFormatChange: (Boolean?) -> Unit) {
         Column(
                 modifier =
                         Modifier.fillMaxWidth()
@@ -792,36 +639,20 @@ private fun TimeFormatSettingItem(
                                 .background(Color(0xFF1E1E1E))
                                 .padding(16.dp)
         ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                        text = title,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color.White
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                        text = description,
-                                        fontSize = 12.sp,
-                                        color = Color.White.copy(alpha = 0.5f)
-                                )
-                        }
+                Text(
+                        text = "Time Format",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                )
 
-                        if (use24Hour != null) {
-                                TextButton(onClick = { onFormatChange(null) }) {
-                                        Text(
-                                                text = "Clear",
-                                                fontSize = 14.sp,
-                                                color = Color(0xFFEF5350)
-                                        )
-                                }
-                        }
-                }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                        text = "Clock display format",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -831,20 +662,13 @@ private fun TimeFormatSettingItem(
                         verticalAlignment = Alignment.CenterVertically
                 ) {
                         Text(
-                                text =
-                                        when (use24Hour) {
-                                                true -> "24-hour (14:30)"
-                                                false -> "12-hour (2:30 PM)"
-                                                null -> "Using calendar config or default (12-hour)"
-                                        },
+                                text = if (use24Hour) "24-hour (14:30)" else "12-hour (2:30 PM)",
                                 fontSize = 16.sp,
-                                color =
-                                        if (use24Hour != null) AccentBlue
-                                        else Color.White.copy(alpha = 0.5f)
+                                color = AccentBlue
                         )
 
                         Switch(
-                                checked = use24Hour ?: false,
+                                checked = use24Hour,
                                 onCheckedChange = { onFormatChange(it) },
                                 colors =
                                         SwitchDefaults.colors(
@@ -859,12 +683,7 @@ private fun TimeFormatSettingItem(
 }
 
 @Composable
-private fun ShowYearSettingItem(
-        title: String,
-        description: String,
-        showYear: Boolean?,
-        onShowYearChange: (Boolean?) -> Unit
-) {
+private fun ShowYearSettingItem(showYear: Boolean, onShowYearChange: (Boolean?) -> Unit) {
         Column(
                 modifier =
                         Modifier.fillMaxWidth()
@@ -872,36 +691,20 @@ private fun ShowYearSettingItem(
                                 .background(Color(0xFF1E1E1E))
                                 .padding(16.dp)
         ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                        text = title,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color.White
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                        text = description,
-                                        fontSize = 12.sp,
-                                        color = Color.White.copy(alpha = 0.5f)
-                                )
-                        }
+                Text(
+                        text = "Show Year",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                )
 
-                        if (showYear != null) {
-                                TextButton(onClick = { onShowYearChange(null) }) {
-                                        Text(
-                                                text = "Clear",
-                                                fontSize = 14.sp,
-                                                color = Color(0xFFEF5350)
-                                        )
-                                }
-                        }
-                }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                        text = "Display year in date",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -912,19 +715,14 @@ private fun ShowYearSettingItem(
                 ) {
                         Text(
                                 text =
-                                        when (showYear) {
-                                                true -> "February 11, 2026"
-                                                false -> "February 11"
-                                                null -> "Using default (show year)"
-                                        },
+                                        if (showYear) "February 11, 2026"
+                                        else "February 11",
                                 fontSize = 16.sp,
-                                color =
-                                        if (showYear != null) AccentBlue
-                                        else Color.White.copy(alpha = 0.5f)
+                                color = AccentBlue
                         )
 
                         Switch(
-                                checked = showYear ?: true,
+                                checked = showYear,
                                 onCheckedChange = { onShowYearChange(it) },
                                 colors =
                                         SwitchDefaults.colors(
@@ -938,110 +736,26 @@ private fun ShowYearSettingItem(
         }
 }
 
-// region Previews
-
-@Preview(
-        name = "Manual Config - With Values",
-        showBackground = true,
-        backgroundColor = 0xFF121212,
-        widthDp = 400,
-        heightDp = 800
-)
+@Preview(showBackground = true, backgroundColor = 0xFF121212, widthDp = 400, heightDp = 800)
 @Composable
-private fun ManualConfigWithValuesPreview() {
+private fun SettingsScreenPreview() {
         MemoryLinkTheme {
-                ManualConfigScreen(
-                        configState =
-                                ConfigState(
+                SettingsScreen(
+                        settingsState =
+                                SettingsState(
                                         wakeTime = LocalTime.of(7, 0),
                                         sleepTime = LocalTime.of(21, 30),
                                         brightness = 80,
-                                        use24HourFormat = true
-                                ),
-                        onWakeTimeChange = {},
-                        onSleepTimeChange = {},
-                        onBrightnessChange = {},
-                        onTimeFormatChange = {},
-                        onBackClick = {}
-                )
-        }
-}
-
-@Preview(
-        name = "Manual Config - Solar Time",
-        showBackground = true,
-        backgroundColor = 0xFF121212,
-        widthDp = 400,
-        heightDp = 800
-)
-@Composable
-private fun ManualConfigSolarTimePreview() {
-        MemoryLinkTheme {
-                ManualConfigScreen(
-                        configState =
-                                ConfigState(
-                                        wakeSolarRef = "SUNRISE",
-                                        wakeSolarOffset = 30,
-                                        sleepSolarRef = "SUNSET",
-                                        sleepSolarOffset = -15,
-                                        brightness = 90,
                                         use24HourFormat = false
                                 ),
                         onWakeTimeChange = {},
                         onSleepTimeChange = {},
+                        onWakeSolarTimeChange = { _, _ -> },
+                        onSleepSolarTimeChange = { _, _ -> },
                         onBrightnessChange = {},
                         onTimeFormatChange = {},
+                        onShowYearChange = {},
                         onBackClick = {}
                 )
         }
 }
-
-@Preview(
-        name = "Manual Config - Defaults",
-        showBackground = true,
-        backgroundColor = 0xFF121212,
-        widthDp = 400,
-        heightDp = 800
-)
-@Composable
-private fun ManualConfigDefaultsPreview() {
-        MemoryLinkTheme {
-                ManualConfigScreen(
-                        configState = ConfigState(),
-                        onWakeTimeChange = {},
-                        onSleepTimeChange = {},
-                        onBrightnessChange = {},
-                        onTimeFormatChange = {},
-                        onBackClick = {}
-                )
-        }
-}
-
-@Preview(
-        name = "Manual Config - 12 Hour Mode",
-        showBackground = true,
-        backgroundColor = 0xFF121212,
-        widthDp = 400,
-        heightDp = 800
-)
-@Composable
-private fun ManualConfig12HourPreview() {
-        MemoryLinkTheme {
-                ManualConfigScreen(
-                        configState =
-                                ConfigState(
-                                        wakeTime = LocalTime.of(7, 30),
-                                        sleepTime = LocalTime.of(21, 0),
-                                        brightness = 90,
-                                        use24HourFormat = false
-                                ),
-                        onWakeTimeChange = {},
-                        onSleepTimeChange = {},
-                        onBrightnessChange = {},
-                        onTimeFormatChange = {},
-                        onBackClick = {}
-                )
-        }
-}
-
-// endregion

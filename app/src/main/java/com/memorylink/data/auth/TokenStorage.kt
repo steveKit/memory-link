@@ -9,18 +9,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Secure storage for OAuth tokens using EncryptedSharedPreferences.
+ * Secure storage for OAuth tokens and app settings using EncryptedSharedPreferences.
  *
  * Per .clinerules/20-android.md:
  * - Config Storage: EncryptedSharedPreferences for PIN, OAuth tokens, settings.
  * - Token encryption: AES-256-GCM via AndroidX Security library.
  *
- * Stores:
- * - Access token (short-lived, ~1 hour)
- * - Refresh token (long-lived, used for offline access)
- * - Token expiration timestamp
- * - Selected calendar ID
- * - User email (for display purposes)
+ * Settings are unified - both admin panel and [CONFIG] calendar events write to the same fields.
+ * Last write wins, no priority system.
  */
 @Singleton
 class TokenStorage @Inject constructor(@ApplicationContext private val context: Context) {
@@ -38,6 +34,8 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         )
     }
 
+    // ========== OAuth Tokens ==========
+
     /** Store OAuth access token. */
     var accessToken: String?
         get() = prefs.getString(KEY_ACCESS_TOKEN, null)
@@ -52,6 +50,8 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
     var tokenExpirationTime: Long
         get() = prefs.getLong(KEY_TOKEN_EXPIRATION, 0L)
         set(value) = prefs.edit().putLong(KEY_TOKEN_EXPIRATION, value).apply()
+
+    // ========== Calendar Selection ==========
 
     /** Selected calendar ID for event fetching. */
     var selectedCalendarId: String?
@@ -157,161 +157,148 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         pinLockoutEndTime = 0L
     }
 
-    // ========== Manual Config Overrides ==========
+    // ========== App Settings (Unified) ==========
+    // These settings are written by both admin panel and [CONFIG] calendar events.
+    // Last write wins - no priority system.
 
-    /** Manually overridden wake time (HH:mm format), or null to use [CONFIG] events. */
-    var manualWakeTime: String?
-        get() = prefs.getString(KEY_MANUAL_WAKE_TIME, null)
-        set(value) = prefs.edit().putString(KEY_MANUAL_WAKE_TIME, value).apply()
+    /**
+     * Wake time as static time (HH:mm format), or null if using solar time. Written by admin panel
+     * or [CONFIG] WAKE HH:MM events.
+     */
+    var wakeTime: String?
+        get() = prefs.getString(KEY_WAKE_TIME, null)
+        set(value) = prefs.edit().putString(KEY_WAKE_TIME, value).apply()
 
-    /** Manually overridden sleep time (HH:mm format), or null to use [CONFIG] events. */
-    var manualSleepTime: String?
-        get() = prefs.getString(KEY_MANUAL_SLEEP_TIME, null)
-        set(value) = prefs.edit().putString(KEY_MANUAL_SLEEP_TIME, value).apply()
+    /**
+     * Sleep time as static time (HH:mm format), or null if using solar time. Written by admin panel
+     * or [CONFIG] SLEEP HH:MM events.
+     */
+    var sleepTime: String?
+        get() = prefs.getString(KEY_SLEEP_TIME, null)
+        set(value) = prefs.edit().putString(KEY_SLEEP_TIME, value).apply()
 
-    /** Manually overridden brightness (0-100), or -1 to use [CONFIG] events. */
-    var manualBrightness: Int
-        get() = prefs.getInt(KEY_MANUAL_BRIGHTNESS, -1)
-        set(value) = prefs.edit().putInt(KEY_MANUAL_BRIGHTNESS, value).apply()
+    /**
+     * Screen brightness (0-100), or -1 if using default. Written by admin panel or [CONFIG]
+     * BRIGHTNESS events.
+     */
+    var brightness: Int
+        get() = prefs.getInt(KEY_BRIGHTNESS, -1)
+        set(value) = prefs.edit().putInt(KEY_BRIGHTNESS, value).apply()
 
-    /** Manually overridden time format. null = use [CONFIG], true = 24h, false = 12h. */
-    var manualUse24HourFormat: Boolean?
+    /**
+     * Time format. null = use default (12h), true = 24h, false = 12h. Written by admin panel or
+     * [CONFIG] TIME_FORMAT events.
+     */
+    var use24HourFormat: Boolean?
         get() {
-            return if (prefs.contains(KEY_MANUAL_TIME_FORMAT)) {
-                prefs.getBoolean(KEY_MANUAL_TIME_FORMAT, false)
+            return if (prefs.contains(KEY_TIME_FORMAT)) {
+                prefs.getBoolean(KEY_TIME_FORMAT, false)
             } else {
                 null
             }
         }
         set(value) {
             if (value == null) {
-                prefs.edit().remove(KEY_MANUAL_TIME_FORMAT).apply()
+                prefs.edit().remove(KEY_TIME_FORMAT).apply()
             } else {
-                prefs.edit().putBoolean(KEY_MANUAL_TIME_FORMAT, value).apply()
+                prefs.edit().putBoolean(KEY_TIME_FORMAT, value).apply()
             }
         }
 
-    /** Manually overridden font size (sp), or -1 to use [CONFIG] events. */
-    var manualFontSize: Int
-        get() = prefs.getInt(KEY_MANUAL_FONT_SIZE, -1)
-        set(value) = prefs.edit().putInt(KEY_MANUAL_FONT_SIZE, value).apply()
-
-    /** Manually overridden show year in date. null = use [CONFIG], true = show, false = hide. */
-    var manualShowYear: Boolean?
+    /** Whether to show year in date display. null = use default (true). Written by admin panel. */
+    var showYear: Boolean?
         get() {
-            return if (prefs.contains(KEY_MANUAL_SHOW_YEAR)) {
-                prefs.getBoolean(KEY_MANUAL_SHOW_YEAR, true)
+            return if (prefs.contains(KEY_SHOW_YEAR)) {
+                prefs.getBoolean(KEY_SHOW_YEAR, true)
             } else {
                 null
             }
         }
         set(value) {
             if (value == null) {
-                prefs.edit().remove(KEY_MANUAL_SHOW_YEAR).apply()
+                prefs.edit().remove(KEY_SHOW_YEAR).apply()
             } else {
-                prefs.edit().putBoolean(KEY_MANUAL_SHOW_YEAR, value).apply()
+                prefs.edit().putBoolean(KEY_SHOW_YEAR, value).apply()
             }
         }
 
-    // ========== Manual Solar Time Overrides ==========
+    // ========== Solar Time Settings ==========
+    // Used when wake/sleep times are relative to sunrise/sunset.
 
-    /** Manual wake solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
-    var manualWakeSolarRef: String?
-        get() = prefs.getString(KEY_MANUAL_WAKE_SOLAR_REF, null)
-        set(value) = prefs.edit().putString(KEY_MANUAL_WAKE_SOLAR_REF, value).apply()
+    /**
+     * Wake solar reference ("SUNRISE" or "SUNSET"), or null for static time. When set, wakeTime is
+     * ignored and solar calculation is used.
+     */
+    var wakeSolarRef: String?
+        get() = prefs.getString(KEY_WAKE_SOLAR_REF, null)
+        set(value) = prefs.edit().putString(KEY_WAKE_SOLAR_REF, value).apply()
 
-    /** Manual wake solar offset in minutes (e.g., +30 or -15). */
-    var manualWakeSolarOffset: Int
-        get() = prefs.getInt(KEY_MANUAL_WAKE_SOLAR_OFFSET, 0)
-        set(value) = prefs.edit().putInt(KEY_MANUAL_WAKE_SOLAR_OFFSET, value).apply()
+    /** Wake solar offset in minutes (e.g., +30 or -15). Only used when wakeSolarRef is set. */
+    var wakeSolarOffset: Int
+        get() = prefs.getInt(KEY_WAKE_SOLAR_OFFSET, 0)
+        set(value) = prefs.edit().putInt(KEY_WAKE_SOLAR_OFFSET, value).apply()
 
-    /** Manual sleep solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
-    var manualSleepSolarRef: String?
-        get() = prefs.getString(KEY_MANUAL_SLEEP_SOLAR_REF, null)
-        set(value) = prefs.edit().putString(KEY_MANUAL_SLEEP_SOLAR_REF, value).apply()
+    /**
+     * Sleep solar reference ("SUNRISE" or "SUNSET"), or null for static time. When set, sleepTime
+     * is ignored and solar calculation is used.
+     */
+    var sleepSolarRef: String?
+        get() = prefs.getString(KEY_SLEEP_SOLAR_REF, null)
+        set(value) = prefs.edit().putString(KEY_SLEEP_SOLAR_REF, value).apply()
 
-    /** Manual sleep solar offset in minutes (e.g., +30 or -15). */
-    var manualSleepSolarOffset: Int
-        get() = prefs.getInt(KEY_MANUAL_SLEEP_SOLAR_OFFSET, 0)
-        set(value) = prefs.edit().putInt(KEY_MANUAL_SLEEP_SOLAR_OFFSET, value).apply()
+    /** Sleep solar offset in minutes (e.g., +30 or -15). Only used when sleepSolarRef is set. */
+    var sleepSolarOffset: Int
+        get() = prefs.getInt(KEY_SLEEP_SOLAR_OFFSET, 0)
+        set(value) = prefs.edit().putInt(KEY_SLEEP_SOLAR_OFFSET, value).apply()
 
-    // ========== [CONFIG] Event Settings ==========
-    // These are set when parsing [CONFIG] calendar events.
-    // Priority: Manual Override > Config Event > Default
-
-    /** Config event wake time (HH:mm format), or null if not set. */
-    var configWakeTime: String?
-        get() = prefs.getString(KEY_CONFIG_WAKE_TIME, null)
-        set(value) = prefs.edit().putString(KEY_CONFIG_WAKE_TIME, value).apply()
-
-    /** Config event sleep time (HH:mm format), or null if not set. */
-    var configSleepTime: String?
-        get() = prefs.getString(KEY_CONFIG_SLEEP_TIME, null)
-        set(value) = prefs.edit().putString(KEY_CONFIG_SLEEP_TIME, value).apply()
-
-    /** Config event brightness (0-100), or -1 if not set. */
-    var configBrightness: Int
-        get() = prefs.getInt(KEY_CONFIG_BRIGHTNESS, -1)
-        set(value) = prefs.edit().putInt(KEY_CONFIG_BRIGHTNESS, value).apply()
-
-    /** Config event time format. null = not set, true = 24h, false = 12h. */
-    var configUse24HourFormat: Boolean?
-        get() {
-            return if (prefs.contains(KEY_CONFIG_TIME_FORMAT)) {
-                prefs.getBoolean(KEY_CONFIG_TIME_FORMAT, false)
-            } else {
-                null
-            }
+    /** Set wake time to a static time. Clears any solar reference. */
+    fun setStaticWakeTime(time: String?) {
+        wakeTime = time
+        if (time != null) {
+            wakeSolarRef = null
+            wakeSolarOffset = 0
         }
-        set(value) {
-            if (value == null) {
-                prefs.edit().remove(KEY_CONFIG_TIME_FORMAT).apply()
-            } else {
-                prefs.edit().putBoolean(KEY_CONFIG_TIME_FORMAT, value).apply()
-            }
+    }
+
+    /** Set wake time to a solar-based time. Clears any static time. */
+    fun setSolarWakeTime(solarRef: String, offsetMinutes: Int) {
+        wakeSolarRef = solarRef
+        wakeSolarOffset = offsetMinutes
+        wakeTime = null
+    }
+
+    /** Set sleep time to a static time. Clears any solar reference. */
+    fun setStaticSleepTime(time: String?) {
+        sleepTime = time
+        if (time != null) {
+            sleepSolarRef = null
+            sleepSolarOffset = 0
         }
+    }
 
-    /** Config event font size (sp), or -1 if not set. */
-    var configFontSize: Int
-        get() = prefs.getInt(KEY_CONFIG_FONT_SIZE, -1)
-        set(value) = prefs.edit().putInt(KEY_CONFIG_FONT_SIZE, value).apply()
+    /** Set sleep time to a solar-based time. Clears any static time. */
+    fun setSolarSleepTime(solarRef: String, offsetMinutes: Int) {
+        sleepSolarRef = solarRef
+        sleepSolarOffset = offsetMinutes
+        sleepTime = null
+    }
 
-    // ========== Solar Time Config (SUNRISE/SUNSET) ==========
-
-    /** Wake solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
-    var configWakeSolarRef: String?
-        get() = prefs.getString(KEY_CONFIG_WAKE_SOLAR_REF, null)
-        set(value) = prefs.edit().putString(KEY_CONFIG_WAKE_SOLAR_REF, value).apply()
-
-    /** Wake solar offset in minutes (e.g., +30 or -15). */
-    var configWakeSolarOffset: Int
-        get() = prefs.getInt(KEY_CONFIG_WAKE_SOLAR_OFFSET, 0)
-        set(value) = prefs.edit().putInt(KEY_CONFIG_WAKE_SOLAR_OFFSET, value).apply()
-
-    /** Sleep solar reference ("SUNRISE" or "SUNSET"), or null for static time. */
-    var configSleepSolarRef: String?
-        get() = prefs.getString(KEY_CONFIG_SLEEP_SOLAR_REF, null)
-        set(value) = prefs.edit().putString(KEY_CONFIG_SLEEP_SOLAR_REF, value).apply()
-
-    /** Sleep solar offset in minutes (e.g., +30 or -15). */
-    var configSleepSolarOffset: Int
-        get() = prefs.getInt(KEY_CONFIG_SLEEP_SOLAR_OFFSET, 0)
-        set(value) = prefs.edit().putInt(KEY_CONFIG_SLEEP_SOLAR_OFFSET, value).apply()
-
-    /** Clear all config event settings (used when resetting or testing). */
-    fun clearConfigSettings() {
+    /** Clear all app settings (used when resetting or testing). */
+    fun clearSettings() {
         prefs.edit()
-                .remove(KEY_CONFIG_WAKE_TIME)
-                .remove(KEY_CONFIG_SLEEP_TIME)
-                .remove(KEY_CONFIG_BRIGHTNESS)
-                .remove(KEY_CONFIG_TIME_FORMAT)
-                .remove(KEY_CONFIG_FONT_SIZE)
-                .remove(KEY_CONFIG_WAKE_SOLAR_REF)
-                .remove(KEY_CONFIG_WAKE_SOLAR_OFFSET)
-                .remove(KEY_CONFIG_SLEEP_SOLAR_REF)
-                .remove(KEY_CONFIG_SLEEP_SOLAR_OFFSET)
+                .remove(KEY_WAKE_TIME)
+                .remove(KEY_SLEEP_TIME)
+                .remove(KEY_BRIGHTNESS)
+                .remove(KEY_TIME_FORMAT)
+                .remove(KEY_SHOW_YEAR)
+                .remove(KEY_WAKE_SOLAR_REF)
+                .remove(KEY_WAKE_SOLAR_OFFSET)
+                .remove(KEY_SLEEP_SOLAR_REF)
+                .remove(KEY_SLEEP_SOLAR_OFFSET)
                 .apply()
     }
+
+    // ========== Helper Methods ==========
 
     /** Check if user is signed in (has refresh token). */
     val isSignedIn: Boolean
@@ -381,31 +368,17 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         const val MAX_PIN_ATTEMPTS = 3
         const val LOCKOUT_DURATION_MS = 30_000L // 30 seconds
 
-        // Manual config override keys
-        private const val KEY_MANUAL_WAKE_TIME = "manual_wake_time"
-        private const val KEY_MANUAL_SLEEP_TIME = "manual_sleep_time"
-        private const val KEY_MANUAL_BRIGHTNESS = "manual_brightness"
-        private const val KEY_MANUAL_TIME_FORMAT = "manual_time_format"
-        private const val KEY_MANUAL_FONT_SIZE = "manual_font_size"
-        private const val KEY_MANUAL_SHOW_YEAR = "manual_show_year"
+        // Unified app settings keys (written by both admin panel and [CONFIG] events)
+        private const val KEY_WAKE_TIME = "wake_time"
+        private const val KEY_SLEEP_TIME = "sleep_time"
+        private const val KEY_BRIGHTNESS = "brightness"
+        private const val KEY_TIME_FORMAT = "time_format"
+        private const val KEY_SHOW_YEAR = "show_year"
 
-        // Config event-derived settings keys (from [CONFIG] calendar events)
-        private const val KEY_CONFIG_WAKE_TIME = "config_wake_time"
-        private const val KEY_CONFIG_SLEEP_TIME = "config_sleep_time"
-        private const val KEY_CONFIG_BRIGHTNESS = "config_brightness"
-        private const val KEY_CONFIG_TIME_FORMAT = "config_time_format"
-        private const val KEY_CONFIG_FONT_SIZE = "config_font_size"
-
-        // Dynamic time config (SUNRISE/SUNSET references)
-        private const val KEY_CONFIG_WAKE_SOLAR_REF = "config_wake_solar_ref"
-        private const val KEY_CONFIG_WAKE_SOLAR_OFFSET = "config_wake_solar_offset"
-        private const val KEY_CONFIG_SLEEP_SOLAR_REF = "config_sleep_solar_ref"
-        private const val KEY_CONFIG_SLEEP_SOLAR_OFFSET = "config_sleep_solar_offset"
-
-        // Manual solar time override keys
-        private const val KEY_MANUAL_WAKE_SOLAR_REF = "manual_wake_solar_ref"
-        private const val KEY_MANUAL_WAKE_SOLAR_OFFSET = "manual_wake_solar_offset"
-        private const val KEY_MANUAL_SLEEP_SOLAR_REF = "manual_sleep_solar_ref"
-        private const val KEY_MANUAL_SLEEP_SOLAR_OFFSET = "manual_sleep_solar_offset"
+        // Solar time settings
+        private const val KEY_WAKE_SOLAR_REF = "wake_solar_ref"
+        private const val KEY_WAKE_SOLAR_OFFSET = "wake_solar_offset"
+        private const val KEY_SLEEP_SOLAR_REF = "sleep_solar_ref"
+        private const val KEY_SLEEP_SOLAR_OFFSET = "sleep_solar_offset"
     }
 }

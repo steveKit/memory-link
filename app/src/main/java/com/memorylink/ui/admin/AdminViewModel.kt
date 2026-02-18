@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
  * - PIN entry/setup state
  * - Google authentication
  * - Calendar selection
- * - Manual config overrides
+ * - Display settings
  * - Inactivity timeout (5 minutes)
  *
  * Per .clinerules/20-android.md:
@@ -57,20 +57,15 @@ constructor(
     private val _calendarState = MutableStateFlow(CalendarState())
     val calendarState: StateFlow<CalendarState> = _calendarState.asStateFlow()
 
-    // ========== Config State ==========
+    // ========== Settings State ==========
 
-    private val _configState = MutableStateFlow(loadConfigState())
-    val configState: StateFlow<ConfigState> = _configState.asStateFlow()
+    private val _settingsState = MutableStateFlow(loadSettingsState())
+    val settingsState: StateFlow<SettingsState> = _settingsState.asStateFlow()
 
     // ========== Sync State ==========
 
     private val _syncState = MutableStateFlow(SyncState())
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
-
-    // ========== Effective Settings (Resolved) ==========
-
-    private val _effectiveSettings = MutableStateFlow(EffectiveSettingsState())
-    val effectiveSettings: StateFlow<EffectiveSettingsState> = _effectiveSettings.asStateFlow()
 
     // ========== Inactivity Timeout ==========
 
@@ -86,25 +81,13 @@ constructor(
         // Start inactivity timer
         resetInactivityTimer()
 
-        // Observe effective settings from SettingsRepository
+        // Observe settings from SettingsRepository for resolved times
         viewModelScope.launch {
             settingsRepository.settings.collect { appSettings ->
-                // Determine source for each setting based on what's set in TokenStorage
-                val wakeSource = determineWakeTimeSource()
-                val sleepSource = determineSleepTimeSource()
-                val brightnessSource = determineBrightnessSource()
-                val timeFormatSource = determineTimeFormatSource()
-
-                _effectiveSettings.update {
-                    EffectiveSettingsState(
-                            wakeTime = appSettings.wakeTime,
-                            wakeTimeSource = wakeSource,
-                            sleepTime = appSettings.sleepTime,
-                            sleepTimeSource = sleepSource,
-                            brightness = appSettings.brightness,
-                            brightnessSource = brightnessSource,
-                            use24HourFormat = appSettings.use24HourFormat,
-                            use24HourFormatSource = timeFormatSource
+                _settingsState.update {
+                    it.copy(
+                            resolvedWakeTime = appSettings.wakeTime,
+                            resolvedSleepTime = appSettings.sleepTime
                     )
                 }
             }
@@ -358,7 +341,6 @@ constructor(
             }
 
             // Trigger sync after selecting calendar
-            // syncEvents() will do a full sync since syncToken was cleared on calendar change
             syncCalendars()
         }
     }
@@ -417,124 +399,90 @@ constructor(
         }
     }
 
-    // ========== Config Methods ==========
+    // ========== Settings Methods ==========
 
-    private fun loadConfigState(): ConfigState {
-        val wakeTimeStr = tokenStorage.manualWakeTime
-        val sleepTimeStr = tokenStorage.manualSleepTime
+    private fun loadSettingsState(): SettingsState {
+        val wakeTimeStr = tokenStorage.wakeTime
+        val sleepTimeStr = tokenStorage.sleepTime
 
-        return ConfigState(
+        return SettingsState(
                 wakeTime = wakeTimeStr?.let { parseTime(it) },
                 sleepTime = sleepTimeStr?.let { parseTime(it) },
-                brightness = tokenStorage.manualBrightness.takeIf { it >= 0 },
-                use24HourFormat = tokenStorage.manualUse24HourFormat,
-                showYearInDate = tokenStorage.manualShowYear,
-                wakeSolarRef = tokenStorage.manualWakeSolarRef,
-                wakeSolarOffset = tokenStorage.manualWakeSolarOffset,
-                sleepSolarRef = tokenStorage.manualSleepSolarRef,
-                sleepSolarOffset = tokenStorage.manualSleepSolarOffset
+                brightness = tokenStorage.brightness.takeIf { it >= 0 },
+                use24HourFormat = tokenStorage.use24HourFormat,
+                showYearInDate = tokenStorage.showYear,
+                wakeSolarRef = tokenStorage.wakeSolarRef,
+                wakeSolarOffset = tokenStorage.wakeSolarOffset,
+                sleepSolarRef = tokenStorage.sleepSolarRef,
+                sleepSolarOffset = tokenStorage.sleepSolarOffset
         )
     }
 
-    /** Update wake time override (static time). Clears solar time if set. */
+    /** Update wake time (static time). Clears any solar reference. */
     fun setWakeTime(time: LocalTime?) {
         resetInactivityTimer()
-        tokenStorage.manualWakeTime = time?.toString()
-        // Clear solar time when setting static time
-        if (time != null) {
-            tokenStorage.manualWakeSolarRef = null
-            tokenStorage.manualWakeSolarOffset = 0
-        }
-        _configState.update { it.copy(wakeTime = time, wakeSolarRef = null, wakeSolarOffset = 0) }
+        tokenStorage.setStaticWakeTime(time?.toString())
+        _settingsState.update { it.copy(wakeTime = time, wakeSolarRef = null, wakeSolarOffset = 0) }
+        notifySettingsChanged()
     }
 
-    /** Update sleep time override (static time). Clears solar time if set. */
+    /** Update sleep time (static time). Clears any solar reference. */
     fun setSleepTime(time: LocalTime?) {
         resetInactivityTimer()
-        tokenStorage.manualSleepTime = time?.toString()
-        // Clear solar time when setting static time
-        if (time != null) {
-            tokenStorage.manualSleepSolarRef = null
-            tokenStorage.manualSleepSolarOffset = 0
-        }
-        _configState.update {
+        tokenStorage.setStaticSleepTime(time?.toString())
+        _settingsState.update {
             it.copy(sleepTime = time, sleepSolarRef = null, sleepSolarOffset = 0)
         }
+        notifySettingsChanged()
     }
 
-    /** Update wake time to solar-based (e.g., Sunrise +30). Clears static time. */
+    /** Update wake time to solar-based. Clears static time. */
     fun setWakeSolarTime(solarRef: String, offsetMinutes: Int) {
         resetInactivityTimer()
-        tokenStorage.manualWakeSolarRef = solarRef
-        tokenStorage.manualWakeSolarOffset = offsetMinutes
-        // Clear static time when setting solar time
-        tokenStorage.manualWakeTime = null
-        _configState.update {
+        tokenStorage.setSolarWakeTime(solarRef, offsetMinutes)
+        _settingsState.update {
             it.copy(wakeTime = null, wakeSolarRef = solarRef, wakeSolarOffset = offsetMinutes)
         }
+        notifySettingsChanged()
     }
 
-    /** Update sleep time to solar-based (e.g., Sunset +30). Clears static time. */
+    /** Update sleep time to solar-based. Clears static time. */
     fun setSleepSolarTime(solarRef: String, offsetMinutes: Int) {
         resetInactivityTimer()
-        tokenStorage.manualSleepSolarRef = solarRef
-        tokenStorage.manualSleepSolarOffset = offsetMinutes
-        // Clear static time when setting solar time
-        tokenStorage.manualSleepTime = null
-        _configState.update {
+        tokenStorage.setSolarSleepTime(solarRef, offsetMinutes)
+        _settingsState.update {
             it.copy(sleepTime = null, sleepSolarRef = solarRef, sleepSolarOffset = offsetMinutes)
         }
+        notifySettingsChanged()
     }
 
-    /** Clear wake time override (both static and solar). */
-    fun clearWakeTime() {
-        resetInactivityTimer()
-        tokenStorage.manualWakeTime = null
-        tokenStorage.manualWakeSolarRef = null
-        tokenStorage.manualWakeSolarOffset = 0
-        _configState.update { it.copy(wakeTime = null, wakeSolarRef = null, wakeSolarOffset = 0) }
-    }
-
-    /** Clear sleep time override (both static and solar). */
-    fun clearSleepTime() {
-        resetInactivityTimer()
-        tokenStorage.manualSleepTime = null
-        tokenStorage.manualSleepSolarRef = null
-        tokenStorage.manualSleepSolarOffset = 0
-        _configState.update {
-            it.copy(sleepTime = null, sleepSolarRef = null, sleepSolarOffset = 0)
-        }
-    }
-
-    /** Update brightness override. */
+    /** Update brightness. */
     fun setBrightness(brightness: Int?) {
         resetInactivityTimer()
-        tokenStorage.manualBrightness = brightness ?: -1
-        _configState.update { it.copy(brightness = brightness) }
+        tokenStorage.brightness = brightness ?: -1
+        _settingsState.update { it.copy(brightness = brightness) }
+        notifySettingsChanged()
     }
 
-    /** Update time format override. */
+    /** Update time format. */
     fun setUse24HourFormat(use24Hour: Boolean?) {
         resetInactivityTimer()
-        tokenStorage.manualUse24HourFormat = use24Hour
-        _configState.update { it.copy(use24HourFormat = use24Hour) }
+        tokenStorage.use24HourFormat = use24Hour
+        _settingsState.update { it.copy(use24HourFormat = use24Hour) }
         notifySettingsChanged()
     }
 
-    /** Update show year in date override. */
+    /** Update show year in date. */
     fun setShowYearInDate(showYear: Boolean?) {
         resetInactivityTimer()
-        tokenStorage.manualShowYear = showYear
-        _configState.update { it.copy(showYearInDate = showYear) }
+        tokenStorage.showYear = showYear
+        _settingsState.update { it.copy(showYearInDate = showYear) }
         notifySettingsChanged()
     }
 
-    /**
-     * Notify SettingsRepository that manual settings have changed. This triggers a refresh of
-     * AppSettings and propagates the change to StateCoordinator.
-     */
+    /** Notify SettingsRepository that settings have changed. */
     private fun notifySettingsChanged() {
-        viewModelScope.launch { settingsRepository.onManualSettingsChanged() }
+        viewModelScope.launch { settingsRepository.onSettingsChanged() }
     }
 
     private fun parseTime(timeStr: String): LocalTime? {
@@ -543,72 +491,6 @@ constructor(
         } catch (e: Exception) {
             null
         }
-    }
-
-    // ========== Source Determination Methods ==========
-
-    /**
-     * Determine the source of the current wake time setting. Priority: Manual > Config > Default
-     */
-    private fun determineWakeTimeSource(): SettingSource {
-        // Check manual override first (highest priority)
-        if (tokenStorage.manualWakeTime != null || tokenStorage.manualWakeSolarRef != null) {
-            return SettingSource.MANUAL
-        }
-        // Check config event
-        if (tokenStorage.configWakeTime != null || tokenStorage.configWakeSolarRef != null) {
-            return SettingSource.CALENDAR
-        }
-        // Default
-        return SettingSource.DEFAULT
-    }
-
-    /**
-     * Determine the source of the current sleep time setting. Priority: Manual > Config > Default
-     */
-    private fun determineSleepTimeSource(): SettingSource {
-        // Check manual override first (highest priority)
-        if (tokenStorage.manualSleepTime != null || tokenStorage.manualSleepSolarRef != null) {
-            return SettingSource.MANUAL
-        }
-        // Check config event
-        if (tokenStorage.configSleepTime != null || tokenStorage.configSleepSolarRef != null) {
-            return SettingSource.CALENDAR
-        }
-        // Default
-        return SettingSource.DEFAULT
-    }
-
-    /**
-     * Determine the source of the current brightness setting. Priority: Manual > Config > Default
-     */
-    private fun determineBrightnessSource(): SettingSource {
-        // Check manual override first (highest priority)
-        if (tokenStorage.manualBrightness >= 0) {
-            return SettingSource.MANUAL
-        }
-        // Check config event
-        if (tokenStorage.configBrightness >= 0) {
-            return SettingSource.CALENDAR
-        }
-        // Default
-        return SettingSource.DEFAULT
-    }
-
-    /**
-     * Determine the source of the current time format setting. Priority: Manual > Config > Default
-     */
-    private fun determineTimeFormatSource(): SettingSource {
-        // Check manual override first (highest priority)
-        if (tokenStorage.manualUse24HourFormat != null) {
-            return SettingSource.MANUAL
-        }
-        // Check config event
-        if (tokenStorage.configUse24HourFormat != null) {
-            return SettingSource.CALENDAR
-        }
-        // Default
-        return SettingSource.DEFAULT
     }
 
     // ========== Inactivity Timeout ==========
@@ -668,17 +550,25 @@ data class CalendarState(
 
 data class CalendarItem(val id: String, val name: String, val isPrimary: Boolean)
 
-data class ConfigState(
+/**
+ * Unified settings state for admin panel. Shows current values that can be edited. Last write wins.
+ */
+data class SettingsState(
+        // Static time settings (null if using solar time)
         val wakeTime: LocalTime? = null,
         val sleepTime: LocalTime? = null,
-        val brightness: Int? = null,
-        val use24HourFormat: Boolean? = null,
-        val showYearInDate: Boolean? = null,
-        // Solar time settings
+        // Solar time settings (null if using static time)
         val wakeSolarRef: String? = null,
         val wakeSolarOffset: Int = 0,
         val sleepSolarRef: String? = null,
-        val sleepSolarOffset: Int = 0
+        val sleepSolarOffset: Int = 0,
+        // Other settings (null = use default)
+        val brightness: Int? = null,
+        val use24HourFormat: Boolean? = null,
+        val showYearInDate: Boolean? = null,
+        // Resolved times (after solar calculation, for display)
+        val resolvedWakeTime: LocalTime = LocalTime.of(6, 0),
+        val resolvedSleepTime: LocalTime = LocalTime.of(21, 0)
 )
 
 /**
@@ -735,30 +625,3 @@ data class SyncState(
         val lastResult: String? = null,
         val lastSyncTime: Long = 0L
 )
-
-/**
- * Represents the resolved/effective settings currently being used by the app. This combines manual
- * overrides + config events + defaults with proper priority.
- *
- * Includes source tracking so the UI can show where each setting came from.
- */
-data class EffectiveSettingsState(
-        val wakeTime: LocalTime = LocalTime.of(6, 0),
-        val wakeTimeSource: SettingSource = SettingSource.DEFAULT,
-        val sleepTime: LocalTime = LocalTime.of(21, 0),
-        val sleepTimeSource: SettingSource = SettingSource.DEFAULT,
-        val brightness: Int = 100,
-        val brightnessSource: SettingSource = SettingSource.DEFAULT,
-        val use24HourFormat: Boolean = false,
-        val use24HourFormatSource: SettingSource = SettingSource.DEFAULT
-)
-
-/** Source of a setting value. */
-enum class SettingSource {
-    /** From [CONFIG] calendar event */
-    CALENDAR,
-    /** Manually set in admin panel */
-    MANUAL,
-    /** Default value (no override) */
-    DEFAULT
-}
