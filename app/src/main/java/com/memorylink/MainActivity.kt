@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -318,6 +319,7 @@ private fun MemoryLinkNavHost(
  * Kiosk screen with admin gesture detection overlay.
  *
  * Detects 5 rapid taps in top-left corner to trigger admin mode.
+ * Also applies screen brightness from DisplayState to the window.
  *
  * @param onAdminGestureDetected Called when admin gesture is completed
  */
@@ -326,6 +328,20 @@ private fun KioskWithAdminGesture(onAdminGestureDetected: () -> Unit) {
     val kioskViewModel: KioskViewModel = hiltViewModel()
     val displayState by kioskViewModel.displayState.collectAsStateWithLifecycle()
     val gestureState: AdminGestureState = rememberAdminGestureState()
+
+    // Apply screen brightness from DisplayState
+    // screenBrightness: 0.0f = dim, 1.0f = max, -1.0f = system default
+    val view = LocalView.current
+    LaunchedEffect(displayState.brightness) {
+        val activity = view.context as? ComponentActivity
+        activity?.window?.let { window ->
+            val brightnessFloat = displayState.brightness / 100f
+            window.attributes = window.attributes.also {
+                it.screenBrightness = brightnessFloat
+            }
+            Log.d("KioskScreen", "Applied brightness: ${displayState.brightness}% ($brightnessFloat)")
+        }
+    }
 
     KioskScreen(
             displayState = displayState,

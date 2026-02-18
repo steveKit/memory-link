@@ -16,12 +16,30 @@ sealed class DisplayState {
         abstract val showYearInDate: Boolean
 
         /**
+         * Screen brightness (0-100).
+         *
+         * Per clinerules/20-android.md:
+         * - Awake states: Use configured brightness from settings
+         * - Sleep state: Always 10% (SLEEP_BRIGHTNESS)
+         */
+        abstract val brightness: Int
+
+        companion object {
+                /** Sleep mode brightness: 10% per clinerules/20-android.md */
+                const val SLEEP_BRIGHTNESS = 10
+
+                /** Default awake brightness when not configured */
+                const val DEFAULT_BRIGHTNESS = 100
+        }
+
+        /**
          * AWAKE_NO_EVENT: Within wake period but no future events in lookahead window. Display:
          * Full clock (72sp) + date (36sp), full brightness.
          */
         data class AwakeNoEvent(
                 override val use24HourFormat: Boolean = false,
-                override val showYearInDate: Boolean = true
+                override val showYearInDate: Boolean = true,
+                override val brightness: Int = DEFAULT_BRIGHTNESS
         ) : DisplayState()
 
         /**
@@ -60,7 +78,8 @@ sealed class DisplayState {
                 val timedEventDate: LocalDate? = null,
                 // Settings
                 override val use24HourFormat: Boolean = false,
-                override val showYearInDate: Boolean = true
+                override val showYearInDate: Boolean = true,
+                override val brightness: Int = DEFAULT_BRIGHTNESS
         ) : DisplayState() {
 
                 /** Returns true if there's an all-day event to display. */
@@ -105,7 +124,8 @@ sealed class DisplayState {
                 val timedEventDate: LocalDate? = null,
                 // Settings
                 override val use24HourFormat: Boolean = false,
-                override val showYearInDate: Boolean = true
+                override val showYearInDate: Boolean = true,
+                override val brightness: Int = SLEEP_BRIGHTNESS
         ) : DisplayState() {
 
                 /** Returns true if there's an all-day event to display. */
