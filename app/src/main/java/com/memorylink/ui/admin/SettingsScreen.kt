@@ -188,7 +188,9 @@ private fun TimeSettingItem(
         var showTimePicker by remember { mutableStateOf(false) }
 
         val timePattern = if (use24HourFormat) "HH:mm" else "h:mm a"
-        val isSolarTime = currentSolarRef != null
+        // Solar time is active only when explicitly set (solar ref is non-null) AND no fixed time is set
+        // This ensures Fixed Time is the default when neither is explicitly set
+        val isSolarTime = currentSolarRef != null && currentTime == null
 
         // Determine the default solar reference based on available options
         val defaultSolarRef = solarOptions.firstOrNull()?.solarRef ?: "SUNRISE"

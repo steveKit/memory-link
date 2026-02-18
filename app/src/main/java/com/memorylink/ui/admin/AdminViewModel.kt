@@ -460,17 +460,26 @@ constructor(
     private fun loadSettingsState(): SettingsState {
         val wakeTimeStr = tokenStorage.wakeTime
         val sleepTimeStr = tokenStorage.sleepTime
+        val wakeSolarRef = tokenStorage.wakeSolarRef
+        val sleepSolarRef = tokenStorage.sleepSolarRef
+
+        // Default to fixed time mode if no explicit setting exists
+        // (neither static time nor solar ref stored)
+        val effectiveWakeTime = wakeTimeStr?.let { parseTime(it) }
+                ?: if (wakeSolarRef == null) LocalTime.of(6, 0) else null
+        val effectiveSleepTime = sleepTimeStr?.let { parseTime(it) }
+                ?: if (sleepSolarRef == null) LocalTime.of(21, 30) else null
 
         return SettingsState(
-                wakeTime = wakeTimeStr?.let { parseTime(it) },
-                sleepTime = sleepTimeStr?.let { parseTime(it) },
+                wakeTime = effectiveWakeTime,
+                sleepTime = effectiveSleepTime,
                 brightness = tokenStorage.brightness.takeIf { it >= 0 },
                 use24HourFormat = tokenStorage.use24HourFormat,
                 showYearInDate = tokenStorage.showYear,
                 showEventsDuringSleep = tokenStorage.showEventsDuringSleep,
-                wakeSolarRef = tokenStorage.wakeSolarRef,
+                wakeSolarRef = wakeSolarRef,
                 wakeSolarOffset = tokenStorage.wakeSolarOffset,
-                sleepSolarRef = tokenStorage.sleepSolarRef,
+                sleepSolarRef = sleepSolarRef,
                 sleepSolarOffset = tokenStorage.sleepSolarOffset
         )
     }
@@ -581,7 +590,7 @@ constructor(
     }
 
     companion object {
-        /** 30 seconds inactivity timeout (reduced for testing; production: 5 minutes per .clinerules/20-android.md) */
+        /** 30 seconds inactivity timeout */
         const val INACTIVITY_TIMEOUT_MS = 30 * 1000L
 
         /** Delay before validating PIN to allow 4th dot to render */
@@ -638,9 +647,9 @@ data class SettingsState(
         val use24HourFormat: Boolean? = null,
         val showYearInDate: Boolean? = null,
         val showEventsDuringSleep: Boolean? = null,
-        // Resolved times (after solar calculation, for display)
-        val resolvedWakeTime: LocalTime = LocalTime.of(6, 0),
-        val resolvedSleepTime: LocalTime = LocalTime.of(21, 0)
+    // Resolved times (for display)
+    val resolvedWakeTime: LocalTime = LocalTime.of(6, 0),
+    val resolvedSleepTime: LocalTime = LocalTime.of(21, 30)
 )
 
 /**

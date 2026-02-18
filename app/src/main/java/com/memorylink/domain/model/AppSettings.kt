@@ -10,21 +10,19 @@ import java.time.LocalTime
  * 2. Admin mode manual override
  *
  * Priority: Manual Override > Config Event > Default
- *
- * Default values use sunrise/sunset with static fallbacks.
  */
 data class AppSettings(
         /**
          * Time to enter sleep mode (dimmed display).
          *
-         * Default: SUNSET+30 (30 minutes after sunset) Fallback: 21:00 if location unavailable
+         * Default: 21:30 (9:30 PM)
          */
         val sleepTime: LocalTime = DEFAULT_SLEEP_TIME,
 
         /**
          * Time to wake from sleep mode (full display).
          *
-         * Default: SUNRISE Fallback: 06:00 if location unavailable
+         * Default: 06:00 (6:00 AM)
          */
         val wakeTime: LocalTime = DEFAULT_WAKE_TIME,
 
@@ -62,14 +60,14 @@ data class AppSettings(
 ) {
     companion object {
         /**
-         * Fallback sleep time when sunrise/sunset API is unavailable. SUNSET+30 → 21:00 as
-         * reasonable evening default.
+         * Default sleep time (fixed).
+         * 21:30 (9:30 PM) as reasonable evening default.
          */
-        val DEFAULT_SLEEP_TIME: LocalTime = LocalTime.of(21, 0)
+        val DEFAULT_SLEEP_TIME: LocalTime = LocalTime.of(21, 30)
 
         /**
-         * Fallback wake time when sunrise/sunset API is unavailable. SUNRISE → 06:00 as reasonable
-         * morning default.
+         * Default wake time (fixed).
+         * 06:00 (6:00 AM) as reasonable morning default.
          */
         val DEFAULT_WAKE_TIME: LocalTime = LocalTime.of(6, 0)
     }

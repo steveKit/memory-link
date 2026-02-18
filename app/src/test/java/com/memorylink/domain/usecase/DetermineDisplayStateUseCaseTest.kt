@@ -37,11 +37,11 @@ class DetermineDisplayStateUseCaseTest {
         useCase = DetermineDisplayStateUseCase(getNextEventUseCase)
     }
 
-    // region Default Settings (sleep: 21:00, wake: 06:00)
+    // region Default Settings (sleep: 21:30, wake: 06:00)
 
     @Test
     fun `returns SLEEP during night hours`() {
-        // 23:00 is after sleep (21:00)
+        // 23:00 is after sleep (21:30)
         val now = LocalDateTime.of(2026, 2, 11, 23, 0)
         val settings = AppSettings()
 
@@ -133,8 +133,8 @@ class DetermineDisplayStateUseCaseTest {
 
     @Test
     fun `returns SLEEP at exactly sleep time`() {
-        // Exactly at 21:00 should be sleep
-        val now = LocalDateTime.of(2026, 2, 11, 21, 0)
+        // Exactly at 21:30 should be sleep (default sleep time)
+        val now = LocalDateTime.of(2026, 2, 11, 21, 30)
         val settings = AppSettings()
 
         val result = useCase(now, emptyList(), settings)
