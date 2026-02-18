@@ -1,6 +1,7 @@
 package com.memorylink.ui.admin
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,9 +12,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,7 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -178,18 +186,12 @@ private fun TimeSettingItem(
         onSolarTimeSelected: (String, Int) -> Unit
 ) {
         var showTimePicker by remember { mutableStateOf(false) }
-        var showSolarPicker by remember { mutableStateOf(false) }
 
         val timePattern = if (use24HourFormat) "HH:mm" else "h:mm a"
         val isSolarTime = currentSolarRef != null
 
-        // Display value: show solar label if using solar, otherwise show resolved time
-        val displayValue: String =
-                if (isSolarTime) {
-                        SolarTimeOption(currentSolarRef!!, currentSolarOffset).displayLabel
-                } else {
-                        resolvedTime.format(DateTimeFormatter.ofPattern(timePattern))
-                }
+        // Determine the default solar reference based on available options
+        val defaultSolarRef = solarOptions.firstOrNull()?.solarRef ?: "SUNRISE"
 
         Column(
                 modifier =
@@ -212,22 +214,40 @@ private fun TimeSettingItem(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Current value display
-                Column {
+                if (isSolarTime) {
+                        // Solar time display with offset controls
+                        val solarLabel = if (currentSolarRef == "SUNRISE") "☀️ Sunrise" else "🌙 Sunset"
+                        
                         Text(
-                                text = displayValue,
+                                text = solarLabel,
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = AccentBlue
                         )
-                        if (isSolarTime) {
-                                // Show resolved time for solar
-                                Text(
-                                        text =
-                                                "Today: ${resolvedTime.format(DateTimeFormatter.ofPattern(timePattern))}",
-                                        fontSize = 12.sp,
-                                        color = Color.White.copy(alpha = 0.5f)
-                                )
-                        }
+                        
+                        Text(
+                                text = "Today: ${resolvedTime.format(DateTimeFormatter.ofPattern(timePattern))}",
+                                fontSize = 14.sp,
+                                color = Color.White.copy(alpha = 0.6f)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Offset adjustment controls
+                        OffsetAdjuster(
+                                currentOffset = currentSolarOffset,
+                                onOffsetChange = { newOffset ->
+                                        onSolarTimeSelected(currentSolarRef!!, newOffset)
+                                }
+                        )
+                } else {
+                        // Fixed time display
+                        Text(
+                                text = resolvedTime.format(DateTimeFormatter.ofPattern(timePattern)),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentBlue
+                        )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -251,7 +271,10 @@ private fun TimeSettingItem(
                         ) { Text(text = "Fixed Time", fontSize = 14.sp, color = Color.White) }
 
                         Button(
-                                onClick = { showSolarPicker = true },
+                                onClick = {
+                                        // When switching to solar time, use default offset of 0
+                                        onSolarTimeSelected(defaultSolarRef, 0)
+                                },
                                 modifier = Modifier.weight(1f).height(48.dp),
                                 colors =
                                         ButtonDefaults.buttonColors(
@@ -276,102 +299,128 @@ private fun TimeSettingItem(
                         onDismiss = { showTimePicker = false }
                 )
         }
-
-        if (showSolarPicker) {
-                SolarTimePickerDialog(
-                        options = solarOptions,
-                        selectedRef = currentSolarRef,
-                        selectedOffset = currentSolarOffset,
-                        onOptionSelected = { option ->
-                                onSolarTimeSelected(option.solarRef, option.offsetMinutes)
-                                showSolarPicker = false
-                        },
-                        onDismiss = { showSolarPicker = false }
-                )
-        }
 }
 
+/**
+ * Offset adjuster component with +/- buttons and editable text field.
+ * 
+ * Layout: [-] [+] | [offset value] min
+ */
 @Composable
-private fun SolarTimePickerDialog(
-        options: List<SolarTimeOption>,
-        selectedRef: String?,
-        selectedOffset: Int,
-        onOptionSelected: (SolarTimeOption) -> Unit,
-        onDismiss: () -> Unit
+private fun OffsetAdjuster(
+        currentOffset: Int,
+        onOffsetChange: (Int) -> Unit,
+        modifier: Modifier = Modifier
 ) {
-        Box(
-                modifier =
-                        Modifier.fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.7f))
-                                .clickable(onClick = onDismiss),
-                contentAlignment = Alignment.Center
+        // Local state for text field editing
+        var textValue by remember(currentOffset) { mutableStateOf(currentOffset.toString()) }
+
+        // Clamp offset to valid range
+        fun clampOffset(value: Int): Int = value.coerceIn(-120, 120)
+
+        Row(
+                modifier = modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
         ) {
-                Column(
-                        modifier =
-                                Modifier.clip(RoundedCornerShape(16.dp))
-                                        .background(Color(0xFF1E1E1E))
-                                        .clickable(enabled = false) {}
-                                        .padding(24.dp)
-                                        .width(280.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                Text(
+                        text = "Offset:",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(end = 12.dp)
+                )
+
+                // Minus button
+                Box(
+                        modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF2A2A2A))
+                                .clickable {
+                                        val newValue = clampOffset(currentOffset - 15)
+                                        textValue = newValue.toString()
+                                        onOffsetChange(newValue)
+                                },
+                        contentAlignment = Alignment.Center
                 ) {
                         Text(
-                                text = "Select Solar Time",
-                                fontSize = 20.sp,
+                                text = "−",
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = AccentBlue
+                        )
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                // Plus button
+                Box(
+                        modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF2A2A2A))
+                                .clickable {
+                                        val newValue = clampOffset(currentOffset + 15)
+                                        textValue = newValue.toString()
+                                        onOffsetChange(newValue)
+                                },
+                        contentAlignment = Alignment.Center
+                ) {
+                        Text(
+                                text = "+",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentBlue
+                        )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Editable text field
+                Row(
+                        modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF2A2A2A))
+                                .border(1.dp, Color(0xFF3A3A3A), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        BasicTextField(
+                                value = textValue,
+                                onValueChange = { newText ->
+                                        // Allow negative sign, digits only
+                                        val filtered = newText.filter { it.isDigit() || it == '-' }
+                                        // Ensure only one negative sign at the start
+                                        val cleaned = if (filtered.startsWith("-")) {
+                                                "-" + filtered.drop(1).filter { it.isDigit() }
+                                        } else {
+                                                filtered.filter { it.isDigit() }
+                                        }
+                                        textValue = cleaned
+                                        
+                                        // Parse and apply if valid
+                                        cleaned.toIntOrNull()?.let { parsed ->
+                                                val clamped = clampOffset(parsed)
+                                                onOffsetChange(clamped)
+                                        }
+                                },
+                                modifier = Modifier.width(50.dp),
+                                textStyle = TextStyle(
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        textAlign = TextAlign.Center
+                                ),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                cursorBrush = SolidColor(AccentBlue)
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                                options.forEach { option ->
-                                        val isSelected =
-                                                selectedRef == option.solarRef &&
-                                                        selectedOffset == option.offsetMinutes
-
-                                        Box(
-                                                modifier =
-                                                        Modifier.fillMaxWidth()
-                                                                .clip(RoundedCornerShape(8.dp))
-                                                                .background(
-                                                                        if (isSelected)
-                                                                                AccentBlue.copy(
-                                                                                        alpha = 0.3f
-                                                                                )
-                                                                        else Color(0xFF2A2A2A)
-                                                                )
-                                                                .clickable {
-                                                                        onOptionSelected(option)
-                                                                }
-                                                                .padding(
-                                                                        horizontal = 16.dp,
-                                                                        vertical = 12.dp
-                                                                )
-                                        ) {
-                                                Text(
-                                                        text = option.displayLabel,
-                                                        fontSize = 16.sp,
-                                                        color =
-                                                                if (isSelected) AccentBlue
-                                                                else Color.White
-                                                )
-                                        }
-                                }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        TextButton(onClick = onDismiss) {
-                                Text(
-                                        "Cancel",
-                                        fontSize = 16.sp,
-                                        color = Color.White.copy(alpha = 0.7f)
-                                )
-                        }
+                        Text(
+                                text = "min",
+                                fontSize = 14.sp,
+                                color = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(start = 4.dp)
+                        )
                 }
         }
 }
