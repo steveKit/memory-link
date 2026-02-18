@@ -16,7 +16,7 @@ object AdminRoutes {
     const val HOME = "admin/home"
     const val GOOGLE_SIGNIN = "admin/google_signin"
     const val CALENDAR_SELECT = "admin/calendar_select"
-    const val MANUAL_CONFIG = "admin/manual_config"
+    const val SETTINGS = "admin/settings"
 }
 
 /**
@@ -85,7 +85,7 @@ fun AdminNavGraph(
                     lastSyncFormatted = viewModel.getLastSyncTimeFormatted(),
                     onGoogleAccountClick = { navController.navigate(AdminRoutes.GOOGLE_SIGNIN) },
                     onCalendarClick = { navController.navigate(AdminRoutes.CALENDAR_SELECT) },
-                    onSettingsClick = { navController.navigate(AdminRoutes.MANUAL_CONFIG) },
+                    onSettingsClick = { navController.navigate(AdminRoutes.SETTINGS) },
                     onSyncNowClick = { viewModel.triggerManualSync() },
                     onExitAdmin = {
                         viewModel.resetPinState()
@@ -120,17 +120,15 @@ fun AdminNavGraph(
             )
         }
 
-        composable(AdminRoutes.MANUAL_CONFIG) {
-            val configState by viewModel.configState.collectAsStateWithLifecycle()
+        composable(AdminRoutes.SETTINGS) {
+            val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
 
-            ManualConfigScreen(
-                    configState = configState,
+            SettingsScreen(
+                    settingsState = settingsState,
                     onWakeTimeChange = viewModel::setWakeTime,
                     onSleepTimeChange = viewModel::setSleepTime,
                     onWakeSolarTimeChange = viewModel::setWakeSolarTime,
                     onSleepSolarTimeChange = viewModel::setSleepSolarTime,
-                    onClearWakeTime = viewModel::clearWakeTime,
-                    onClearSleepTime = viewModel::clearSleepTime,
                     onBrightnessChange = viewModel::setBrightness,
                     onTimeFormatChange = viewModel::setUse24HourFormat,
                     onShowYearChange = viewModel::setShowYearInDate,

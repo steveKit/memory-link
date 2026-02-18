@@ -14,18 +14,19 @@ import javax.inject.Inject
  * Use case for parsing [CONFIG] calendar events and applying settings.
  *
  * Processes config events from the calendar cache and stores the resulting settings in
- * TokenStorage. Settings are then resolved by SettingsRepository with proper priority handling.
+ * TokenStorage. Settings are unified - both admin panel and [CONFIG] events write to the same
+ * fields. Last write wins.
  *
  * Per .clinerules/10-project-meta.md:
  * - Config events are parsed immediately when cached
- * - Settings persist until overwritten by another [CONFIG] event
+ * - Settings persist until overwritten (either via [CONFIG] event or admin panel)
  * - Invalid syntax is logged but ignored
  *
  * Flow:
  * 1. CalendarSyncWorker syncs events → triggers this use case
  * 2. This use case parses [CONFIG] events (chronologically by startTime)
- * 3. Settings are stored in TokenStorage
- * 4. SettingsRepository refreshes to combine with manual overrides
+ * 3. Settings are stored in TokenStorage (unified fields)
+ * 4. SettingsRepository refreshes to resolve solar times
  * 5. Successfully processed event IDs are returned for deletion
  */
 class ParseConfigEventUseCase
@@ -154,21 +155,17 @@ constructor(
         }
     }
 
-    /** Apply sleep time configuration. */
+    /** Apply sleep time configuration to unified storage. */
     private fun applySleepConfig(config: SleepConfig) {
         when (config) {
             is SleepConfig.StaticTime -> {
-                // Clear any solar reference, set static time
-                tokenStorage.configSleepSolarRef = null
-                tokenStorage.configSleepSolarOffset = 0
-                tokenStorage.configSleepTime = config.time.format(TIME_FORMATTER)
+                // Use the helper method to set static time and clear solar ref
+                tokenStorage.setStaticSleepTime(config.time.format(TIME_FORMATTER))
                 Log.d(TAG, "Set sleep time: ${config.time}")
             }
             is SleepConfig.DynamicTime -> {
-                // Clear static time, set solar reference
-                tokenStorage.configSleepTime = null
-                tokenStorage.configSleepSolarRef = config.reference.name
-                tokenStorage.configSleepSolarOffset = config.offsetMinutes
+                // Use the helper method to set solar time and clear static time
+                tokenStorage.setSolarSleepTime(config.reference.name, config.offsetMinutes)
                 Log.d(
                         TAG,
                         "Set sleep time: ${config.reference}${formatOffset(config.offsetMinutes)}"
@@ -177,21 +174,17 @@ constructor(
         }
     }
 
-    /** Apply wake time configuration. */
+    /** Apply wake time configuration to unified storage. */
     private fun applyWakeConfig(config: WakeConfig) {
         when (config) {
             is WakeConfig.StaticTime -> {
-                // Clear any solar reference, set static time
-                tokenStorage.configWakeSolarRef = null
-                tokenStorage.configWakeSolarOffset = 0
-                tokenStorage.configWakeTime = config.time.format(TIME_FORMATTER)
+                // Use the helper method to set static time and clear solar ref
+                tokenStorage.setStaticWakeTime(config.time.format(TIME_FORMATTER))
                 Log.d(TAG, "Set wake time: ${config.time}")
             }
             is WakeConfig.DynamicTime -> {
-                // Clear static time, set solar reference
-                tokenStorage.configWakeTime = null
-                tokenStorage.configWakeSolarRef = config.reference.name
-                tokenStorage.configWakeSolarOffset = config.offsetMinutes
+                // Use the helper method to set solar time and clear static time
+                tokenStorage.setSolarWakeTime(config.reference.name, config.offsetMinutes)
                 Log.d(
                         TAG,
                         "Set wake time: ${config.reference}${formatOffset(config.offsetMinutes)}"
@@ -202,13 +195,13 @@ constructor(
 
     /** Apply brightness configuration. */
     private fun applyBrightnessConfig(config: BrightnessConfig) {
-        tokenStorage.configBrightness = config.percent
+        tokenStorage.brightness = config.percent
         Log.d(TAG, "Set brightness: ${config.percent}%")
     }
 
     /** Apply time format configuration. */
     private fun applyTimeFormatConfig(config: TimeFormatConfig) {
-        tokenStorage.configUse24HourFormat = config.use24Hour
+        tokenStorage.use24HourFormat = config.use24Hour
         Log.d(TAG, "Set time format: ${if (config.use24Hour) "24h" else "12h"}")
     }
 
@@ -221,10 +214,10 @@ constructor(
         }
     }
 
-    /** Clear all config event settings. Call this when user wants to reset to defaults. */
-    suspend fun clearAllConfigs() {
-        tokenStorage.clearConfigSettings()
+    /** Clear all settings. Call this when user wants to reset to defaults. */
+    suspend fun clearAllSettings() {
+        tokenStorage.clearSettings()
         settingsRepository.refreshSettings()
-        Log.d(TAG, "Cleared all config settings")
+        Log.d(TAG, "Cleared all settings")
     }
 }
