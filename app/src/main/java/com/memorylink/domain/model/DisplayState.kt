@@ -4,9 +4,22 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 /**
+ * Represents an all-day event for display purposes.
+ *
+ * @param title Event title
+ * @param startDate Start date, or null if today (ongoing multi-day event)
+ * @param endDate End date (exclusive) for multi-day events, or null if single-day
+ */
+data class AllDayEventInfo(
+        val title: String,
+        val startDate: LocalDate? = null,
+        val endDate: LocalDate? = null
+)
+
+/**
  * Kiosk display states. See: 40-state-machine.md
  *
- * Time is NOT embedded here—UI reads live system time. Clock area shows time/date/all-day event;
+ * Time is NOT embedded here—UI reads live system time. Clock area shows time/date/all-day events;
  * event card shows next timed event.
  */
 sealed class DisplayState {
@@ -46,10 +59,10 @@ sealed class DisplayState {
          * AWAKE_WITH_EVENT: Within wake period and at least one event exists in lookahead window.
          *
          * Layout:
-         * - Clock area: Time + Date + optional all-day event (in AccentBlue)
+         * - Clock area: Time + Date + all-day events (each on separate line, in AccentBlue)
          * - Event card: Next timed event (only shown if timedEventTitle is set)
          *
-         * All-day event display rules:
+         * All-day event display rules (each event rendered as a separate line):
          * - Today (single-day): "Today is {title}"
          * - Tomorrow (single-day): "Tomorrow is {title}"
          * - Future (within 7 days, single-day): "{Day of week} is {title}"
@@ -60,18 +73,14 @@ sealed class DisplayState {
          * - Tomorrow: "Tomorrow, at {time}, {title}"
          * - Future (within 2 weeks): "On {day}, {date} at {time}, {title}"
          *
-         * @param allDayEventTitle Title of next all-day event, or null if none
-         * @param allDayEventDate Start date of all-day event, or null if today
-         * @param allDayEventEndDate End date of multi-day event (exclusive), or null if single-day
+         * @param allDayEvents List of all-day events to display (holidays first, then by date)
          * @param timedEventTitle Title of next timed event, or null if none
          * @param timedEventTime Start time of timed event, or null if none
          * @param timedEventDate Date of timed event, or null if today
          */
         data class AwakeWithEvent(
-                // All-day event (displays in clock area)
-                val allDayEventTitle: String? = null,
-                val allDayEventDate: LocalDate? = null,
-                val allDayEventEndDate: LocalDate? = null,
+                // All-day events (display in clock area, each on separate line)
+                val allDayEvents: List<AllDayEventInfo> = emptyList(),
                 // Timed event (displays in event card)
                 val timedEventTitle: String? = null,
                 val timedEventTime: LocalTime? = null,
@@ -82,13 +91,9 @@ sealed class DisplayState {
                 override val brightness: Int = DEFAULT_BRIGHTNESS
         ) : DisplayState() {
 
-                /** Returns true if there's an all-day event to display. */
+                /** Returns true if there are all-day events to display. */
                 val hasAllDayEvent: Boolean
-                        get() = allDayEventTitle != null
-
-                /** Returns true if the all-day event is today (not a future day). */
-                val isAllDayEventToday: Boolean
-                        get() = allDayEventTitle != null && allDayEventDate == null
+                        get() = allDayEvents.isNotEmpty()
 
                 /** Returns true if there's a timed event to display. */
                 val hasTimedEvent: Boolean
@@ -106,18 +111,14 @@ sealed class DisplayState {
          * When showEventsDuringSleep is enabled in settings, event data will be populated and
          * displayed with dimmed styling alongside the clock.
          *
-         * @param allDayEventTitle Title of next all-day event, or null if none/disabled
-         * @param allDayEventDate Start date of all-day event, or null if today
-         * @param allDayEventEndDate End date of multi-day event (exclusive), or null if single-day
+         * @param allDayEvents List of all-day events to display when enabled
          * @param timedEventTitle Title of next timed event, or null if none/disabled
          * @param timedEventTime Start time of timed event, or null if none
          * @param timedEventDate Date of timed event, or null if today
          */
         data class Sleep(
-                // All-day event (displays in clock area when enabled)
-                val allDayEventTitle: String? = null,
-                val allDayEventDate: LocalDate? = null,
-                val allDayEventEndDate: LocalDate? = null,
+                // All-day events (display in clock area when enabled)
+                val allDayEvents: List<AllDayEventInfo> = emptyList(),
                 // Timed event (displays in event card when enabled)
                 val timedEventTitle: String? = null,
                 val timedEventTime: LocalTime? = null,
@@ -128,9 +129,9 @@ sealed class DisplayState {
                 override val brightness: Int = SLEEP_BRIGHTNESS
         ) : DisplayState() {
 
-                /** Returns true if there's an all-day event to display. */
+                /** Returns true if there are all-day events to display. */
                 val hasAllDayEvent: Boolean
-                        get() = allDayEventTitle != null
+                        get() = allDayEvents.isNotEmpty()
 
                 /** Returns true if there's a timed event to display. */
                 val hasTimedEvent: Boolean

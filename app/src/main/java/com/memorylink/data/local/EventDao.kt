@@ -82,6 +82,29 @@ interface EventDao {
     )
     fun getActiveEventsInRange(startTime: Long, endTime: Long): Flow<List<EventEntity>>
 
+    /**
+     * Get all events active during a date range, with optional holiday filtering.
+     *
+     * @param startTime Range start (epoch millis)
+     * @param endTime Range end (epoch millis)
+     * @param includeHolidays Whether to include holiday events
+     */
+    @Query(
+            """
+        SELECT * FROM cached_events 
+        WHERE start_time < :endTime 
+        AND end_time > :startTime
+        AND is_config_event = 0
+        AND (:includeHolidays = 1 OR is_holiday = 0)
+        ORDER BY is_holiday DESC, start_time ASC
+    """
+    )
+    fun getActiveEventsInRangeWithHolidayFilter(
+            startTime: Long,
+            endTime: Long,
+            includeHolidays: Boolean
+    ): Flow<List<EventEntity>>
+
     /** Get all [CONFIG] events for settings parsing. */
     @Query(
             """
@@ -110,6 +133,10 @@ interface EventDao {
     /** Delete a single event by ID (for config event cleanup after processing). */
     @Query("DELETE FROM cached_events WHERE id = :eventId")
     suspend fun deleteEventById(eventId: String): Int
+
+    /** Delete all holiday events (used when holiday calendar selection changes). */
+    @Query("DELETE FROM cached_events WHERE is_holiday = 1")
+    suspend fun deleteHolidayEvents(): Int
 
     @Query("SELECT COUNT(*) FROM cached_events") suspend fun getEventCount(): Int
 }

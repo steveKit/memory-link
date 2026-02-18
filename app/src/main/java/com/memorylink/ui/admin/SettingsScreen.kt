@@ -66,6 +66,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun SettingsScreen(
         settingsState: SettingsState,
+        calendarState: CalendarState,
         onWakeTimeChange: (LocalTime?) -> Unit,
         onSleepTimeChange: (LocalTime?) -> Unit,
         onWakeSolarTimeChange: (String, Int) -> Unit,
@@ -74,6 +75,7 @@ fun SettingsScreen(
         onTimeFormatChange: (Boolean?) -> Unit,
         onShowYearChange: (Boolean?) -> Unit,
         onShowEventsDuringSleepChange: (Boolean?) -> Unit,
+        onShowHolidaysChange: (Boolean) -> Unit,
         onBackClick: () -> Unit,
         modifier: Modifier = Modifier
 ) {
@@ -165,6 +167,17 @@ fun SettingsScreen(
                                 showEvents = settingsState.showEventsDuringSleep ?: false,
                                 onShowEventsChange = onShowEventsDuringSleepChange
                         )
+
+                        // Show Holidays - only visible if a holiday calendar is configured
+                        if (calendarState.holidayCalendarId != null) {
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                ShowHolidaysSettingItem(
+                                        showHolidays = settingsState.showHolidays,
+                                        holidayCalendarName = calendarState.holidayCalendarName,
+                                        onShowHolidaysChange = onShowHolidaysChange
+                                )
+                        }
 
                         Spacer(modifier = Modifier.height(48.dp))
                 }
@@ -859,6 +872,66 @@ private fun ShowEventsDuringSleepSettingItem(
         }
 }
 
+/**
+ * Toggle for showing/hiding holiday events.
+ * Only visible when a holiday calendar is configured.
+ */
+@Composable
+private fun ShowHolidaysSettingItem(
+        showHolidays: Boolean,
+        holidayCalendarName: String?,
+        onShowHolidaysChange: (Boolean) -> Unit
+) {
+        Column(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF1E1E1E))
+                                .padding(16.dp)
+        ) {
+                Text(
+                        text = "Show Holidays",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                        text = "Display holidays from: ${holidayCalendarName ?: "Holiday calendar"}",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Text(
+                                text = if (showHolidays) "Enabled" else "Hidden",
+                                fontSize = 16.sp,
+                                color = AccentBlue
+                        )
+
+                        Switch(
+                                checked = showHolidays,
+                                onCheckedChange = { onShowHolidaysChange(it) },
+                                colors =
+                                        SwitchDefaults.colors(
+                                                checkedThumbColor = AccentBlue,
+                                                checkedTrackColor = AccentBlue.copy(alpha = 0.5f),
+                                                uncheckedThumbColor = Color(0xFF3A3A3A),
+                                                uncheckedTrackColor = Color(0xFF2A2A2A)
+                                        )
+                        )
+                }
+        }
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFF121212, widthDp = 400, heightDp = 800)
 @Composable
 private fun SettingsScreenPreview_FixedTime() {
@@ -872,6 +945,7 @@ private fun SettingsScreenPreview_FixedTime() {
                                         use24HourFormat = false,
                                         showEventsDuringSleep = false
                                 ),
+                        calendarState = CalendarState(),
                         onWakeTimeChange = {},
                         onSleepTimeChange = {},
                         onWakeSolarTimeChange = { _, _ -> },
@@ -880,6 +954,7 @@ private fun SettingsScreenPreview_FixedTime() {
                         onTimeFormatChange = {},
                         onShowYearChange = {},
                         onShowEventsDuringSleepChange = {},
+                        onShowHolidaysChange = {},
                         onBackClick = {}
                 )
         }
@@ -902,6 +977,7 @@ private fun SettingsScreenPreview_SolarTime() {
                                         resolvedWakeTime = LocalTime.of(6, 45),
                                         resolvedSleepTime = LocalTime.of(18, 30)
                                 ),
+                        calendarState = CalendarState(),
                         onWakeTimeChange = {},
                         onSleepTimeChange = {},
                         onWakeSolarTimeChange = { _, _ -> },
@@ -910,6 +986,39 @@ private fun SettingsScreenPreview_SolarTime() {
                         onTimeFormatChange = {},
                         onShowYearChange = {},
                         onShowEventsDuringSleepChange = {},
+                        onShowHolidaysChange = {},
+                        onBackClick = {}
+                )
+        }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF121212, widthDp = 400, heightDp = 800)
+@Composable
+private fun SettingsScreenPreview_WithHolidays() {
+        MemoryLinkTheme {
+                SettingsScreen(
+                        settingsState =
+                                SettingsState(
+                                        wakeTime = LocalTime.of(7, 0),
+                                        sleepTime = LocalTime.of(21, 30),
+                                        brightness = 80,
+                                        use24HourFormat = false,
+                                        showEventsDuringSleep = false,
+                                        showHolidays = true
+                                ),
+                        calendarState = CalendarState(
+                                holidayCalendarId = "holidays-calendar-id",
+                                holidayCalendarName = "Canadian Holidays"
+                        ),
+                        onWakeTimeChange = {},
+                        onSleepTimeChange = {},
+                        onWakeSolarTimeChange = { _, _ -> },
+                        onSleepSolarTimeChange = { _, _ -> },
+                        onBrightnessChange = {},
+                        onTimeFormatChange = {},
+                        onShowYearChange = {},
+                        onShowEventsDuringSleepChange = {},
+                        onShowHolidaysChange = {},
                         onBackClick = {}
                 )
         }

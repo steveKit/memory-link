@@ -1,8 +1,10 @@
 package com.memorylink.domain.usecase
 
+import com.memorylink.domain.model.AllDayEventInfo
 import com.memorylink.domain.model.AppSettings
 import com.memorylink.domain.model.CalendarEvent
 import com.memorylink.domain.model.DisplayState
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import javax.inject.Inject
@@ -43,11 +45,11 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
 
         // We're in wake period - find next events
         val nextEvents = getNextEventUseCase(now, events)
-        val allDayEvent = nextEvents.allDayEvent
+        val allDayEvents = nextEvents.allDayEvents
         val timedEvent = nextEvents.timedEvent
 
         // If no events at all, return AwakeNoEvent
-        if (allDayEvent == null && timedEvent == null) {
+        if (allDayEvents.isEmpty() && timedEvent == null) {
             return DisplayState.AwakeNoEvent(
                     use24HourFormat = settings.use24HourFormat,
                     showYearInDate = settings.showYearInDate,
@@ -55,42 +57,14 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
             )
         }
 
-        // Build AwakeWithEvent state
-        // For multi-day all-day events, we need to pass both start and end dates
-        // to enable "until" formatting for ongoing events
-        val allDayStartDate = allDayEvent?.startTime?.toLocalDate()
-        val allDayEndDate = allDayEvent?.endTime?.toLocalDate()
-        val isMultiDayEvent =
-                allDayEvent != null &&
-                        allDayStartDate != null &&
-                        allDayEndDate != null &&
-                        allDayEndDate.minusDays(1) > allDayStartDate // endDate is exclusive
+        // Convert CalendarEvents to AllDayEventInfo for display
+        val allDayEventInfos = allDayEvents.map { event ->
+            convertToAllDayEventInfo(event, today)
+        }
 
         return DisplayState.AwakeWithEvent(
-                // All-day event fields
-                allDayEventTitle = allDayEvent?.title,
-                // For multi-day events: null if ongoing (started today or earlier), date if future
-                // For single-day events: null if today, date if future
-                allDayEventDate =
-                        if (allDayEvent != null &&
-                                        allDayStartDate != null &&
-                                        allDayStartDate.isAfter(today)
-                        ) {
-                            // Future event - show start date
-                            allDayStartDate
-                        } else {
-                            // Today or past (ongoing multi-day) - null signals "active now"
-                            null
-                        },
-                // End date for multi-day events (exclusive, so subtract 1 for display)
-                allDayEventEndDate =
-                        if (isMultiDayEvent) {
-                            allDayEndDate?.minusDays(
-                                    1
-                            ) // Convert exclusive to inclusive for display
-                        } else {
-                            null
-                        },
+                // All-day events (each shown on separate line)
+                allDayEvents = allDayEventInfos,
                 // Timed event fields
                 timedEventTitle = timedEvent?.title,
                 timedEventTime = timedEvent?.startTime?.toLocalTime(),
@@ -108,14 +82,35 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
     }
 
     /**
+     * Convert a CalendarEvent to AllDayEventInfo for display.
+     *
+     * @param event The calendar event
+     * @param today Today's date
+     * @return AllDayEventInfo with appropriate start/end dates
+     */
+    private fun convertToAllDayEventInfo(event: CalendarEvent, today: LocalDate): AllDayEventInfo {
+        val startDate = event.startTime.toLocalDate()
+        val endDate = event.endTime.toLocalDate()
+        val isMultiDay = endDate.minusDays(1) > startDate // endDate is exclusive
+
+        return AllDayEventInfo(
+                title = event.title,
+                // null if today/ongoing, otherwise the start date
+                startDate = if (startDate.isAfter(today)) startDate else null,
+                // End date for multi-day (exclusive, so subtract 1 for display)
+                endDate = if (isMultiDay) endDate.minusDays(1) else null
+        )
+    }
+
+    /**
      * Build Sleep state, optionally with event data if showEventsDuringSleep is enabled.
      *
      * When the setting is disabled, returns a Sleep state with no event data.
      * When enabled, populates event data similar to AwakeWithEvent for dimmed display.
      */
     private fun buildSleepState(
-            now: java.time.LocalDateTime,
-            today: java.time.LocalDate,
+            now: LocalDateTime,
+            today: LocalDate,
             events: List<CalendarEvent>,
             settings: AppSettings
     ): DisplayState.Sleep {
@@ -129,36 +124,17 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
 
         // Find next events for display during sleep
         val nextEvents = getNextEventUseCase(now, events)
-        val allDayEvent = nextEvents.allDayEvent
+        val allDayEvents = nextEvents.allDayEvents
         val timedEvent = nextEvents.timedEvent
 
-        // Calculate all-day event fields (same logic as AwakeWithEvent)
-        val allDayStartDate = allDayEvent?.startTime?.toLocalDate()
-        val allDayEndDate = allDayEvent?.endTime?.toLocalDate()
-        val isMultiDayEvent =
-                allDayEvent != null &&
-                        allDayStartDate != null &&
-                        allDayEndDate != null &&
-                        allDayEndDate.minusDays(1) > allDayStartDate
+        // Convert CalendarEvents to AllDayEventInfo for display
+        val allDayEventInfos = allDayEvents.map { event ->
+            convertToAllDayEventInfo(event, today)
+        }
 
         return DisplayState.Sleep(
-                // All-day event fields
-                allDayEventTitle = allDayEvent?.title,
-                allDayEventDate =
-                        if (allDayEvent != null &&
-                                        allDayStartDate != null &&
-                                        allDayStartDate.isAfter(today)
-                        ) {
-                            allDayStartDate
-                        } else {
-                            null
-                        },
-                allDayEventEndDate =
-                        if (isMultiDayEvent) {
-                            allDayEndDate?.minusDays(1)
-                        } else {
-                            null
-                        },
+                // All-day events (each shown on separate line)
+                allDayEvents = allDayEventInfos,
                 // Timed event fields
                 timedEventTitle = timedEvent?.title,
                 timedEventTime = timedEvent?.startTime?.toLocalTime(),

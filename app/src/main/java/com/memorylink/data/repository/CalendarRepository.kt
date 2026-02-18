@@ -62,16 +62,23 @@ constructor(
      * all-day events that started before today but haven't ended yet. Filtering for "has not
      * started yet" (for timed events) is done at use-case level since all-day events technically
      * start at midnight but should display all day.
+     *
+     * @param includeHolidays Whether to include holiday events (from TokenStorage.showHolidays)
      */
-    fun observeUpcomingEvents(): Flow<List<CalendarEvent>> {
+    fun observeUpcomingEvents(includeHolidays: Boolean = true): Flow<List<CalendarEvent>> {
         val zoneId = ZoneId.systemDefault()
         val today = LocalDate.now()
         val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
         val twoWeeksLater = today.plusWeeks(2).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
-        // Use getActiveEventsInRange to include multi-day events that started before today
-        // but are still active (end_time > dayStart)
-        return eventDao.getActiveEventsInRange(dayStart, twoWeeksLater).map { entities ->
+        // Use getActiveEventsInRangeWithHolidayFilter to include multi-day events that started
+        // before today but are still active (end_time > dayStart), with holiday filtering.
+        // Results are ordered: holidays first, then by start_time.
+        return eventDao.getActiveEventsInRangeWithHolidayFilter(
+            dayStart,
+            twoWeeksLater,
+            includeHolidays
+        ).map { entities ->
             entities.map { it.toDomainModel() }
         }
     }
@@ -351,6 +358,160 @@ constructor(
         return eventDao.getEventCount()
     }
 
+    // ========== Holiday Calendar Methods ==========
+
+    /** Whether show holidays setting is enabled. */
+    val showHolidays: Boolean
+        get() = tokenStorage.showHolidays
+
+    /** Get the currently selected holiday calendar ID. */
+    val holidayCalendarId: String?
+        get() = tokenStorage.holidayCalendarId
+
+    /** Get the currently selected holiday calendar name. */
+    val holidayCalendarName: String?
+        get() = tokenStorage.holidayCalendarName
+
+    /** Check if holiday calendar is configured. */
+    val hasHolidayCalendar: Boolean
+        get() = tokenStorage.hasHolidayCalendar
+
+    /** Check if holiday sync is needed (weekly sync). */
+    val needsHolidaySync: Boolean
+        get() = tokenStorage.needsHolidaySync
+
+    /**
+     * Select a holiday calendar. Clears cached holidays if calendar changes.
+     *
+     * @param calendarId The calendar ID to use for holidays
+     * @param calendarName The calendar name for display
+     * @return true if calendar changed
+     */
+    suspend fun selectHolidayCalendar(calendarId: String, calendarName: String): Boolean {
+        val previousCalendarId = tokenStorage.holidayCalendarId
+        val calendarChanged = previousCalendarId != calendarId
+
+        if (calendarChanged) {
+            Log.d(TAG, "Holiday calendar changed from $previousCalendarId to $calendarId")
+            // Clear cached holiday events
+            eventDao.deleteHolidayEvents()
+            // Clear holiday sync token for full sync
+            tokenStorage.holidaySyncToken = null
+            tokenStorage.lastHolidaySyncTime = 0L
+        }
+
+        tokenStorage.holidayCalendarId = calendarId
+        tokenStorage.holidayCalendarName = calendarName
+        Log.d(TAG, "Selected holiday calendar: $calendarName ($calendarId)")
+
+        return calendarChanged
+    }
+
+    /**
+     * Clear the holiday calendar selection.
+     * Removes all cached holiday events.
+     */
+    suspend fun clearHolidayCalendar() {
+        Log.d(TAG, "Clearing holiday calendar selection")
+        eventDao.deleteHolidayEvents()
+        tokenStorage.clearHolidayCalendar()
+    }
+
+    /**
+     * Sync events from the holiday calendar.
+     *
+     * Holiday calendars sync weekly (vs 5 min for main calendar) since holidays change rarely.
+     * All holiday events are marked with isHoliday = true.
+     *
+     * @param force If true, sync even if weekly threshold hasn't passed
+     * @return SyncResult indicating success/failure
+     */
+    suspend fun syncHolidayEvents(force: Boolean = false): SyncResult {
+        val calendarId = tokenStorage.holidayCalendarId
+        if (calendarId.isNullOrBlank()) {
+            Log.d(TAG, "No holiday calendar configured, skipping holiday sync")
+            return SyncResult.NoCalendarSelected
+        }
+
+        // Check if sync is needed (unless forced)
+        if (!force && !tokenStorage.needsHolidaySync) {
+            Log.d(TAG, "Holiday sync not needed yet (weekly threshold)")
+            return SyncResult.Success(0)
+        }
+
+        Log.d(TAG, "Starting holiday calendar sync")
+
+        val syncToken = tokenStorage.holidaySyncToken
+        val isFullSync = syncToken == null
+
+        // Fetch events using syncToken
+        val result = calendarService.fetchEventsWithSync(calendarId, syncToken)
+
+        return when (result) {
+            is ApiResult.Success -> {
+                val fetchedAt = System.currentTimeMillis()
+                val syncResponse = result.data
+
+                // Convert DTOs to entities, marking as holidays
+                val entities =
+                        syncResponse.events
+                                // Only cache all-day events from holiday calendars
+                                .filter { it.isAllDay && !it.isConfigEvent }
+                                .map { dto ->
+                                    EventEntity(
+                                            id = dto.id,
+                                            title = dto.title,
+                                            startTime = dto.startTimeMillis,
+                                            endTime = dto.endTimeMillis,
+                                            isConfigEvent = false,
+                                            isAllDay = true,
+                                            isHoliday = true, // Mark as holiday
+                                            fetchedAt = fetchedAt
+                                    )
+                                }
+
+                // Insert/update holiday events
+                if (entities.isNotEmpty()) {
+                    eventDao.insertEvents(entities)
+                    Log.d(TAG, "Inserted/updated ${entities.size} holiday events")
+                }
+
+                // Delete removed events
+                var deletedCount = 0
+                if (syncResponse.deletedEventIds.isNotEmpty()) {
+                    deletedCount = eventDao.deleteEventsByIds(syncResponse.deletedEventIds)
+                    Log.d(TAG, "Deleted $deletedCount holiday events")
+                }
+
+                // Store the new sync token for next incremental sync
+                tokenStorage.holidaySyncToken = syncResponse.nextSyncToken
+                tokenStorage.lastHolidaySyncTime = fetchedAt
+
+                Log.d(
+                        TAG,
+                        "Holiday sync successful: ${entities.size} events synced, $deletedCount deleted"
+                )
+                SyncResult.Success(entities.size, deletedCount)
+            }
+            is ApiResult.SyncTokenExpired -> {
+                // 410 Gone - sync token is invalid, must perform full sync
+                Log.w(TAG, "Holiday sync token expired, clearing and performing full sync")
+                tokenStorage.holidaySyncToken = null
+                eventDao.deleteHolidayEvents()
+                // Retry as full sync
+                return syncHolidayEvents(force = true)
+            }
+            is ApiResult.NotAuthenticated -> {
+                Log.w(TAG, "Holiday sync failed: not authenticated")
+                SyncResult.NotAuthenticated
+            }
+            is ApiResult.Error -> {
+                Log.e(TAG, "Holiday sync failed: ${result.message}")
+                SyncResult.Error(result.message)
+            }
+        }
+    }
+
     /** Convert EventEntity to CalendarEvent domain model. */
     private fun EventEntity.toDomainModel(): CalendarEvent {
         val zoneId = ZoneId.systemDefault()
@@ -359,7 +520,8 @@ constructor(
                 title = title,
                 startTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(startTime), zoneId),
                 endTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(endTime), zoneId),
-                isAllDay = isAllDay
+                isAllDay = isAllDay,
+                isHoliday = isHoliday
         )
     }
 

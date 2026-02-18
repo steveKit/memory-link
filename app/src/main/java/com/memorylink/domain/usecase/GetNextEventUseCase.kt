@@ -5,11 +5,21 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import javax.inject.Inject
 
-/** Result containing next all-day event (7-day window) and timed event (2-week window). */
+/**
+ * Result containing all-day events (7-day window) and next timed event (2-week window).
+ *
+ * All-day events are returned as a list, sorted by:
+ * 1. Holiday events first (if from holiday calendar)
+ * 2. Then by start date
+ */
 data class NextEventsResult(
-        val allDayEvent: CalendarEvent? = null,
+        val allDayEvents: List<CalendarEvent> = emptyList(),
         val timedEvent: CalendarEvent? = null
-)
+) {
+        /** Convenience: first all-day event, or null if none. */
+        val allDayEvent: CalendarEvent?
+                get() = allDayEvents.firstOrNull()
+}
 
 /**
  * Determines which events to display next.
@@ -25,7 +35,13 @@ class GetNextEventUseCase @Inject constructor() {
         const val TIMED_LOOKAHEAD_DAYS = 14L
     }
 
-    /** Get next all-day and timed events from the provided list. */
+    /**
+     * Get all-day events and next timed event from the provided list.
+     *
+     * @param now Current time
+     * @param events List of all events (already filtered by holiday toggle if needed)
+     * @return NextEventsResult containing all active all-day events and next timed event
+     */
     operator fun invoke(now: LocalDateTime, events: List<CalendarEvent>): NextEventsResult {
         if (events.isEmpty()) return NextEventsResult()
 
@@ -33,17 +49,17 @@ class GetNextEventUseCase @Inject constructor() {
         val allDayCutoff = today.plusDays(ALL_DAY_LOOKAHEAD_DAYS)
         val timedCutoff = today.plusDays(TIMED_LOOKAHEAD_DAYS)
 
-        // Find next all-day event within 7 days
-        // An all-day event is valid if it's "active today" OR starts within the lookahead window.
-        // For multi-day events, check if event overlaps with today:
-        //   - Event starts on or before today AND ends after today (endTime is exclusive)
-        // For future events, check if they start within the lookahead window.
-        val nextAllDayEvent =
+        // Find ALL all-day events within 7 days
+        // Events are sorted: holidays first, then by start date
+        val allDayEvents =
                 events
                         .filter { event ->
                             event.isAllDay && isAllDayEventActive(event, today, allDayCutoff)
                         }
-                        .minByOrNull { it.startTime }
+                        .sortedWith(
+                                compareByDescending<CalendarEvent> { it.isHoliday }
+                                        .thenBy { it.startTime }
+                        )
 
         // Find next timed event within 2 weeks
         // Must not have started yet (startTime > now)
@@ -56,7 +72,7 @@ class GetNextEventUseCase @Inject constructor() {
                         }
                         .minByOrNull { it.startTime }
 
-        return NextEventsResult(allDayEvent = nextAllDayEvent, timedEvent = nextTimedEvent)
+        return NextEventsResult(allDayEvents = allDayEvents, timedEvent = nextTimedEvent)
     }
 
     /**

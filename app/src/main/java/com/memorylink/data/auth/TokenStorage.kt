@@ -276,6 +276,56 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getInt(KEY_SLEEP_SOLAR_OFFSET, 0)
         set(value) = prefs.edit().putInt(KEY_SLEEP_SOLAR_OFFSET, value).apply()
 
+    // ========== Holiday Calendar Settings ==========
+    // Optional secondary calendar for holidays. Syncs weekly instead of every 5 minutes.
+
+    /** Holiday calendar ID (optional). When set, holidays are synced from this calendar. */
+    var holidayCalendarId: String?
+        get() = prefs.getString(KEY_HOLIDAY_CALENDAR_ID, null)
+        set(value) = prefs.edit().putString(KEY_HOLIDAY_CALENDAR_ID, value).apply()
+
+    /** Holiday calendar name for display. */
+    var holidayCalendarName: String?
+        get() = prefs.getString(KEY_HOLIDAY_CALENDAR_NAME, null)
+        set(value) = prefs.edit().putString(KEY_HOLIDAY_CALENDAR_NAME, value).apply()
+
+    /** Whether to show holidays on the display. Default: true when holiday calendar is selected. */
+    var showHolidays: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_HOLIDAYS, true)
+        set(value) = prefs.edit().putBoolean(KEY_SHOW_HOLIDAYS, value).apply()
+
+    /** Last holiday calendar sync timestamp. Used to enforce weekly sync. */
+    var lastHolidaySyncTime: Long
+        get() = prefs.getLong(KEY_LAST_HOLIDAY_SYNC_TIME, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_HOLIDAY_SYNC_TIME, value).apply()
+
+    /** Sync token for holiday calendar incremental sync. */
+    var holidaySyncToken: String?
+        get() = prefs.getString(KEY_HOLIDAY_SYNC_TOKEN, null)
+        set(value) = prefs.edit().putString(KEY_HOLIDAY_SYNC_TOKEN, value).apply()
+
+    /** Check if holiday calendar is configured. */
+    val hasHolidayCalendar: Boolean
+        get() = !holidayCalendarId.isNullOrBlank()
+
+    /** Check if holiday sync is needed (more than 7 days since last sync). */
+    val needsHolidaySync: Boolean
+        get() {
+            if (!hasHolidayCalendar) return false
+            val elapsed = System.currentTimeMillis() - lastHolidaySyncTime
+            return elapsed >= HOLIDAY_SYNC_INTERVAL_MS
+        }
+
+    /** Clear holiday calendar selection and related data. */
+    fun clearHolidayCalendar() {
+        prefs.edit()
+                .remove(KEY_HOLIDAY_CALENDAR_ID)
+                .remove(KEY_HOLIDAY_CALENDAR_NAME)
+                .remove(KEY_LAST_HOLIDAY_SYNC_TIME)
+                .remove(KEY_HOLIDAY_SYNC_TOKEN)
+                .apply()
+    }
+
     /** Set wake time to a static time. Clears any solar reference. */
     fun setStaticWakeTime(time: String?) {
         wakeTime = time
@@ -407,5 +457,15 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_WAKE_SOLAR_OFFSET = "wake_solar_offset"
         private const val KEY_SLEEP_SOLAR_REF = "sleep_solar_ref"
         private const val KEY_SLEEP_SOLAR_OFFSET = "sleep_solar_offset"
+
+        // Holiday calendar settings
+        private const val KEY_HOLIDAY_CALENDAR_ID = "holiday_calendar_id"
+        private const val KEY_HOLIDAY_CALENDAR_NAME = "holiday_calendar_name"
+        private const val KEY_SHOW_HOLIDAYS = "show_holidays"
+        private const val KEY_LAST_HOLIDAY_SYNC_TIME = "last_holiday_sync_time"
+        private const val KEY_HOLIDAY_SYNC_TOKEN = "holiday_sync_token"
+
+        /** Holiday calendar syncs weekly (7 days in millis). */
+        const val HOLIDAY_SYNC_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000L
     }
 }

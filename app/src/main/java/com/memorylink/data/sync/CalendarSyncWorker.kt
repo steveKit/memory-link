@@ -36,29 +36,55 @@ constructor(
         Log.d(TAG, "Starting calendar sync")
 
         return try {
-            val syncResult = repository.syncEvents()
+            // Sync main calendar (every 5 minutes via WorkManager's 15-min minimum)
+            val mainSyncResult = repository.syncEvents()
 
-            when (syncResult) {
+            when (mainSyncResult) {
                 is CalendarRepository.SyncResult.Success -> {
                     Log.d(
                             TAG,
-                            "Sync completed: ${syncResult.eventCount} events synced, ${syncResult.deletedCount} deleted"
+                            "Main sync completed: ${mainSyncResult.eventCount} events synced, ${mainSyncResult.deletedCount} deleted"
                     )
-                    Result.success()
                 }
                 is CalendarRepository.SyncResult.NotAuthenticated -> {
                     Log.w(TAG, "Sync skipped: not authenticated")
-                    Result.success()
+                    return Result.success()
                 }
                 is CalendarRepository.SyncResult.NoCalendarSelected -> {
                     Log.w(TAG, "Sync skipped: no calendar selected")
-                    Result.success()
+                    return Result.success()
                 }
                 is CalendarRepository.SyncResult.Error -> {
-                    Log.e(TAG, "Sync failed: ${syncResult.message}")
-                    if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+                    Log.e(TAG, "Sync failed: ${mainSyncResult.message}")
+                    return if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
                 }
             }
+
+            // Sync holiday calendar (weekly) - only if configured and due
+            if (repository.hasHolidayCalendar && repository.needsHolidaySync) {
+                val holidaySyncResult = repository.syncHolidayEvents()
+
+                when (holidaySyncResult) {
+                    is CalendarRepository.SyncResult.Success -> {
+                        Log.d(
+                                TAG,
+                                "Holiday sync completed: ${holidaySyncResult.eventCount} events synced"
+                        )
+                    }
+                    is CalendarRepository.SyncResult.NoCalendarSelected -> {
+                        // Holiday calendar not configured - expected, not an error
+                    }
+                    is CalendarRepository.SyncResult.NotAuthenticated -> {
+                        Log.w(TAG, "Holiday sync skipped: not authenticated")
+                    }
+                    is CalendarRepository.SyncResult.Error -> {
+                        // Log but don't fail - main sync succeeded
+                        Log.w(TAG, "Holiday sync failed: ${holidaySyncResult.message}")
+                    }
+                }
+            }
+
+            Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Sync worker exception", e)
             if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
