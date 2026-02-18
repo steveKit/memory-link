@@ -89,10 +89,9 @@ constructor(
             return resolvedTime
         }
 
-        // Default: SUNSET+30 (fallback to 21:00)
-        val defaultSolar = resolveSolarTime("SUNSET", 30, AppSettings.DEFAULT_SLEEP_TIME)
-        Log.d(TAG, "Using default sleep time: SUNSET+30 -> $defaultSolar")
-        return defaultSolar
+        // Default: Fixed time (no solar calculation)
+        Log.d(TAG, "Using default sleep time: ${AppSettings.DEFAULT_SLEEP_TIME}")
+        return AppSettings.DEFAULT_SLEEP_TIME
     }
 
     /**
@@ -116,10 +115,9 @@ constructor(
             return resolvedTime
         }
 
-        // Default: SUNRISE (fallback to 06:00)
-        val defaultSolar = resolveSolarTime("SUNRISE", 0, AppSettings.DEFAULT_WAKE_TIME)
-        Log.d(TAG, "Using default wake time: SUNRISE -> $defaultSolar")
-        return defaultSolar
+        // Default: Fixed time (no solar calculation)
+        Log.d(TAG, "Using default wake time: ${AppSettings.DEFAULT_WAKE_TIME}")
+        return AppSettings.DEFAULT_WAKE_TIME
     }
 
     /**
