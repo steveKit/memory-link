@@ -262,7 +262,6 @@ private fun AwakeWithEventContent(
                                                 startTime = timedEventTime!!,
                                                 eventDate = timedEventDate,
                                                 use24HourFormat = use24HourFormat,
-                                                showYearInDate = showYearInDate,
                                                 showBackground = false,
                                                 modifier = Modifier.fillMaxWidth()
                                         )

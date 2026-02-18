@@ -29,8 +29,10 @@ import java.util.Locale
  *
  * Format:
  * - Timed event today: "At 10:30 am, Event Title"
+ * - Timed event tomorrow: "Tomorrow, at 10:30 am, Event Title"
  * - Timed event future: "On Wednesday, February 18 at 10:30 am, Event Title"
- * - Timed event future (with year): "On Wednesday, February 18, 2026 at 10:30 am, Event Title"
+ *
+ * Note: Year is never shown in the event card since it's already displayed in the main date area.
  *
  * Text auto-sizes to fill the available space while wrapping naturally. Designed for
  * elderly/sight-challenged users - text is always as large as possible.
@@ -39,7 +41,6 @@ import java.util.Locale
  * @param startTime The event start time
  * @param eventDate The event date, or null if the event is today
  * @param use24HourFormat Whether to use 24-hour format (default: false = 12-hour)
- * @param showYearInDate Whether to show year in date for future events (default: true)
  * @param showBackground Whether to show the DarkSurface background (default: true)
  * @param modifier Modifier for the root container (should include size constraints)
  */
@@ -49,7 +50,6 @@ fun EventCard(
         startTime: LocalTime,
         eventDate: LocalDate? = null,
         use24HourFormat: Boolean = false,
-        showYearInDate: Boolean = true,
         showBackground: Boolean = true,
         modifier: Modifier = Modifier
 ) {
@@ -86,11 +86,10 @@ fun EventCard(
                         }
                         else -> {
                                 // Future date: "On {day}, {date} at {time}, {title}"
-                                val datePattern =
-                                        if (showYearInDate) "EEEE, MMMM d, yyyy" else "EEEE, MMMM d"
+                                // Year is never shown here - it's already in the main date area
                                 val dateFormatter =
                                         DateTimeFormatter.ofPattern(
-                                                datePattern,
+                                                "EEEE, MMMM d",
                                                 Locale.getDefault()
                                         )
                                 val formattedDate = eventDate.format(dateFormatter)
@@ -162,42 +161,20 @@ private fun EventCardTomorrowPreview() {
 }
 
 @Preview(
-        name = "Event Card - Future Event (With Year)",
+        name = "Event Card - Future Event",
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 400,
         heightDp = 300
 )
 @Composable
-private fun EventCardFutureWithYearPreview() {
+private fun EventCardFuturePreview() {
         MemoryLinkTheme {
                 EventCard(
                         title = "Doctor Appointment",
                         startTime = LocalTime.of(10, 30),
                         eventDate = LocalDate.of(2026, 2, 19),
                         use24HourFormat = false,
-                        showYearInDate = true,
-                        modifier = Modifier.fillMaxSize().padding(16.dp)
-                )
-        }
-}
-
-@Preview(
-        name = "Event Card - Future Event (No Year)",
-        showBackground = true,
-        backgroundColor = 0xFF121212,
-        widthDp = 400,
-        heightDp = 300
-)
-@Composable
-private fun EventCardFutureNoYearPreview() {
-        MemoryLinkTheme {
-                EventCard(
-                        title = "Doctor Appointment",
-                        startTime = LocalTime.of(10, 30),
-                        eventDate = LocalDate.of(2026, 2, 19),
-                        use24HourFormat = false,
-                        showYearInDate = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
         }
@@ -219,7 +196,6 @@ private fun EventCardLongFuturePreview() {
                         startTime = LocalTime.of(15, 0),
                         eventDate = LocalDate.of(2026, 2, 23),
                         use24HourFormat = false,
-                        showYearInDate = true,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
         }
