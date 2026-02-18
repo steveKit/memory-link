@@ -11,16 +11,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import com.memorylink.ui.components.AutoSizeText
 import com.memorylink.ui.theme.DarkSurface
 import com.memorylink.ui.theme.DisplayConstants
 import com.memorylink.ui.theme.MemoryLinkTheme
 import com.memorylink.ui.theme.SleepText
 import com.memorylink.ui.theme.TextPrimary
+import com.memorylink.util.toOrdinalSuffix
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -43,12 +49,25 @@ data class EventCardColorScheme(val textColor: Color) {
 }
 
 /**
+ * Style for ordinal suffixes (st, nd, rd, th) - smaller and superscript.
+ *
+ * Uses 0.6em (60% of parent font size) so it scales proportionally with AutoSizeText.
+ */
+private val OrdinalSuffixStyle =
+        SpanStyle(
+                fontSize = 0.6.em,
+                baselineShift = BaselineShift.Superscript
+        )
+
+/**
  * Displays the next calendar event with time and title as a single flowing sentence.
  *
  * Format:
  * - Timed event today: "At 10:30 am, Event Title"
  * - Timed event tomorrow: "Tomorrow, at 10:30 am, Event Title"
- * - Timed event future: "On Wednesday, February 18 at 10:30 am, Event Title"
+ * - Timed event future: "On Wednesday, February 18th at 10:30 am, Event Title"
+ *
+ * Date suffixes (st, nd, rd, th) are displayed in a smaller superscript style.
  *
  * Note: Year is never shown in the event card since it's already displayed in the main date area.
  *
@@ -95,25 +114,37 @@ fun EventCard(
         val displayText =
                 when {
                         eventDate == null -> {
-                                // Today: "At {time}, {title}"
-                                // Use non-breaking spaces in "At {time}," so it won't wrap
-                                // mid-phrase
-                                "At $formattedTime, $title"
+                                // Today: "At {time}, {title}" - no date suffix needed
+                                buildAnnotatedString {
+                                        append("At $formattedTime, $title")
+                                }
                         }
                         eventDate == tomorrow -> {
-                                // Tomorrow: "Tomorrow, at {time}, {title}"
-                                "Tomorrow, at $formattedTime, $title"
+                                // Tomorrow: "Tomorrow, at {time}, {title}" - no date suffix needed
+                                buildAnnotatedString {
+                                        append("Tomorrow, at $formattedTime, $title")
+                                }
                         }
                         else -> {
-                                // Future date: "On {day}, {date} at {time}, {title}"
+                                // Future date: "On {day}, {month} {day}{suffix} at {time}, {title}"
                                 // Year is never shown here - it's already in the main date area
-                                val dateFormatter =
-                                        DateTimeFormatter.ofPattern(
-                                                "EEEE, MMMM d",
-                                                Locale.getDefault()
-                                        )
-                                val formattedDate = eventDate.format(dateFormatter)
-                                "On $formattedDate at $formattedTime, $title"
+                                val dayOfWeekFormatter =
+                                        DateTimeFormatter.ofPattern("EEEE", Locale.getDefault())
+                                val monthFormatter =
+                                        DateTimeFormatter.ofPattern("MMMM", Locale.getDefault())
+
+                                val dayOfWeek = eventDate.format(dayOfWeekFormatter)
+                                val month = eventDate.format(monthFormatter)
+                                val dayOfMonth = eventDate.dayOfMonth
+                                val suffix = dayOfMonth.toOrdinalSuffix()
+
+                                buildAnnotatedString {
+                                        append("On $dayOfWeek, $month $dayOfMonth")
+                                        withStyle(OrdinalSuffixStyle) {
+                                                append(suffix)
+                                        }
+                                        append(" at $formattedTime, $title")
+                                }
                         }
                 }
 
@@ -185,19 +216,79 @@ private fun EventCardTomorrowPreview() {
 }
 
 @Preview(
-        name = "Event Card - Future Event",
+        name = "Event Card - Future 2nd (nd suffix)",
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 400,
         heightDp = 300
 )
 @Composable
-private fun EventCardFuturePreview() {
+private fun EventCardFuture2ndPreview() {
         MemoryLinkTheme {
                 EventCard(
                         title = "Doctor Appointment",
                         startTime = LocalTime.of(10, 30),
-                        eventDate = LocalDate.of(2026, 2, 19),
+                        eventDate = LocalDate.of(2026, 3, 2), // March 2nd
+                        use24HourFormat = false,
+                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                )
+        }
+}
+
+@Preview(
+        name = "Event Card - Future 3rd (rd suffix)",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 400,
+        heightDp = 300
+)
+@Composable
+private fun EventCardFuture3rdPreview() {
+        MemoryLinkTheme {
+                EventCard(
+                        title = "Lunch with Sarah",
+                        startTime = LocalTime.of(12, 0),
+                        eventDate = LocalDate.of(2026, 3, 3), // March 3rd
+                        use24HourFormat = false,
+                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                )
+        }
+}
+
+@Preview(
+        name = "Event Card - Future 11th (teen exception)",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 400,
+        heightDp = 300
+)
+@Composable
+private fun EventCardFuture11thPreview() {
+        MemoryLinkTheme {
+                EventCard(
+                        title = "Physical Therapy",
+                        startTime = LocalTime.of(14, 0),
+                        eventDate = LocalDate.of(2026, 3, 11), // March 11th
+                        use24HourFormat = false,
+                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                )
+        }
+}
+
+@Preview(
+        name = "Event Card - Future 21st (st suffix)",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 400,
+        heightDp = 300
+)
+@Composable
+private fun EventCardFuture21stPreview() {
+        MemoryLinkTheme {
+                EventCard(
+                        title = "Birthday Party",
+                        startTime = LocalTime.of(15, 0),
+                        eventDate = LocalDate.of(2026, 3, 21), // March 21st
                         use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
@@ -218,7 +309,7 @@ private fun EventCardLongFuturePreview() {
                         title =
                                 "Meet Eric downstairs so he can take you to your doctors appointment",
                         startTime = LocalTime.of(15, 0),
-                        eventDate = LocalDate.of(2026, 2, 23),
+                        eventDate = LocalDate.of(2026, 2, 23), // February 23rd
                         use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
@@ -258,7 +349,7 @@ private fun EventCardTabletPreview() {
                 EventCard(
                         title = "Physical Therapy Session",
                         startTime = LocalTime.of(14, 30),
-                        eventDate = LocalDate.of(2026, 2, 20),
+                        eventDate = LocalDate.of(2026, 2, 20), // February 20th
                         use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
