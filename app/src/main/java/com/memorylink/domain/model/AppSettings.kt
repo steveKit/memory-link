@@ -45,10 +45,10 @@ data class AppSettings(
         /**
          * Whether to show the year in the date display.
          *
-         * Default: true (shows "Wednesday, February 11, 2026") When false: shows "Wednesday,
-         * February 11"
+         * Default: false (shows "Wednesday, February 11") When true: shows "Wednesday, February 11,
+         * 2026"
          */
-        val showYearInDate: Boolean = true,
+        val showYearInDate: Boolean = false,
 
         /**
          * Whether to show events during sleep mode.
