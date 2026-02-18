@@ -211,48 +211,9 @@ private fun TimeSettingItem(
 
                 Text(text = description, fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Current value display
-                if (isSolarTime) {
-                        // Solar time display with offset controls
-                        val solarLabel = if (currentSolarRef == "SUNRISE") "☀️ Sunrise" else "🌙 Sunset"
-                        
-                        Text(
-                                text = solarLabel,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentBlue
-                        )
-                        
-                        Text(
-                                text = "Today: ${resolvedTime.format(DateTimeFormatter.ofPattern(timePattern))}",
-                                fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.6f)
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Offset adjustment controls
-                        OffsetAdjuster(
-                                currentOffset = currentSolarOffset,
-                                onOffsetChange = { newOffset ->
-                                        onSolarTimeSelected(currentSolarRef!!, newOffset)
-                                }
-                        )
-                } else {
-                        // Fixed time display
-                        Text(
-                                text = resolvedTime.format(DateTimeFormatter.ofPattern(timePattern)),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentBlue
-                        )
-                }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Action buttons row
+                // Mode toggle buttons row
                 Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -285,6 +246,53 @@ private fun TimeSettingItem(
                                         ),
                                 shape = RoundedCornerShape(8.dp)
                         ) { Text(text = "Solar Time", fontSize = 14.sp, color = Color.White) }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Conditional settings display based on selected mode
+                if (isSolarTime) {
+                        // Solar time settings
+                        val solarLabel = if (currentSolarRef == "SUNRISE") "☀️ Sunrise" else "🌙 Sunset"
+                        
+                        Text(
+                                text = solarLabel,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentBlue
+                        )
+                        
+                        Text(
+                                text = "Today: ${resolvedTime.format(DateTimeFormatter.ofPattern(timePattern))}",
+                                fontSize = 14.sp,
+                                color = Color.White.copy(alpha = 0.6f)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Offset adjustment controls (only shown in solar mode)
+                        OffsetAdjuster(
+                                currentOffset = currentSolarOffset,
+                                onOffsetChange = { newOffset ->
+                                        onSolarTimeSelected(currentSolarRef!!, newOffset)
+                                }
+                        )
+                } else {
+                        // Fixed time settings
+                        Text(
+                                text = resolvedTime.format(DateTimeFormatter.ofPattern(timePattern)),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentBlue
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                                text = "Tap \"Fixed Time\" to change",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.5f)
+                        )
                 }
         }
 
@@ -851,7 +859,7 @@ private fun ShowEventsDuringSleepSettingItem(
 
 @Preview(showBackground = true, backgroundColor = 0xFF121212, widthDp = 400, heightDp = 800)
 @Composable
-private fun SettingsScreenPreview() {
+private fun SettingsScreenPreview_FixedTime() {
         MemoryLinkTheme {
                 SettingsScreen(
                         settingsState =
@@ -861,6 +869,36 @@ private fun SettingsScreenPreview() {
                                         brightness = 80,
                                         use24HourFormat = false,
                                         showEventsDuringSleep = false
+                                ),
+                        onWakeTimeChange = {},
+                        onSleepTimeChange = {},
+                        onWakeSolarTimeChange = { _, _ -> },
+                        onSleepSolarTimeChange = { _, _ -> },
+                        onBrightnessChange = {},
+                        onTimeFormatChange = {},
+                        onShowYearChange = {},
+                        onShowEventsDuringSleepChange = {},
+                        onBackClick = {}
+                )
+        }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF121212, widthDp = 400, heightDp = 800)
+@Composable
+private fun SettingsScreenPreview_SolarTime() {
+        MemoryLinkTheme {
+                SettingsScreen(
+                        settingsState =
+                                SettingsState(
+                                        wakeSolarRef = "SUNRISE",
+                                        wakeSolarOffset = 15,
+                                        sleepSolarRef = "SUNSET",
+                                        sleepSolarOffset = 30,
+                                        brightness = 80,
+                                        use24HourFormat = false,
+                                        showEventsDuringSleep = false,
+                                        resolvedWakeTime = LocalTime.of(6, 45),
+                                        resolvedSleepTime = LocalTime.of(18, 30)
                                 ),
                         onWakeTimeChange = {},
                         onSleepTimeChange = {},
