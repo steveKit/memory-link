@@ -66,6 +66,7 @@ constructor(
 
     private val _syncState = MutableStateFlow(SyncState())
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+    private var syncCooldownJob: Job? = null
 
     // ========== Inactivity Timeout ==========
 
@@ -80,6 +81,8 @@ constructor(
         updateCalendarState()
         // Start inactivity timer
         resetInactivityTimer()
+        // Restore sync cooldown state from persisted timestamp
+        restoreSyncCooldownState()
 
         // Observe settings from SettingsRepository for resolved times
         viewModelScope.launch {
@@ -91,6 +94,23 @@ constructor(
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Restore sync cooldown state from persisted timestamp.
+     * Called on ViewModel init to maintain cooldown across admin panel exits/re-entries.
+     */
+    private fun restoreSyncCooldownState() {
+        val lastManualSync = tokenStorage.lastManualSyncTime
+        if (lastManualSync == 0L) return
+
+        val elapsedSeconds = (System.currentTimeMillis() - lastManualSync) / 1000
+        val remainingSeconds = SYNC_COOLDOWN_SECONDS - elapsedSeconds.toInt()
+
+        if (remainingSeconds > 0) {
+            _syncState.update { it.copy(cooldownSecondsRemaining = remainingSeconds) }
+            startSyncCooldown(remainingSeconds)
         }
     }
 
@@ -356,9 +376,17 @@ constructor(
     /**
      * Manually trigger a calendar sync. Updates sync state to show progress/result. Called from
      * Admin UI "Sync Now" button.
+     *
+     * Includes a 30-second cooldown to prevent API abuse.
      */
     fun triggerManualSync() {
         resetInactivityTimer()
+
+        // Check if cooldown is active
+        if (_syncState.value.cooldownSecondsRemaining > 0) {
+            return
+        }
+
         viewModelScope.launch {
             _syncState.update { it.copy(isSyncing = true, lastResult = null) }
 
@@ -375,14 +403,38 @@ constructor(
                         CalendarRepository.SyncResult.NoCalendarSelected -> "No calendar selected"
                     }
 
+            // Persist the manual sync timestamp for cooldown across admin exits
+            tokenStorage.lastManualSyncTime = System.currentTimeMillis()
+
             _syncState.update {
                 it.copy(
                         isSyncing = false,
                         lastResult = resultMessage,
-                        lastSyncTime = tokenStorage.lastSyncTime
+                        lastSyncTime = tokenStorage.lastSyncTime,
+                        cooldownSecondsRemaining = SYNC_COOLDOWN_SECONDS
                 )
             }
+
+            // Start cooldown countdown
+            startSyncCooldown(SYNC_COOLDOWN_SECONDS)
         }
+    }
+
+    /**
+     * Start the cooldown countdown timer.
+     * @param initialSeconds Starting seconds for countdown (allows restoring mid-cooldown)
+     */
+    private fun startSyncCooldown(initialSeconds: Int = SYNC_COOLDOWN_SECONDS) {
+        syncCooldownJob?.cancel()
+        syncCooldownJob =
+                viewModelScope.launch {
+                    var remaining = initialSeconds
+                    while (remaining > 0) {
+                        delay(1000)
+                        remaining--
+                        _syncState.update { it.copy(cooldownSecondsRemaining = remaining) }
+                    }
+                }
     }
 
     /** Get the last sync time in a human-readable format. */
@@ -534,6 +586,9 @@ constructor(
 
         /** Delay before validating PIN to allow 4th dot to render */
         const val PIN_VALIDATION_DELAY_MS = 150L
+
+        /** Cooldown duration after manual sync (prevents API abuse) */
+        const val SYNC_COOLDOWN_SECONDS = 30
     }
 }
 
@@ -640,5 +695,7 @@ data class SolarTimeOption(val solarRef: String, val offsetMinutes: Int) {
 data class SyncState(
         val isSyncing: Boolean = false,
         val lastResult: String? = null,
-        val lastSyncTime: Long = 0L
+        val lastSyncTime: Long = 0L,
+        /** Remaining cooldown seconds before manual sync is allowed again (0 = no cooldown) */
+        val cooldownSecondsRemaining: Int = 0
 )
