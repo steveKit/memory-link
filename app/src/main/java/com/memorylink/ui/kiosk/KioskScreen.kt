@@ -124,7 +124,15 @@ fun KioskScreen(displayState: DisplayState, modifier: Modifier = Modifier) {
                                         currentTime = currentTime,
                                         currentDate = currentDate,
                                         use24HourFormat = displayState.use24HourFormat,
-                                        showYearInDate = displayState.showYearInDate
+                                        showYearInDate = displayState.showYearInDate,
+                                        // All-day event (clock area)
+                                        allDayEventTitle = displayState.allDayEventTitle,
+                                        allDayEventDate = displayState.allDayEventDate,
+                                        allDayEventEndDate = displayState.allDayEventEndDate,
+                                        // Timed event (event card)
+                                        timedEventTitle = displayState.timedEventTitle,
+                                        timedEventTime = displayState.timedEventTime,
+                                        timedEventDate = displayState.timedEventDate
                                 )
                         }
                 }
@@ -275,8 +283,15 @@ private fun AwakeWithEventContent(
 }
 
 /**
- * Content displayed during sleep mode. Same layout as AwakeNoEvent but with dimmed colors and
- * darker background. Uses 1-second cross-fade animation when entering/exiting.
+ * Content displayed during sleep mode.
+ *
+ * When showEventsDuringSleep is disabled: Same layout as AwakeNoEvent but with dimmed colors and
+ * darker background.
+ *
+ * When showEventsDuringSleep is enabled: Shows clock + optional all-day event + optional timed
+ * event card, all with dimmed colors.
+ *
+ * Uses 1-second cross-fade animation when entering/exiting.
  */
 @Composable
 private fun SleepContent(
@@ -284,8 +299,19 @@ private fun SleepContent(
         currentDate: LocalDate,
         use24HourFormat: Boolean,
         showYearInDate: Boolean = true,
+        // All-day event fields (optional - only present if showEventsDuringSleep is enabled)
+        allDayEventTitle: String? = null,
+        allDayEventDate: LocalDate? = null,
+        allDayEventEndDate: LocalDate? = null,
+        // Timed event fields (optional - only present if showEventsDuringSleep is enabled)
+        timedEventTitle: String? = null,
+        timedEventTime: LocalTime? = null,
+        timedEventDate: LocalDate? = null,
         modifier: Modifier = Modifier
 ) {
+        val hasTimedEvent = timedEventTitle != null && timedEventTime != null
+        val hasAnyEvent = allDayEventTitle != null || hasTimedEvent
+
         AnimatedVisibility(
                 visible = true,
                 enter =
@@ -308,21 +334,114 @@ private fun SleepContent(
                         ),
                 modifier = modifier.fillMaxSize()
         ) {
-                Box(
-                        modifier =
-                                Modifier.fillMaxSize()
-                                        .background(SleepBackground)
-                                        .padding(DisplayConstants.SLEEP_MARGIN),
-                        contentAlignment = Alignment.Center
-                ) {
-                        ClockDisplay(
-                                time = currentTime,
-                                date = currentDate,
+                if (hasAnyEvent) {
+                        // Sleep mode with events - similar layout to AwakeWithEvent but dimmed
+                        SleepWithEventLayout(
+                                currentTime = currentTime,
+                                currentDate = currentDate,
                                 use24HourFormat = use24HourFormat,
                                 showYearInDate = showYearInDate,
-                                colorScheme = ClockColorScheme.Sleep,
-                                modifier = Modifier.fillMaxSize()
+                                allDayEventTitle = allDayEventTitle,
+                                allDayEventDate = allDayEventDate,
+                                allDayEventEndDate = allDayEventEndDate,
+                                timedEventTitle = timedEventTitle,
+                                timedEventTime = timedEventTime,
+                                timedEventDate = timedEventDate
                         )
+                } else {
+                        // Sleep mode without events - simple centered clock
+                        Box(
+                                modifier =
+                                        Modifier.fillMaxSize()
+                                                .background(SleepBackground)
+                                                .padding(DisplayConstants.SLEEP_MARGIN),
+                                contentAlignment = Alignment.Center
+                        ) {
+                                ClockDisplay(
+                                        time = currentTime,
+                                        date = currentDate,
+                                        use24HourFormat = use24HourFormat,
+                                        showYearInDate = showYearInDate,
+                                        colorScheme = ClockColorScheme.Sleep,
+                                        modifier = Modifier.fillMaxSize()
+                                )
+                        }
+                }
+        }
+}
+
+/**
+ * Layout for sleep mode when events are enabled. Similar to AwakeWithEventContent but with dimmed
+ * colors and no background accent on the event card.
+ */
+@Composable
+private fun SleepWithEventLayout(
+        currentTime: LocalTime,
+        currentDate: LocalDate,
+        use24HourFormat: Boolean,
+        showYearInDate: Boolean,
+        allDayEventTitle: String?,
+        allDayEventDate: LocalDate?,
+        allDayEventEndDate: LocalDate?,
+        timedEventTitle: String?,
+        timedEventTime: LocalTime?,
+        timedEventDate: LocalDate?
+) {
+        val hasTimedEvent = timedEventTitle != null && timedEventTime != null
+
+        Box(modifier = Modifier.fillMaxSize().background(SleepBackground)) {
+                // Content layer: centered as a group with weighted spacers
+                Column(
+                        modifier =
+                                Modifier.fillMaxSize()
+                                        .padding(horizontal = DisplayConstants.SCREEN_MARGIN),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                        // Top spacer
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // Clock area with optional all-day event
+                        Box(contentAlignment = Alignment.BottomCenter) {
+                                ClockDisplay(
+                                        time = currentTime,
+                                        date = currentDate,
+                                        use24HourFormat = use24HourFormat,
+                                        showYearInDate = showYearInDate,
+                                        allDayEventTitle = allDayEventTitle,
+                                        allDayEventDate = allDayEventDate,
+                                        allDayEventEndDate = allDayEventEndDate,
+                                        colorScheme = ClockColorScheme.Sleep,
+                                        modifier = Modifier.fillMaxWidth()
+                                )
+                        }
+
+                        // Event card - only show if timed event exists
+                        if (hasTimedEvent) {
+                                Spacer(
+                                        modifier =
+                                                Modifier.height(
+                                                        DisplayConstants.CLOCK_TO_EVENT_SPACING
+                                                )
+                                )
+
+                                Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.TopStart
+                                ) {
+                                        EventCard(
+                                                title = timedEventTitle!!,
+                                                startTime = timedEventTime!!,
+                                                eventDate = timedEventDate,
+                                                use24HourFormat = use24HourFormat,
+                                                showBackground = false,
+                                                colorScheme = EventCardColorScheme.Sleep,
+                                                modifier = Modifier.fillMaxWidth()
+                                        )
+                                }
+                        }
+
+                        // Bottom spacer
+                        Spacer(modifier = Modifier.weight(1f))
                 }
         }
 }
@@ -535,6 +654,52 @@ private fun KioskScreenSleepPreview() {
 @Composable
 private fun KioskScreenSleepPortraitPreview() {
         MemoryLinkTheme { KioskScreen(displayState = DisplayState.Sleep(use24HourFormat = false)) }
+}
+
+@Preview(
+        name = "Kiosk Screen - Sleep Mode With Event",
+        showBackground = true,
+        backgroundColor = 0xFF0A0A0A,
+        widthDp = 800,
+        heightDp = 480
+)
+@Composable
+private fun KioskScreenSleepWithEventPreview() {
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.Sleep(
+                                        timedEventTitle = "Doctor Appointment",
+                                        timedEventTime = LocalTime.of(10, 30),
+                                        timedEventDate = null,
+                                        use24HourFormat = false
+                                )
+                )
+        }
+}
+
+@Preview(
+        name = "Kiosk Screen - Sleep Mode With All-Day + Timed Event",
+        showBackground = true,
+        backgroundColor = 0xFF0A0A0A,
+        widthDp = 800,
+        heightDp = 480
+)
+@Composable
+private fun KioskScreenSleepWithAllDayAndTimedPreview() {
+        MemoryLinkTheme {
+                KioskScreen(
+                        displayState =
+                                DisplayState.Sleep(
+                                        allDayEventTitle = "Mom's Birthday",
+                                        allDayEventDate = null,
+                                        timedEventTitle = "Lunch Celebration",
+                                        timedEventTime = LocalTime.of(12, 0),
+                                        timedEventDate = null,
+                                        use24HourFormat = false
+                                )
+                )
+        }
 }
 
 @Preview(

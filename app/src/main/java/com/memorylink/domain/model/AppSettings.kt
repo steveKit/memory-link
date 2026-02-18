@@ -48,7 +48,17 @@ data class AppSettings(
          * Default: true (shows "Wednesday, February 11, 2026") When false: shows "Wednesday,
          * February 11"
          */
-        val showYearInDate: Boolean = true
+        val showYearInDate: Boolean = true,
+
+        /**
+         * Whether to show events during sleep mode.
+         *
+         * Default: false (clock only during sleep) When true: shows next event with dimmed styling
+         * alongside the clock
+         *
+         * Note: API calls are still paused during sleep. Events shown are from local cache.
+         */
+        val showEventsDuringSleep: Boolean = false
 ) {
     companion object {
         /**

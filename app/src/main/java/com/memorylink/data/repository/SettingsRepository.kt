@@ -63,7 +63,8 @@ constructor(
                 wakeTime = resolveWakeTime(),
                 use24HourFormat = tokenStorage.use24HourFormat ?: false,
                 brightness = tokenStorage.brightness.takeIf { it >= 0 } ?: 100,
-                showYearInDate = tokenStorage.showYear ?: true
+                showYearInDate = tokenStorage.showYear ?: true,
+                showEventsDuringSleep = tokenStorage.showEventsDuringSleep ?: false
         )
     }
 

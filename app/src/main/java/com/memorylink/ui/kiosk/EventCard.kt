@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -18,11 +19,28 @@ import com.memorylink.ui.components.AutoSizeText
 import com.memorylink.ui.theme.DarkSurface
 import com.memorylink.ui.theme.DisplayConstants
 import com.memorylink.ui.theme.MemoryLinkTheme
+import com.memorylink.ui.theme.SleepText
 import com.memorylink.ui.theme.TextPrimary
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+/**
+ * Color scheme for the event card display.
+ *
+ * Allows the same EventCard composable to be used for both awake and sleep modes by passing
+ * different color configurations.
+ */
+data class EventCardColorScheme(val textColor: Color) {
+        companion object {
+                /** Bright colors for awake/daytime mode. */
+                val Awake = EventCardColorScheme(textColor = TextPrimary)
+
+                /** Dimmed colors for sleep mode. */
+                val Sleep = EventCardColorScheme(textColor = SleepText)
+        }
+}
 
 /**
  * Displays the next calendar event with time and title as a single flowing sentence.
@@ -42,6 +60,7 @@ import java.util.Locale
  * @param eventDate The event date, or null if the event is today
  * @param use24HourFormat Whether to use 24-hour format (default: false = 12-hour)
  * @param showBackground Whether to show the DarkSurface background (default: true)
+ * @param colorScheme Colors for the event card text (default: Awake)
  * @param modifier Modifier for the root container (should include size constraints)
  */
 @Composable
@@ -51,6 +70,7 @@ fun EventCard(
         eventDate: LocalDate? = null,
         use24HourFormat: Boolean = false,
         showBackground: Boolean = true,
+        colorScheme: EventCardColorScheme = EventCardColorScheme.Awake,
         modifier: Modifier = Modifier
 ) {
         // Format time
@@ -110,7 +130,11 @@ fun EventCard(
                 AutoSizeText(
                         text = displayText,
                         modifier = Modifier.fillMaxWidth(),
-                        style = TextStyle(color = TextPrimary, fontWeight = FontWeight.Bold),
+                        style =
+                                TextStyle(
+                                        color = colorScheme.textColor,
+                                        fontWeight = FontWeight.Bold
+                                ),
                         maxFontSize = DisplayConstants.MAX_FONT_SIZE,
                         minFontSize = DisplayConstants.MIN_FONT_SIZE,
                         contentAlignment = Alignment.TopStart

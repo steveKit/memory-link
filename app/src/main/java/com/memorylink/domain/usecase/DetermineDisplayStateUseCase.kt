@@ -28,10 +28,7 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
 
         // Check if we're in sleep period
         if (isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime)) {
-            return DisplayState.Sleep(
-                    use24HourFormat = settings.use24HourFormat,
-                    showYearInDate = settings.showYearInDate
-            )
+            return buildSleepState(now, today, events, settings)
         }
 
         // We're in wake period - find next events
@@ -91,6 +88,73 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
                             timedEvent.startTime.toLocalDate()
                         } else {
                             null // null means "today"
+                        },
+                // Settings
+                use24HourFormat = settings.use24HourFormat,
+                showYearInDate = settings.showYearInDate
+        )
+    }
+
+    /**
+     * Build Sleep state, optionally with event data if showEventsDuringSleep is enabled.
+     *
+     * When the setting is disabled, returns a Sleep state with no event data.
+     * When enabled, populates event data similar to AwakeWithEvent for dimmed display.
+     */
+    private fun buildSleepState(
+            now: java.time.LocalDateTime,
+            today: java.time.LocalDate,
+            events: List<CalendarEvent>,
+            settings: AppSettings
+    ): DisplayState.Sleep {
+        // If showEventsDuringSleep is disabled, return basic Sleep state
+        if (!settings.showEventsDuringSleep) {
+            return DisplayState.Sleep(
+                    use24HourFormat = settings.use24HourFormat,
+                    showYearInDate = settings.showYearInDate
+            )
+        }
+
+        // Find next events for display during sleep
+        val nextEvents = getNextEventUseCase(now, events)
+        val allDayEvent = nextEvents.allDayEvent
+        val timedEvent = nextEvents.timedEvent
+
+        // Calculate all-day event fields (same logic as AwakeWithEvent)
+        val allDayStartDate = allDayEvent?.startTime?.toLocalDate()
+        val allDayEndDate = allDayEvent?.endTime?.toLocalDate()
+        val isMultiDayEvent =
+                allDayEvent != null &&
+                        allDayStartDate != null &&
+                        allDayEndDate != null &&
+                        allDayEndDate.minusDays(1) > allDayStartDate
+
+        return DisplayState.Sleep(
+                // All-day event fields
+                allDayEventTitle = allDayEvent?.title,
+                allDayEventDate =
+                        if (allDayEvent != null &&
+                                        allDayStartDate != null &&
+                                        allDayStartDate.isAfter(today)
+                        ) {
+                            allDayStartDate
+                        } else {
+                            null
+                        },
+                allDayEventEndDate =
+                        if (isMultiDayEvent) {
+                            allDayEndDate?.minusDays(1)
+                        } else {
+                            null
+                        },
+                // Timed event fields
+                timedEventTitle = timedEvent?.title,
+                timedEventTime = timedEvent?.startTime?.toLocalTime(),
+                timedEventDate =
+                        if (timedEvent != null && timedEvent.startTime.toLocalDate() != today) {
+                            timedEvent.startTime.toLocalDate()
+                        } else {
+                            null
                         },
                 // Settings
                 use24HourFormat = settings.use24HourFormat,
