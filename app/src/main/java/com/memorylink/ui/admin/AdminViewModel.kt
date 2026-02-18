@@ -307,7 +307,9 @@ constructor(
         _calendarState.update {
             it.copy(
                     selectedCalendarId = calendarRepository.selectedCalendarId,
-                    selectedCalendarName = calendarRepository.selectedCalendarName
+                    selectedCalendarName = calendarRepository.selectedCalendarName,
+                    holidayCalendarId = calendarRepository.holidayCalendarId,
+                    holidayCalendarName = calendarRepository.holidayCalendarName
             )
         }
     }
@@ -371,6 +373,38 @@ constructor(
 
     private fun syncCalendars() {
         viewModelScope.launch { calendarRepository.syncEvents() }
+    }
+
+    // ========== Holiday Calendar Methods ==========
+
+    /** Select a holiday calendar. */
+    fun selectHolidayCalendar(calendarId: String, calendarName: String) {
+        resetInactivityTimer()
+        viewModelScope.launch {
+            calendarRepository.selectHolidayCalendar(calendarId, calendarName)
+            _calendarState.update {
+                it.copy(holidayCalendarId = calendarId, holidayCalendarName = calendarName)
+            }
+            // Trigger holiday sync
+            calendarRepository.syncHolidayEvents(force = true)
+        }
+    }
+
+    /** Clear the holiday calendar selection. */
+    fun clearHolidayCalendar() {
+        resetInactivityTimer()
+        viewModelScope.launch {
+            calendarRepository.clearHolidayCalendar()
+            _calendarState.update { it.copy(holidayCalendarId = null, holidayCalendarName = null) }
+        }
+    }
+
+    /** Update show holidays setting. */
+    fun setShowHolidays(show: Boolean) {
+        resetInactivityTimer()
+        tokenStorage.showHolidays = show
+        _settingsState.update { it.copy(showHolidays = show) }
+        notifySettingsChanged()
     }
 
     /**
@@ -477,6 +511,7 @@ constructor(
                 use24HourFormat = tokenStorage.use24HourFormat,
                 showYearInDate = tokenStorage.showYear,
                 showEventsDuringSleep = tokenStorage.showEventsDuringSleep,
+                showHolidays = tokenStorage.showHolidays,
                 wakeSolarRef = wakeSolarRef,
                 wakeSolarOffset = tokenStorage.wakeSolarOffset,
                 sleepSolarRef = sleepSolarRef,
@@ -624,6 +659,10 @@ data class CalendarState(
         val calendars: List<CalendarItem> = emptyList(),
         val selectedCalendarId: String? = null,
         val selectedCalendarName: String? = null,
+        /** Optional holiday calendar ID. */
+        val holidayCalendarId: String? = null,
+        /** Optional holiday calendar name for display. */
+        val holidayCalendarName: String? = null,
         val isLoading: Boolean = false,
         val error: String? = null
 )
@@ -647,6 +686,12 @@ data class SettingsState(
         val use24HourFormat: Boolean? = null,
         val showYearInDate: Boolean? = null,
         val showEventsDuringSleep: Boolean? = null,
+        /**
+         * Whether to show holiday events on the display.
+         * Only applicable if a holiday calendar is configured.
+         * Default: true
+         */
+        val showHolidays: Boolean = true,
     // Resolved times (for display)
     val resolvedWakeTime: LocalTime = LocalTime.of(6, 0),
     val resolvedSleepTime: LocalTime = LocalTime.of(21, 30)

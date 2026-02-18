@@ -39,5 +39,16 @@ data class CalendarEvent(
      * - Superseded by timed events 2 hours before their start time
      * - Return to showing after timed event passes (if no more timed events)
      */
-    val isAllDay: Boolean = false
+    val isAllDay: Boolean = false,
+
+    /**
+     * Whether this event is from the holiday calendar.
+     *
+     * Holiday events:
+     * - Are displayed before personal all-day events (holiday first, then personal)
+     * - Can be toggled on/off via the "Show Holidays" setting
+     * - Are synced weekly (vs 5 minutes for main calendar)
+     * - Use the same display format as personal all-day events
+     */
+    val isHoliday: Boolean = false
 )

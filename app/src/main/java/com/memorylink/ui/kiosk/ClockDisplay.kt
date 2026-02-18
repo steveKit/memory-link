@@ -19,10 +19,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import com.memorylink.domain.model.AllDayEventInfo
+import com.memorylink.ui.components.AutoSizeText
 import com.memorylink.ui.theme.AccentBlue
 import com.memorylink.ui.theme.DisplayConstants
 import com.memorylink.ui.theme.MemoryLinkTheme
@@ -469,6 +472,303 @@ private fun formatEndDate(endDate: LocalDate, today: LocalDate, tomorrow: LocalD
                         endDate.format(formatter)
                 }
         }
+}
+
+/**
+ * Displays the current time, date, and multiple all-day events.
+ *
+ * This overload accepts a list of AllDayEventInfo objects for displaying multiple events,
+ * each on a separate line below the date.
+ *
+ * @param time The current time to display
+ * @param date The current date to display
+ * @param use24HourFormat Whether to use 24-hour format
+ * @param showYearInDate Whether to show year in date
+ * @param allDayEvents List of all-day events to display (each on separate line)
+ * @param colorScheme Colors for time, date, and all-day event text
+ * @param modifier Modifier for the root container
+ */
+@Composable
+fun ClockDisplay(
+        time: LocalTime,
+        date: LocalDate,
+        use24HourFormat: Boolean = false,
+        showYearInDate: Boolean = true,
+        allDayEvents: List<AllDayEventInfo>,
+        colorScheme: ClockColorScheme = ClockColorScheme.Awake,
+        modifier: Modifier = Modifier
+) {
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        val timeFormatter =
+                if (use24HourFormat) {
+                        DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+                } else {
+                        DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+                }
+
+        val formattedTime =
+                time.format(timeFormatter)
+                        .replace("AM", "am")
+                        .replace("PM", "pm")
+                        .replace("a.m.", "am")
+                        .replace("p.m.", "pm")
+
+        val datePattern = if (showYearInDate) "EEEE, MMMM d, yyyy" else "EEEE, MMMM d"
+        val dateFormatter = DateTimeFormatter.ofPattern(datePattern, Locale.getDefault())
+        val formattedDate = date.format(dateFormatter)
+
+        // Format all all-day events
+        val today = LocalDate.now()
+        val tomorrow = today.plusDays(1)
+        val formattedEvents = allDayEvents.map { event ->
+                formatAllDayEvent(event, today, tomorrow)
+        }
+
+        // Find the longest event text for font sizing
+        val longestEventText = formattedEvents.maxByOrNull { it.length }
+
+        BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+                val textMeasurer = rememberTextMeasurer()
+                val density = LocalDensity.current
+
+                val maxWidthPx = constraints.maxWidth
+                val maxHeightPx = constraints.maxHeight
+
+                val (timeFontSize, dateFontSize, allDayFontSize) =
+                        remember(
+                                formattedTime,
+                                formattedDate,
+                                longestEventText,
+                                formattedEvents.size,
+                                maxWidthPx,
+                                maxHeightPx,
+                                isLandscape
+                        ) {
+                                calculateOptimalFontSizesMultiple(
+                                        timeText = formattedTime,
+                                        dateText = formattedDate,
+                                        allDayEventTexts = formattedEvents,
+                                        textMeasurer = textMeasurer,
+                                        maxWidthPx = maxWidthPx,
+                                        maxHeightPx = maxHeightPx,
+                                        isLandscape = isLandscape,
+                                        density = density
+                                )
+                        }
+
+                Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                ) {
+                        // Time
+                        Text(
+                                text = formattedTime,
+                                style =
+                                        TextStyle(
+                                                color = colorScheme.timeColor,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = timeFontSize,
+                                                lineHeight = timeFontSize * 1.1f
+                                        ),
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(DisplayConstants.CLOCK_VERTICAL_SPACING))
+
+                        // Date
+                        Text(
+                                text = formattedDate,
+                                style =
+                                        TextStyle(
+                                                color = colorScheme.dateColor,
+                                                fontWeight = FontWeight.Normal,
+                                                fontSize = dateFontSize,
+                                                lineHeight = dateFontSize * 1.15f
+                                        ),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // All-day events (each on separate line, auto-sized to fit)
+                        formattedEvents.forEach { eventText ->
+                                Spacer(
+                                        modifier =
+                                                Modifier.height(
+                                                        DisplayConstants.CLOCK_VERTICAL_SPACING / 2
+                                                )
+                                )
+
+                                // Each event auto-sizes independently:
+                                // - maxFontSize = 60.sp (DisplayConstants.MAX_ALL_DAY_FONT_SIZE)
+                                // - Shrinks if text is too long to fit width
+                                // - Single line only (softWrap = false)
+                                AutoSizeText(
+                                        text = eventText,
+                                        maxFontSize = DisplayConstants.MAX_ALL_DAY_FONT_SIZE,
+                                        minFontSize = DisplayConstants.MIN_FONT_SIZE,
+                                        softWrap = false,
+                                        textAlign = TextAlign.Center,
+                                        style = TextStyle(
+                                                color = colorScheme.allDayEventColor,
+                                                fontWeight = FontWeight.Medium
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                )
+                        }
+                }
+        }
+}
+
+/**
+ * Format a single all-day event for display.
+ *
+ * @param event The event info
+ * @param today Today's date
+ * @param tomorrow Tomorrow's date
+ * @return Formatted event string
+ */
+private fun formatAllDayEvent(event: AllDayEventInfo, today: LocalDate, tomorrow: LocalDate): String {
+        // Check if this is an ongoing multi-day event
+        val isOngoingMultiDay = event.endDate != null && event.startDate == null
+
+        return when {
+                isOngoingMultiDay -> {
+                        // Ongoing multi-day event: "{title} until {end day/date}"
+                        val endDateText = formatEndDate(event.endDate!!, today, tomorrow)
+                        "${event.title} until $endDateText"
+                }
+                event.startDate == null -> {
+                        // Single-day event today: "Today is {title}"
+                        "Today is ${event.title}"
+                }
+                event.startDate == tomorrow -> {
+                        // Tomorrow: "Tomorrow is {title}"
+                        "Tomorrow is ${event.title}"
+                }
+                else -> {
+                        // Future day: "{Day of week} is {title}"
+                        val dayName =
+                                event.startDate.dayOfWeek.getDisplayName(
+                                        JavaTextStyle.FULL,
+                                        Locale.getDefault()
+                                )
+                        "$dayName is ${event.title}"
+                }
+        }
+}
+
+/**
+ * Calculate optimal font sizes for time, date, and multiple all-day events.
+ *
+ * Uses the longest event text to determine font size, then applies same size to all events.
+ */
+private fun calculateOptimalFontSizesMultiple(
+        timeText: String,
+        dateText: String,
+        allDayEventTexts: List<String>,
+        textMeasurer: androidx.compose.ui.text.TextMeasurer,
+        maxWidthPx: Int,
+        maxHeightPx: Int,
+        @Suppress("UNUSED_PARAMETER") isLandscape: Boolean,
+        density: androidx.compose.ui.unit.Density
+): FontSizeResult {
+        val maxTimeFontSizeSp =
+                with(density) { DisplayConstants.MAX_TIME_FONT_SIZE.toPx() / fontScale }
+        val maxDateFontSizeSp = with(density) { DisplayConstants.MAX_FONT_SIZE.toPx() / fontScale }
+        val maxAllDayFontSizeSp =
+                with(density) { DisplayConstants.MAX_ALL_DAY_FONT_SIZE.toPx() / fontScale }
+        val minFontSizeSp = with(density) { DisplayConstants.MIN_FONT_SIZE.toPx() / fontScale }
+
+        // Time: sized independently
+        val timeFontSizeSp =
+                findMaxFontSizeThatFits(
+                        text = timeText,
+                        textMeasurer = textMeasurer,
+                        maxWidthPx = maxWidthPx,
+                        maxHeightPx = Int.MAX_VALUE,
+                        minFontSizeSp = minFontSizeSp,
+                        maxFontSizeSp = maxTimeFontSizeSp,
+                        softWrap = false
+                )
+
+        // Date: sized independently
+        val dateFontSizeSp =
+                findMaxFontSizeThatFits(
+                        text = dateText,
+                        textMeasurer = textMeasurer,
+                        maxWidthPx = maxWidthPx,
+                        maxHeightPx = Int.MAX_VALUE,
+                        minFontSizeSp = minFontSizeSp,
+                        maxFontSizeSp = maxDateFontSizeSp,
+                        softWrap = false
+                )
+
+        // All-day events: find size that fits the longest text
+        val allDayFontSizeSp =
+                if (allDayEventTexts.isNotEmpty()) {
+                        val longestText = allDayEventTexts.maxByOrNull { it.length } ?: ""
+                        findMaxFontSizeThatFits(
+                                text = longestText,
+                                textMeasurer = textMeasurer,
+                                maxWidthPx = maxWidthPx,
+                                maxHeightPx = Int.MAX_VALUE,
+                                minFontSizeSp = minFontSizeSp,
+                                maxFontSizeSp = maxAllDayFontSizeSp,
+                                softWrap = false
+                        )
+                } else {
+                        maxAllDayFontSizeSp
+                }
+
+        // Verify all fit together in available height
+        val totalHeight =
+                estimateTotalHeightMultiple(
+                        timeFontSizeSp,
+                        dateFontSizeSp,
+                        allDayFontSizeSp,
+                        allDayEventTexts.size,
+                        density
+                )
+
+        return if (totalHeight <= maxHeightPx) {
+                FontSizeResult(timeFontSizeSp.sp, dateFontSizeSp.sp, allDayFontSizeSp.sp)
+        } else {
+                // Scale all down proportionally to fit height
+                val scale = maxHeightPx.toFloat() / totalHeight
+                val scaledTime = (timeFontSizeSp * scale).coerceAtLeast(minFontSizeSp)
+                val scaledDate = (dateFontSizeSp * scale).coerceAtLeast(minFontSizeSp)
+                val scaledAllDay = (allDayFontSizeSp * scale).coerceAtLeast(minFontSizeSp)
+                FontSizeResult(scaledTime.sp, scaledDate.sp, scaledAllDay.sp)
+        }
+}
+
+/** Estimate total height of time + date + multiple all-day events with spacing. */
+private fun estimateTotalHeightMultiple(
+        timeFontSizeSp: Float,
+        dateFontSizeSp: Float,
+        allDayFontSizeSp: Float,
+        eventCount: Int,
+        density: androidx.compose.ui.unit.Density
+): Float {
+        val timeHeight = timeFontSizeSp * 1.15f
+        val dateHeight = dateFontSizeSp * 1.15f
+        val spacing = with(density) { DisplayConstants.CLOCK_VERTICAL_SPACING.toPx() }
+        val halfSpacing = spacing / 2
+
+        var total = timeHeight + dateHeight + spacing
+
+        if (eventCount > 0) {
+                val allDayHeight = allDayFontSizeSp * 1.15f
+                // Each event adds its height plus half spacing
+                total += (allDayHeight + halfSpacing) * eventCount
+        }
+
+        return total
 }
 
 // region Previews

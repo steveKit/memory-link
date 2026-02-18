@@ -137,6 +137,8 @@ fun AdminNavGraph(
             CalendarSelectScreen(
                     calendarState = calendarState,
                     onCalendarSelected = viewModel::selectCalendar,
+                    onHolidayCalendarSelected = viewModel::selectHolidayCalendar,
+                    onHolidayCalendarCleared = viewModel::clearHolidayCalendar,
                     onRefresh = viewModel::loadCalendars,
                     onBackClick = { navController.popBackStack() }
             )
@@ -144,9 +146,11 @@ fun AdminNavGraph(
 
         composable(AdminRoutes.SETTINGS) {
             val settingsState by viewModel.settingsState.collectAsStateWithLifecycle()
+            val calendarState by viewModel.calendarState.collectAsStateWithLifecycle()
 
             SettingsScreen(
                     settingsState = settingsState,
+                    calendarState = calendarState,
                     onWakeTimeChange = viewModel::setWakeTime,
                     onSleepTimeChange = viewModel::setSleepTime,
                     onWakeSolarTimeChange = viewModel::setWakeSolarTime,
@@ -155,6 +159,7 @@ fun AdminNavGraph(
                     onTimeFormatChange = viewModel::setUse24HourFormat,
                     onShowYearChange = viewModel::setShowYearInDate,
                     onShowEventsDuringSleepChange = viewModel::setShowEventsDuringSleep,
+                    onShowHolidaysChange = viewModel::setShowHolidays,
                     onBackClick = { navController.popBackStack() }
             )
         }

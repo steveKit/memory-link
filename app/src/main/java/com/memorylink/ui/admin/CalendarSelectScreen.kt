@@ -36,10 +36,14 @@ import com.memorylink.ui.theme.MemoryLinkTheme
 /**
  * Calendar selection screen.
  *
- * Lists available calendars from Google and allows selection.
+ * Lists available calendars from Google and allows selection for:
+ * - Primary Calendar: The main calendar for events
+ * - Holiday Calendar (optional): Secondary calendar for holidays
  *
  * @param calendarState Current calendar list state
- * @param onCalendarSelected Called when a calendar is selected (id, name)
+ * @param onCalendarSelected Called when the main calendar is selected (id, name)
+ * @param onHolidayCalendarSelected Called when a holiday calendar is selected (id, name)
+ * @param onHolidayCalendarCleared Called when holiday calendar is cleared
  * @param onRefresh Refresh the calendar list
  * @param onBackClick Navigate back to admin home
  * @param modifier Modifier for the screen
@@ -48,6 +52,8 @@ import com.memorylink.ui.theme.MemoryLinkTheme
 fun CalendarSelectScreen(
         calendarState: CalendarState,
         onCalendarSelected: (String, String) -> Unit,
+        onHolidayCalendarSelected: (String, String) -> Unit,
+        onHolidayCalendarCleared: () -> Unit,
         onRefresh: () -> Unit,
         onBackClick: () -> Unit,
         modifier: Modifier = Modifier
@@ -144,8 +150,25 @@ fun CalendarSelectScreen(
                     }
                 }
                 else -> {
-                    // Calendar list
+                    // Calendar list with sections
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        // Primary Calendar Section
+                        item {
+                            Text(
+                                    text = "📅 Primary Calendar",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                    text = "Main calendar for events and reminders",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
                         items(calendarState.calendars) { calendar ->
                             CalendarListItem(
                                     calendar = calendar,
@@ -154,6 +177,53 @@ fun CalendarSelectScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
+
+                        // Holiday Calendar Section
+                        item {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Text(
+                                    text = "🎄 Holiday Calendar (Optional)",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                    text = "Shows holidays on the display. Can be toggled in Settings.",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        // "None" option for holiday calendar
+                        item {
+                            HolidayCalendarListItem(
+                                    name = "None",
+                                    isSelected = calendarState.holidayCalendarId == null,
+                                    onClick = { onHolidayCalendarCleared() }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        // Calendar options for holiday (exclude the selected primary calendar)
+                        items(
+                                calendarState.calendars.filter {
+                                    it.id != calendarState.selectedCalendarId
+                                }
+                        ) { calendar ->
+                            HolidayCalendarListItem(
+                                    name = calendar.name,
+                                    isSelected = calendar.id == calendarState.holidayCalendarId,
+                                    onClick = {
+                                        onHolidayCalendarSelected(calendar.id, calendar.name)
+                                    }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        // Bottom padding
+                        item { Spacer(modifier = Modifier.height(24.dp)) }
                     }
                 }
             }
@@ -209,6 +279,59 @@ private fun CalendarListItem(
     }
 }
 
+/**
+ * List item for holiday calendar selection.
+ * Uses a slightly different style to distinguish from primary calendars.
+ */
+@Composable
+private fun HolidayCalendarListItem(
+        name: String,
+        isSelected: Boolean,
+        onClick: () -> Unit,
+        modifier: Modifier = Modifier
+) {
+    val isNone = name == "None"
+    Row(
+            modifier =
+                    modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                    if (isSelected) Color(0xFF2E7D32).copy(alpha = 0.2f)
+                                    else Color(0xFF1E1E1E)
+                            )
+                            .clickable(onClick = onClick)
+                            .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Selection indicator (green for holidays)
+        Box(
+                modifier =
+                        Modifier.size(24.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) Color(0xFF4CAF50) else Color(0xFF3A3A3A)),
+                contentAlignment = Alignment.Center
+        ) {
+            if (isSelected) {
+                Text(text = "✓", fontSize = 14.sp, color = Color.White)
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                    text = name,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isNone) Color.White.copy(alpha = 0.6f) else Color.White
+            )
+            if (!isNone) {
+                Text(text = "Syncs weekly", fontSize = 12.sp, color = Color(0xFF4CAF50))
+            }
+        }
+    }
+}
+
 // region Previews
 
 @Preview(
@@ -216,7 +339,7 @@ private fun CalendarListItem(
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 400,
-        heightDp = 600
+        heightDp = 800
 )
 @Composable
 private fun CalendarSelectWithCalendarsPreview() {
@@ -234,6 +357,41 @@ private fun CalendarSelectWithCalendarsPreview() {
                                 selectedCalendarId = "1"
                         ),
                 onCalendarSelected = { _, _ -> },
+                onHolidayCalendarSelected = { _, _ -> },
+                onHolidayCalendarCleared = {},
+                onRefresh = {},
+                onBackClick = {}
+        )
+    }
+}
+
+@Preview(
+        name = "Calendar Select - With Holiday Selected",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 400,
+        heightDp = 800
+)
+@Composable
+private fun CalendarSelectWithHolidayPreview() {
+    MemoryLinkTheme {
+        CalendarSelectScreen(
+                calendarState =
+                        CalendarState(
+                                calendars =
+                                        listOf(
+                                                CalendarItem("1", "Grandma's Calendar", false),
+                                                CalendarItem("2", "family@example.com", true),
+                                                CalendarItem("3", "Birthdays", false),
+                                                CalendarItem("4", "Holidays in Canada", false)
+                                        ),
+                                selectedCalendarId = "1",
+                                holidayCalendarId = "4",
+                                holidayCalendarName = "Holidays in Canada"
+                        ),
+                onCalendarSelected = { _, _ -> },
+                onHolidayCalendarSelected = { _, _ -> },
+                onHolidayCalendarCleared = {},
                 onRefresh = {},
                 onBackClick = {}
         )
@@ -253,6 +411,8 @@ private fun CalendarSelectLoadingPreview() {
         CalendarSelectScreen(
                 calendarState = CalendarState(isLoading = true),
                 onCalendarSelected = { _, _ -> },
+                onHolidayCalendarSelected = { _, _ -> },
+                onHolidayCalendarCleared = {},
                 onRefresh = {},
                 onBackClick = {}
         )
@@ -275,6 +435,8 @@ private fun CalendarSelectErrorPreview() {
                                 error = "Failed to load calendars. Please check your connection."
                         ),
                 onCalendarSelected = { _, _ -> },
+                onHolidayCalendarSelected = { _, _ -> },
+                onHolidayCalendarCleared = {},
                 onRefresh = {},
                 onBackClick = {}
         )
@@ -294,6 +456,8 @@ private fun CalendarSelectEmptyPreview() {
         CalendarSelectScreen(
                 calendarState = CalendarState(calendars = emptyList()),
                 onCalendarSelected = { _, _ -> },
+                onHolidayCalendarSelected = { _, _ -> },
+                onHolidayCalendarCleared = {},
                 onRefresh = {},
                 onBackClick = {}
         )

@@ -20,6 +20,11 @@ data class EventEntity(
         /** [CONFIG] events are parsed for settings, never displayed. */
         @ColumnInfo(name = "is_config_event") val isConfigEvent: Boolean = false,
         @ColumnInfo(name = "is_all_day") val isAllDay: Boolean = false,
+        /**
+         * Whether this event is from the holiday calendar.
+         * Holidays are displayed before personal events and can be toggled off.
+         */
+        @ColumnInfo(name = "is_holiday", defaultValue = "0") val isHoliday: Boolean = false,
         /** Used for cache eviction. */
         @ColumnInfo(name = "fetched_at") val fetchedAt: Long
 )

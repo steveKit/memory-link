@@ -21,9 +21,10 @@ object DatabaseModule {
     private const val DATABASE_NAME = "memorylink_db"
 
     /**
-     * Provides the Room database instance.
-     * Uses fallbackToDestructiveMigration for simplicity during development.
-     * TODO: Add proper migrations for production.
+     * Provides the Room database instance with proper migrations.
+     *
+     * Migrations:
+     * - v1 → v2: Add is_holiday column for holiday calendar support
      */
     @Provides
     @Singleton
@@ -35,7 +36,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             DATABASE_NAME
         )
-            .fallbackToDestructiveMigration()
+            .addMigrations(AppDatabase.MIGRATION_1_2)
             .build()
     }
 
