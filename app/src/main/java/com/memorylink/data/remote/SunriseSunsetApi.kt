@@ -157,7 +157,9 @@ class SunriseSunsetApi @Inject constructor() {
             withContext(Dispatchers.IO) {
                 try {
                     val dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                    val urlString = "$API_BASE_URL?lat=$lat&lng=$lng&date=$dateStr&formatted=1"
+                    // Include timezone ID so API returns local times (not UTC)
+                    val tzid = java.util.TimeZone.getDefault().id
+                    val urlString = "$API_BASE_URL?lat=$lat&lng=$lng&date=$dateStr&formatted=1&tzid=$tzid"
 
                     Log.d(TAG, "Fetching solar times from: $urlString")
 
