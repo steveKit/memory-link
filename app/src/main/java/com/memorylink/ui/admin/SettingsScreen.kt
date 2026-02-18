@@ -154,7 +154,7 @@ fun SettingsScreen(
 
                         // Show Year
                         ShowYearSettingItem(
-                                showYear = settingsState.showYearInDate ?: true,
+                                showYear = settingsState.showYearInDate ?: false,
                                 onShowYearChange = onShowYearChange
                         )
 
