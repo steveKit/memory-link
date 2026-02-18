@@ -609,4 +609,61 @@ class DetermineDisplayStateUseCaseTest {
     }
 
     // endregion
+
+    // region Brightness Setting
+
+    @Test
+    fun `sleep state always has 10 percent brightness`() {
+        val now = LocalDateTime.of(2026, 2, 11, 23, 0) // Sleep period
+        val settings = AppSettings(brightness = 80) // Custom brightness
+
+        val result = useCase(now, emptyList(), settings)
+
+        assertTrue(result is DisplayState.Sleep)
+        // Sleep state should use SLEEP_BRIGHTNESS (10) regardless of settings
+        assertEquals(DisplayState.SLEEP_BRIGHTNESS, result.brightness)
+    }
+
+    @Test
+    fun `awake no event state uses configured brightness`() {
+        val now = LocalDateTime.of(2026, 2, 11, 10, 0) // Wake period
+        val settings = AppSettings(brightness = 75)
+
+        val result = useCase(now, emptyList(), settings)
+
+        assertTrue(result is DisplayState.AwakeNoEvent)
+        assertEquals(75, result.brightness)
+    }
+
+    @Test
+    fun `awake with event state uses configured brightness`() {
+        val now = LocalDateTime.of(2026, 2, 11, 10, 0) // Wake period
+        val settings = AppSettings(brightness = 60)
+        val event =
+                CalendarEvent(
+                        id = "1",
+                        title = "Event",
+                        startTime = LocalDateTime.of(2026, 2, 11, 14, 0),
+                        endTime = LocalDateTime.of(2026, 2, 11, 15, 0),
+                        isAllDay = false
+                )
+
+        val result = useCase(now, listOf(event), settings)
+
+        assertTrue(result is DisplayState.AwakeWithEvent)
+        assertEquals(60, result.brightness)
+    }
+
+    @Test
+    fun `awake state defaults to 100 percent brightness`() {
+        val now = LocalDateTime.of(2026, 2, 11, 10, 0)
+        val settings = AppSettings() // Default brightness is 100
+
+        val result = useCase(now, emptyList(), settings)
+
+        assertTrue(result is DisplayState.AwakeNoEvent)
+        assertEquals(DisplayState.DEFAULT_BRIGHTNESS, result.brightness)
+    }
+
+    // endregion
 }

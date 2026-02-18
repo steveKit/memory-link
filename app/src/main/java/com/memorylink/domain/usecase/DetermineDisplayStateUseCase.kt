@@ -50,7 +50,8 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
         if (allDayEvent == null && timedEvent == null) {
             return DisplayState.AwakeNoEvent(
                     use24HourFormat = settings.use24HourFormat,
-                    showYearInDate = settings.showYearInDate
+                    showYearInDate = settings.showYearInDate,
+                    brightness = settings.brightness
             )
         }
 
@@ -101,7 +102,8 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
                         },
                 // Settings
                 use24HourFormat = settings.use24HourFormat,
-                showYearInDate = settings.showYearInDate
+                showYearInDate = settings.showYearInDate,
+                brightness = settings.brightness
         )
     }
 
