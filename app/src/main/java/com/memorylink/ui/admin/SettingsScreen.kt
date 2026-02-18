@@ -304,7 +304,7 @@ private fun TimeSettingItem(
 /**
  * Offset adjuster component with +/- buttons and editable text field.
  * 
- * Layout: [-] [+] | [offset value] min | [▲] [▼]
+ * Layout: [-] [+] | [offset value] min
  */
 @Composable
 private fun OffsetAdjuster(
@@ -375,13 +375,13 @@ private fun OffsetAdjuster(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Editable text field with up/down arrows
+                // Editable text field
                 Row(
                         modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFF2A2A2A))
                                 .border(1.dp, Color(0xFF3A3A3A), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                 ) {
                         BasicTextField(
@@ -419,46 +419,8 @@ private fun OffsetAdjuster(
                                 text = "min",
                                 fontSize = 14.sp,
                                 color = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(start = 4.dp, end = 8.dp)
+                                modifier = Modifier.padding(start = 4.dp)
                         )
-
-                        // Up/down arrow buttons (fine adjustment)
-                        Column {
-                                Box(
-                                        modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .clickable {
-                                                        val newValue = clampOffset(currentOffset + 1)
-                                                        textValue = newValue.toString()
-                                                        onOffsetChange(newValue)
-                                                },
-                                        contentAlignment = Alignment.Center
-                                ) {
-                                        Text(
-                                                text = "▲",
-                                                fontSize = 12.sp,
-                                                color = AccentBlue
-                                        )
-                                }
-                                Box(
-                                        modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .clickable {
-                                                        val newValue = clampOffset(currentOffset - 1)
-                                                        textValue = newValue.toString()
-                                                        onOffsetChange(newValue)
-                                                },
-                                        contentAlignment = Alignment.Center
-                                ) {
-                                        Text(
-                                                text = "▼",
-                                                fontSize = 12.sp,
-                                                color = AccentBlue
-                                        )
-                                }
-                        }
                 }
         }
 }
