@@ -529,8 +529,8 @@ constructor(
     }
 
     companion object {
-        /** 5 minutes inactivity timeout per .clinerules/20-android.md */
-        const val INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000L
+        /** 30 seconds inactivity timeout (reduced for testing; production: 5 minutes per .clinerules/20-android.md) */
+        const val INACTIVITY_TIMEOUT_MS = 30 * 1000L
 
         /** Delay before validating PIN to allow 4th dot to render */
         const val PIN_VALIDATION_DELAY_MS = 150L
