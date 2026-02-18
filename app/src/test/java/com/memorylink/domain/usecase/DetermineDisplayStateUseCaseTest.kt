@@ -429,6 +429,142 @@ class DetermineDisplayStateUseCaseTest {
 
     // endregion
 
+    // region Sleep Delay for Events
+
+    @Test
+    fun `delays sleep when timed event ends after sleep time`() {
+        // Sleep time is 21:00, but event ends at 22:00
+        // At 21:30, should still be awake showing the ongoing event
+        val now = LocalDateTime.of(2026, 2, 11, 21, 30)
+        val settings = AppSettings() // Default sleep: 21:00
+        val event =
+                CalendarEvent(
+                        id = "1",
+                        title = "Family Video Call",
+                        startTime = LocalDateTime.of(2026, 2, 11, 21, 0),
+                        endTime = LocalDateTime.of(2026, 2, 11, 22, 0),
+                        isAllDay = false
+                )
+
+        val result = useCase(now, listOf(event), settings)
+
+        // Should be awake, not sleep, because event hasn't ended
+        assertTrue(result is DisplayState.AwakeNoEvent || result is DisplayState.AwakeWithEvent)
+    }
+
+    @Test
+    fun `enters sleep after last event ends`() {
+        // Event ended at 22:00, now it's 22:30
+        val now = LocalDateTime.of(2026, 2, 11, 22, 30)
+        val settings = AppSettings() // Default sleep: 21:00
+        val event =
+                CalendarEvent(
+                        id = "1",
+                        title = "Family Video Call",
+                        startTime = LocalDateTime.of(2026, 2, 11, 21, 0),
+                        endTime = LocalDateTime.of(2026, 2, 11, 22, 0),
+                        isAllDay = false
+                )
+
+        val result = useCase(now, listOf(event), settings)
+
+        // Should be sleep since event has ended
+        assertTrue(result is DisplayState.Sleep)
+    }
+
+    @Test
+    fun `delays sleep for upcoming event after sleep time`() {
+        // Sleep time is 21:00, event starts at 22:00
+        // At 21:30, should stay awake to show upcoming event
+        val now = LocalDateTime.of(2026, 2, 11, 21, 30)
+        val settings = AppSettings() // Default sleep: 21:00
+        val event =
+                CalendarEvent(
+                        id = "1",
+                        title = "Late Night Show",
+                        startTime = LocalDateTime.of(2026, 2, 11, 22, 0),
+                        endTime = LocalDateTime.of(2026, 2, 11, 23, 0),
+                        isAllDay = false
+                )
+
+        val result = useCase(now, listOf(event), settings)
+
+        // Should be awake showing upcoming event
+        assertTrue(result is DisplayState.AwakeWithEvent)
+        val state = result as DisplayState.AwakeWithEvent
+        assertEquals("Late Night Show", state.timedEventTitle)
+    }
+
+    @Test
+    fun `delays sleep until last event of multiple ends`() {
+        // Multiple events after sleep time
+        val now = LocalDateTime.of(2026, 2, 11, 22, 30)
+        val settings = AppSettings() // Default sleep: 21:00
+        val event1 =
+                CalendarEvent(
+                        id = "1",
+                        title = "First Event",
+                        startTime = LocalDateTime.of(2026, 2, 11, 21, 0),
+                        endTime = LocalDateTime.of(2026, 2, 11, 22, 0), // Already ended
+                        isAllDay = false
+                )
+        val event2 =
+                CalendarEvent(
+                        id = "2",
+                        title = "Second Event",
+                        startTime = LocalDateTime.of(2026, 2, 11, 22, 0),
+                        endTime = LocalDateTime.of(2026, 2, 11, 23, 30), // Still ongoing
+                        isAllDay = false
+                )
+
+        val result = useCase(now, listOf(event1, event2), settings)
+
+        // Should still be awake because second event hasn't ended
+        assertTrue(result is DisplayState.AwakeNoEvent || result is DisplayState.AwakeWithEvent)
+    }
+
+    @Test
+    fun `all-day events do not delay sleep`() {
+        // Only all-day event, should enter sleep normally
+        val now = LocalDateTime.of(2026, 2, 11, 21, 30)
+        val settings = AppSettings() // Default sleep: 21:00
+        val allDayEvent =
+                CalendarEvent(
+                        id = "1",
+                        title = "Birthday",
+                        startTime = LocalDateTime.of(2026, 2, 11, 0, 0),
+                        endTime = LocalDateTime.of(2026, 2, 12, 0, 0),
+                        isAllDay = true
+                )
+
+        val result = useCase(now, listOf(allDayEvent), settings)
+
+        // Should be sleep because all-day events don't delay sleep
+        assertTrue(result is DisplayState.Sleep)
+    }
+
+    @Test
+    fun `timed event from different day does not delay sleep`() {
+        // Event is tomorrow, should not affect today's sleep
+        val now = LocalDateTime.of(2026, 2, 11, 21, 30)
+        val settings = AppSettings() // Default sleep: 21:00
+        val event =
+                CalendarEvent(
+                        id = "1",
+                        title = "Tomorrow Event",
+                        startTime = LocalDateTime.of(2026, 2, 12, 10, 0),
+                        endTime = LocalDateTime.of(2026, 2, 12, 11, 0),
+                        isAllDay = false
+                )
+
+        val result = useCase(now, listOf(event), settings)
+
+        // Should be sleep because the event is not today
+        assertTrue(result is DisplayState.Sleep)
+    }
+
+    // endregion
+
     // region showYearInDate Setting
 
     @Test
