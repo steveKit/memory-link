@@ -116,7 +116,12 @@ fun AdminHomeScreen(
 
                         // Sync Now button
                         AdminMenuItem(
-                                title = "Sync Calendar",
+                                title =
+                                        if (syncState.cooldownSecondsRemaining > 0) {
+                                                "Sync Calendar (${syncState.cooldownSecondsRemaining}s)"
+                                        } else {
+                                                "Sync Calendar"
+                                        },
                                 subtitle =
                                         if (syncState.isSyncing) {
                                                 "Syncing..."
@@ -129,7 +134,8 @@ fun AdminHomeScreen(
                                 enabled =
                                         authState.isSignedIn &&
                                                 selectedCalendarName != null &&
-                                                !syncState.isSyncing
+                                                !syncState.isSyncing &&
+                                                syncState.cooldownSecondsRemaining == 0
                         )
 
                         Spacer(modifier = Modifier.weight(1f))

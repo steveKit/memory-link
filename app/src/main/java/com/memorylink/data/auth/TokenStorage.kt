@@ -73,6 +73,11 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         get() = prefs.getLong(KEY_LAST_SYNC_TIME, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_SYNC_TIME, value).apply()
 
+    /** Last manual sync timestamp in epoch millis (for cooldown calculation). */
+    var lastManualSyncTime: Long
+        get() = prefs.getLong(KEY_LAST_MANUAL_SYNC_TIME, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_MANUAL_SYNC_TIME, value).apply()
+
     /**
      * Google Calendar API sync token for incremental sync.
      *
@@ -377,6 +382,7 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_SELECTED_CALENDAR_NAME = "selected_calendar_name"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
+        private const val KEY_LAST_MANUAL_SYNC_TIME = "last_manual_sync_time"
         private const val KEY_SYNC_TOKEN = "sync_token"
 
         // Admin PIN keys
