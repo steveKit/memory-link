@@ -83,9 +83,37 @@ sealed class DisplayState {
         /**
          * SLEEP: Current time is within sleep period. Display: Dimmed clock + date (same layout as
          * AwakeNoEvent), 10% brightness.
+         *
+         * When showEventsDuringSleep is enabled in settings, event data will be populated and
+         * displayed with dimmed styling alongside the clock.
+         *
+         * @param allDayEventTitle Title of next all-day event, or null if none/disabled
+         * @param allDayEventDate Start date of all-day event, or null if today
+         * @param allDayEventEndDate End date of multi-day event (exclusive), or null if single-day
+         * @param timedEventTitle Title of next timed event, or null if none/disabled
+         * @param timedEventTime Start time of timed event, or null if none
+         * @param timedEventDate Date of timed event, or null if today
          */
         data class Sleep(
+                // All-day event (displays in clock area when enabled)
+                val allDayEventTitle: String? = null,
+                val allDayEventDate: LocalDate? = null,
+                val allDayEventEndDate: LocalDate? = null,
+                // Timed event (displays in event card when enabled)
+                val timedEventTitle: String? = null,
+                val timedEventTime: LocalTime? = null,
+                val timedEventDate: LocalDate? = null,
+                // Settings
                 override val use24HourFormat: Boolean = false,
                 override val showYearInDate: Boolean = true
-        ) : DisplayState()
+        ) : DisplayState() {
+
+                /** Returns true if there's an all-day event to display. */
+                val hasAllDayEvent: Boolean
+                        get() = allDayEventTitle != null
+
+                /** Returns true if there's a timed event to display. */
+                val hasTimedEvent: Boolean
+                        get() = timedEventTitle != null
+        }
 }

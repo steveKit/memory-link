@@ -222,6 +222,26 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
             }
         }
 
+    /**
+     * Whether to show events during sleep mode. null = use default (false). Written by admin
+     * panel.
+     */
+    var showEventsDuringSleep: Boolean?
+        get() {
+            return if (prefs.contains(KEY_SHOW_EVENTS_DURING_SLEEP)) {
+                prefs.getBoolean(KEY_SHOW_EVENTS_DURING_SLEEP, false)
+            } else {
+                null
+            }
+        }
+        set(value) {
+            if (value == null) {
+                prefs.edit().remove(KEY_SHOW_EVENTS_DURING_SLEEP).apply()
+            } else {
+                prefs.edit().putBoolean(KEY_SHOW_EVENTS_DURING_SLEEP, value).apply()
+            }
+        }
+
     // ========== Solar Time Settings ==========
     // Used when wake/sleep times are relative to sunrise/sunset.
 
@@ -374,6 +394,7 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_BRIGHTNESS = "brightness"
         private const val KEY_TIME_FORMAT = "time_format"
         private const val KEY_SHOW_YEAR = "show_year"
+        private const val KEY_SHOW_EVENTS_DURING_SLEEP = "show_events_during_sleep"
 
         // Solar time settings
         private const val KEY_WAKE_SOLAR_REF = "wake_solar_ref"

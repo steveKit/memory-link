@@ -411,6 +411,7 @@ constructor(
                 brightness = tokenStorage.brightness.takeIf { it >= 0 },
                 use24HourFormat = tokenStorage.use24HourFormat,
                 showYearInDate = tokenStorage.showYear,
+                showEventsDuringSleep = tokenStorage.showEventsDuringSleep,
                 wakeSolarRef = tokenStorage.wakeSolarRef,
                 wakeSolarOffset = tokenStorage.wakeSolarOffset,
                 sleepSolarRef = tokenStorage.sleepSolarRef,
@@ -477,6 +478,14 @@ constructor(
         resetInactivityTimer()
         tokenStorage.showYear = showYear
         _settingsState.update { it.copy(showYearInDate = showYear) }
+        notifySettingsChanged()
+    }
+
+    /** Update show events during sleep. */
+    fun setShowEventsDuringSleep(showEvents: Boolean?) {
+        resetInactivityTimer()
+        tokenStorage.showEventsDuringSleep = showEvents
+        _settingsState.update { it.copy(showEventsDuringSleep = showEvents) }
         notifySettingsChanged()
     }
 
@@ -566,6 +575,7 @@ data class SettingsState(
         val brightness: Int? = null,
         val use24HourFormat: Boolean? = null,
         val showYearInDate: Boolean? = null,
+        val showEventsDuringSleep: Boolean? = null,
         // Resolved times (after solar calculation, for display)
         val resolvedWakeTime: LocalTime = LocalTime.of(6, 0),
         val resolvedSleepTime: LocalTime = LocalTime.of(21, 0)

@@ -65,6 +65,7 @@ fun SettingsScreen(
         onBrightnessChange: (Int?) -> Unit,
         onTimeFormatChange: (Boolean?) -> Unit,
         onShowYearChange: (Boolean?) -> Unit,
+        onShowEventsDuringSleepChange: (Boolean?) -> Unit,
         onBackClick: () -> Unit,
         modifier: Modifier = Modifier
 ) {
@@ -147,6 +148,14 @@ fun SettingsScreen(
                         ShowYearSettingItem(
                                 showYear = settingsState.showYearInDate ?: true,
                                 onShowYearChange = onShowYearChange
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Show Events During Sleep
+                        ShowEventsDuringSleepSettingItem(
+                                showEvents = settingsState.showEventsDuringSleep ?: false,
+                                onShowEventsChange = onShowEventsDuringSleepChange
                         )
 
                         Spacer(modifier = Modifier.height(48.dp))
@@ -736,6 +745,61 @@ private fun ShowYearSettingItem(showYear: Boolean, onShowYearChange: (Boolean?) 
         }
 }
 
+@Composable
+private fun ShowEventsDuringSleepSettingItem(
+        showEvents: Boolean,
+        onShowEventsChange: (Boolean?) -> Unit
+) {
+        Column(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF1E1E1E))
+                                .padding(16.dp)
+        ) {
+                Text(
+                        text = "Show Events During Sleep",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                        text = "Display upcoming events with dimmed styling during sleep mode",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Text(
+                                text = if (showEvents) "Enabled" else "Disabled",
+                                fontSize = 16.sp,
+                                color = AccentBlue
+                        )
+
+                        Switch(
+                                checked = showEvents,
+                                onCheckedChange = { onShowEventsChange(it) },
+                                colors =
+                                        SwitchDefaults.colors(
+                                                checkedThumbColor = AccentBlue,
+                                                checkedTrackColor = AccentBlue.copy(alpha = 0.5f),
+                                                uncheckedThumbColor = Color(0xFF3A3A3A),
+                                                uncheckedTrackColor = Color(0xFF2A2A2A)
+                                        )
+                        )
+                }
+        }
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFF121212, widthDp = 400, heightDp = 800)
 @Composable
 private fun SettingsScreenPreview() {
@@ -746,7 +810,8 @@ private fun SettingsScreenPreview() {
                                         wakeTime = LocalTime.of(7, 0),
                                         sleepTime = LocalTime.of(21, 30),
                                         brightness = 80,
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showEventsDuringSleep = false
                                 ),
                         onWakeTimeChange = {},
                         onSleepTimeChange = {},
@@ -755,6 +820,7 @@ private fun SettingsScreenPreview() {
                         onBrightnessChange = {},
                         onTimeFormatChange = {},
                         onShowYearChange = {},
+                        onShowEventsDuringSleepChange = {},
                         onBackClick = {}
                 )
         }
