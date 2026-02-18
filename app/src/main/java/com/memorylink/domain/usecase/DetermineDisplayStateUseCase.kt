@@ -26,8 +26,18 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
         val currentTime = now.toLocalTime()
         val today = now.toLocalDate()
 
+        // Check if any timed events today haven't ended yet
+        // This is used to delay sleep until after the last event
+        val hasRemainingTimedEventsToday = events.any { event ->
+            !event.isAllDay &&
+            event.startTime.toLocalDate() == today &&
+            event.endTime.isAfter(now)
+        }
+
         // Check if we're in sleep period
-        if (isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime)) {
+        // Sleep is delayed if there are remaining timed events today
+        if (isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime) &&
+                !hasRemainingTimedEventsToday) {
             return buildSleepState(now, today, events, settings)
         }
 
