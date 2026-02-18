@@ -218,6 +218,8 @@ fun ClockDisplay(
                                                 lineHeight = timeFontSize * 1.1f
                                         ),
                                 textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                softWrap = false,
                                 modifier = Modifier.fillMaxWidth()
                         )
 
