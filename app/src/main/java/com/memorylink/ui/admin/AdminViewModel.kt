@@ -27,10 +27,10 @@ import kotlinx.coroutines.launch
  * - Google authentication
  * - Calendar selection
  * - Display settings
- * - Inactivity timeout (5 minutes)
+ * - Inactivity timeout (30 seconds)
  *
  * Per .clinerules/20-android.md:
- * - Exit Admin: Auto-returns to kiosk after 5 minutes of inactivity
+ * - Exit Admin: Auto-returns to kiosk after 30 seconds of inactivity
  */
 @HiltViewModel
 class AdminViewModel

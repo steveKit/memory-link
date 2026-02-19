@@ -142,7 +142,7 @@ class MainActivity : ComponentActivity() {
         hideSystemUI()
 
         // Start foreground service for calendar sync if setup is complete
-        // The service handles 5-minute sync intervals and 1-minute state refresh
+        // The service handles 15-minute sync intervals and 1-minute state refresh
         if (tokenStorage.isSetupComplete) {
             Log.d(TAG, "Starting KioskForegroundService on resume")
             com.memorylink.service.KioskForegroundService.start(this)

@@ -47,7 +47,7 @@ data class CalendarEvent(
      * Holiday events:
      * - Are displayed before personal all-day events (holiday first, then personal)
      * - Can be toggled on/off via the "Show Holidays" setting
-     * - Are synced weekly (vs 5 minutes for main calendar)
+     * - Are synced weekly (vs 15 minutes for main calendar)
      * - Use the same display format as personal all-day events
      */
     val isHoliday: Boolean = false

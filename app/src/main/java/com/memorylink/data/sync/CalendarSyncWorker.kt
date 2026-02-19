@@ -20,8 +20,16 @@ import java.util.concurrent.TimeUnit
 /**
  * Background worker for syncing calendar events.
  *
- * WorkManager minimum is 15 minutes (we'd prefer 5). StateCoordinator observes Room directly, so
- * events propagate automatically when inserted/deleted.
+ * Architecture:
+ * - Primary sync: KioskForegroundService runs every 15 minutes with high priority
+ * - Backup sync: This WorkManager job runs once daily as a safety net
+ * - Immediate sync: Available via admin panel "Sync Now" button
+ *
+ * The daily backup ensures data freshness even if the foreground service is killed
+ * by aggressive battery optimizations on some devices.
+ *
+ * StateCoordinator observes Room directly, so events propagate automatically when
+ * inserted/deleted.
  */
 @HiltWorker
 class CalendarSyncWorker
@@ -36,7 +44,7 @@ constructor(
         Log.d(TAG, "Starting calendar sync")
 
         return try {
-            // Sync main calendar (every 5 minutes via WorkManager's 15-min minimum)
+            // Sync main calendar (daily backup - primary sync is via KioskForegroundService)
             val mainSyncResult = repository.syncEvents()
 
             when (mainSyncResult) {
@@ -98,25 +106,30 @@ constructor(
         const val PERIODIC_WORK_NAME = "calendar_sync_periodic"
         const val IMMEDIATE_WORK_NAME = "calendar_sync_immediate"
 
-        /** Schedule periodic sync (15-minute minimum per WorkManager). */
-        fun schedulePeriodicSync(context: Context) {
+        /**
+         * Schedule daily backup sync.
+         *
+         * This runs once per day as a safety net in case the foreground service is killed.
+         * Primary sync happens every 15 minutes via KioskForegroundService.
+         */
+        fun scheduleDailyBackupSync(context: Context) {
             val constraints =
                     Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
-            val periodicWork =
-                    PeriodicWorkRequestBuilder<CalendarSyncWorker>(15, TimeUnit.MINUTES)
+            val dailyWork =
+                    PeriodicWorkRequestBuilder<CalendarSyncWorker>(24, TimeUnit.HOURS)
                             .setConstraints(constraints)
-                            .setInitialDelay(1, TimeUnit.MINUTES)
+                            .setInitialDelay(1, TimeUnit.HOURS)
                             .build()
 
             WorkManager.getInstance(context)
                     .enqueueUniquePeriodicWork(
                             PERIODIC_WORK_NAME,
                             ExistingPeriodicWorkPolicy.KEEP,
-                            periodicWork
+                            dailyWork
                     )
 
-            Log.d(TAG, "Periodic sync scheduled (every 15 minutes)")
+            Log.d(TAG, "Daily backup sync scheduled")
         }
 
         /** Trigger immediate sync (app start, settings change). */

@@ -47,15 +47,17 @@ class MemoryLinkApp : Application(), Configuration.Provider {
         Log.d(TAG, "Initializing StateTransitionScheduler")
         stateTransitionScheduler.initialize()
 
-        // Schedule calendar sync only if user is signed in AND we're in awake period
-        // During sleep, the scheduler will cancel sync; at wake, it will restart
+        // Schedule daily backup sync if user is signed in
+        // Primary 15-minute sync is handled by KioskForegroundService
+        // Daily backup ensures sync even if foreground service is killed
         if (tokenStorage.isSignedIn && !tokenStorage.selectedCalendarId.isNullOrBlank()) {
+            Log.d(TAG, "Scheduling daily backup sync")
+            CalendarSyncWorker.scheduleDailyBackupSync(this)
+
+            // Trigger immediate sync if in awake period
             if (stateTransitionScheduler.isAwakePeriod()) {
-                Log.d(TAG, "In awake period - scheduling calendar sync")
-                CalendarSyncWorker.schedulePeriodicSync(this)
+                Log.d(TAG, "In awake period - triggering immediate sync")
                 CalendarSyncWorker.triggerImmediateSync(this)
-            } else {
-                Log.d(TAG, "In sleep period - skipping calendar sync until wake")
             }
         }
     }

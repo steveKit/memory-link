@@ -1,8 +1,15 @@
 # MemoryLink
 
-A kiosk-locked Android tablet app for dementia/elderly users displaying calendar events and time.
+MemoryLink is a Kotlin-based kiosk application that transforms any Android tablet into a distraction-free "smart clock" for seniors and individuals with cognitive challenges. By replacing complex mobile interfaces with a high-contrast, read-only display, MemoryLink provides a single, reliable source of truth for the time, date, and "what’s happening next."
 
-> 🚧 **Work in Progress** - See [plan.md](./plan.md) for the detailed spec and roadmap.
+## Why MemoryLink?
+
+- **Cognitive Clarity:** Strips away the noise of modern OS notifications and icons, leaving only essential information.
+- **Locked-Down Security:** Utilizes Android Kiosk mode to prevent accidental navigation or "getting lost" in other apps.
+- **Remote Peace of Mind:** Caregivers manage the schedule via Google Calendar; the app handles the rest.
+
+> [!IMPORTANT]
+> **Language & Grammar:** This app is currently optimized for English sentence structure. Display phrases (e.g., "Today is...", "At 10:30 am...") are hard-coded with English syntax to ensure natural readability for the user.
 
 ## Overview
 
@@ -24,30 +31,32 @@ A kiosk-locked Android tablet app for dementia/elderly users displaying calendar
 
 The display shows calendar events with clear, auto-scaling text optimized for elderly/visually impaired users.
 
-### Timed Events
+### Display Language Examples
 
-Timed events display with an "AT" prefix:
+**Timed Events (event card area):**
 
-```
-AT 10:30 AM
-Doctor Appointment
-```
+| Scenario                | Display                                                     |
+| ----------------------- | ----------------------------------------------------------- |
+| Today                   | "At 10:30 am, Doctor Appointment"                           |
+| Tomorrow                | "Tomorrow, at 2:00 pm, Lunch with Sarah"                    |
+| Future (within 2 weeks) | "On Wednesday, February 18th at 10:30 am, Physical Therapy" |
 
-### All-Day Events
+**All-Day Events (clock area):**
 
-All-day events display with a "TODAY IS" prefix:
+| Scenario            | Display                      |
+| ------------------- | ---------------------------- |
+| Single-day today    | "Today is Mom's Birthday"    |
+| Single-day tomorrow | "Tomorrow is Family Reunion" |
+| Future day          | "Wednesday is Road Trip"     |
+| Multi-day (ongoing) | "Vacation until Friday"      |
 
-```
-TODAY IS
-Mom's Birthday
-```
+### Formatting Tips for Caregivers
 
-**Formatting Tip for Caregivers:** Since all-day events display as "TODAY IS [Event Title]", name your all-day events accordingly:
+Since event titles are inserted into grammatical phrases, follow these guidelines:
 
-- ✅ Good: "Mom's Birthday" → displays as "TODAY IS Mom's Birthday"
-- ❌ Avoid: "Today is Mom's Birthday" → displays as "TODAY IS Today is Mom's Birthday"
-
-Both lines use the same large font size and auto-scale together to fill the message area while never truncating text.
+- ✅ **Name events as nouns/phrases:** "Mom's Birthday", "Doctor Appointment", "Family Reunion"
+- ❌ **Avoid starting with "Today is":** "Today is Mom's Birthday" → displays as "Today is Today is Mom's Birthday"
+- ❌ **Avoid ending punctuation for multi-day events:** "European Vacation." → displays as "European Vacation. until Friday"
 
 ## Configuration via Calendar Events
 
@@ -57,22 +66,39 @@ MemoryLink can be configured remotely by creating special calendar events with t
 
 1. **Create a calendar event** with a title like `[CONFIG] SLEEP 21:00`
 2. **The app caches events 2 weeks in advance** - config events are processed immediately upon caching
-3. **Settings persist** until overwritten by a newer config event of the same type, or manually changed in admin mode
-4. **Config events are never shown** to the memory user - they're parsed and filtered out
+3. **Config events are never shown** to the memory user - they're parsed and filtered out
+4. **Successfully processed config events are automatically deleted** from the calendar
+
+### Config Event Consumption
+
+When a `[CONFIG]` event is processed:
+
+- ✅ **Valid syntax:** Settings are applied, event is deleted from Google Calendar
+- ❌ **Invalid syntax:** Event remains in calendar (serves as a visual indicator of the error)
+
+If a config event stays in your calendar after sync, check the syntax - the app could not parse it.
+
+### Time Format in Config Events
+
+The app accepts both 12-hour and 24-hour formats for SLEEP and WAKE times:
+
+| Format                 | Example                | Notes                                 |
+| ---------------------- | ---------------------- | ------------------------------------- |
+| 24-hour                | `[CONFIG] SLEEP 21:00` | Recommended for clarity               |
+| 12-hour **(no AM/PM)** | `[CONFIG] WAKE 7:00`   | **WAKE assumes AM, SLEEP assumes PM** |
 
 ### Best Practices
 
-- **Schedule config events for tomorrow** (or any day within the next 2 weeks) to ensure they're cached and processed promptly
-- **Config events can be deleted** from your calendar after the app has synced - the setting will remain active
-- **Use recurring events sparingly** - a single config event sets the value permanently until changed
+- **Schedule config events ahead of the current date** to ensure they're cached and processed promptly
+- **Config events are auto-deleted** from your calendar after being processed. This indicates that they have been applied.
 
 ### Available Commands
 
 | Command             | Example                      | Description                                      |
 | ------------------- | ---------------------------- | ------------------------------------------------ |
 | `SLEEP`             | `[CONFIG] SLEEP 21:00`       | Set sleep mode start time (HH:MM or 12h format)  |
-| `WAKE`              | `[CONFIG] WAKE 07:00`        | Set wake time (HH:MM or 12h format)              |
-| `BRIGHTNESS`        | `[CONFIG] BRIGHTNESS 80`     | Screen brightness (0-100)                        |
+| `WAKE`              | `[CONFIG] WAKE 7:00`         | Set wake time (HH:MM or 12h format)              |
+| `BRIGHTNESS`        | `[CONFIG] BRIGHTNESS 80`     | Screen brightness (10-100)                       |
 | `TIME_FORMAT`       | `[CONFIG] TIME_FORMAT 12`    | Clock format: `12` or `24` hour (default: 12)    |
 | `SHOW YEAR`         | `[CONFIG] SHOW YEAR`         | Display year in date (e.g., "February 11, 2026") |
 | `HIDE YEAR`         | `[CONFIG] HIDE YEAR`         | Hide year in date (e.g., "February 11")          |
@@ -87,10 +113,51 @@ _\*HOLIDAYS commands only apply if a holiday calendar is configured in admin mod
 
 To have the display dim at 9 PM and wake at 7 AM:
 
-1. Create event: `[CONFIG] SLEEP 21:00` (schedule for any time tomorrow)
-2. Create event: `[CONFIG] WAKE 07:00` (schedule for any time tomorrow)
-3. Wait for next sync (up to 5 minutes)
-4. Optionally delete the events from your calendar
+1. Create event: `[CONFIG] SLEEP 9:00` (schedule for any time tomorrow)
+2. Create event: `[CONFIG] WAKE 7:00` (schedule for any time tomorrow)
+3. Wait for next sync (up to 15 minutes)
+4. Events will be auto-deleted from your calendar once processed
+
+## Calendar Sync
+
+The app syncs with Google Calendar automatically to fetch new events.
+
+### Sync Schedule
+
+| Sync Type    | Frequency        | Purpose                                     |
+| ------------ | ---------------- | ------------------------------------------- |
+| **Primary**  | Every 15 minutes | Main sync via foreground service            |
+| **Backup**   | Once daily       | Safety net if service is interrupted        |
+| **Manual**   | On-demand        | "Sync Now" button in admin panel            |
+| **Holidays** | Once weekly      | Active only if holiday calendar is selected |
+
+## Google Calendar API Scopes
+
+The app requires two OAuth scopes:
+
+| Scope               | Purpose                        |
+| ------------------- | ------------------------------ |
+| `calendar.readonly` | List calendars and read events |
+| `calendar.events`   | Delete processed config events |
+
+Both scopes are requested during Google Sign-In setup.
+
+## Admin Mode
+
+Access admin mode by tapping 5 times rapidly in the top-left corner of the screen, then entering your 4-digit PIN.
+
+### Admin Features
+
+- Google account sign-in
+- Calendar selection
+- Holiday calendar selection
+- Display settings (wake/sleep times, brightness, time format)
+- Manual sync trigger
+- Exit kiosk mode
+
+### Admin Timeout
+
+The admin panel automatically returns to kiosk mode after **30 seconds of inactivity**.
 
 ## Tech Stack
 
@@ -161,18 +228,9 @@ adb shell dpm remove-active-admin com.memorylink/.service.DeviceAdminReceiver
 
 Or from the device: Admin Mode → Settings → Exit Kiosk Mode (requires factory reset for full removal).
 
-### Troubleshooting
-
-| Issue                             | Solution                                                          |
-| --------------------------------- | ----------------------------------------------------------------- |
-| "Not allowed to set device owner" | Factory reset the device and skip Google account setup            |
-| "Already has a device owner"      | Remove existing device owner first or factory reset               |
-| App doesn't block home button     | Verify device owner is set with `adb shell dumpsys device_policy` |
-| "Unknown admin component"         | Ensure the app is installed before running dpm command            |
-
 ### Without Device Owner
 
-If device owner cannot be set, the app will still function but with reduced kiosk protection:
+The app will still function but with reduced kiosk protection:
 
 - Clock and events display normally
 - Sleep mode and config parsing work
@@ -180,20 +238,6 @@ If device owner cannot be set, the app will still function but with reduced kios
 - **BUT:** Home/back buttons will still work (user can exit)
 
 For testing without device owner, the app logs: `Not device owner, skipping LockTask start`
-
-## Project Status
-
-- [x] Planning & Architecture
-- [x] Phase 1: Project Setup
-- [x] Phase 2: Display Layer (Kiosk UI)
-- [x] Phase 3: State Machine
-- [x] Phase 4: Calendar Integration
-- [x] Phase 5: Config Parser
-- [x] Phase 6: Admin Mode
-- [x] Phase 7: Kiosk Lock
-- [x] Phase 8: First-Time Setup
-- [ ] Phase 9: Testing & Polish
-- [ ] Phase 10: Documentation & Release
 
 ## License
 
