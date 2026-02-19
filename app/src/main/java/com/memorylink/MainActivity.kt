@@ -284,6 +284,7 @@ private fun MemoryLinkNavHost(
         composable(MainRoutes.ADMIN) {
             val adminViewModel: AdminViewModel = hiltViewModel()
             val scope = rememberCoroutineScope()
+            val settingsState by adminViewModel.settingsState.collectAsStateWithLifecycle()
 
             // Track sign-in result
             var pendingSignInResult by remember { mutableStateOf<Intent?>(null) }
@@ -293,6 +294,21 @@ private fun MemoryLinkNavHost(
                 pendingSignInResult?.let { data ->
                     adminViewModel.handleSignInResult(data)
                     pendingSignInResult = null
+                }
+            }
+
+            // Apply brightness in Admin mode
+            // Uses configured brightness (not sleep-adjusted) so admin is always visible
+            val view = LocalView.current
+            LaunchedEffect(settingsState.brightness) {
+                val activity = view.context as? ComponentActivity
+                activity?.window?.let { window ->
+                    val brightnessPercent = settingsState.brightness ?: 100
+                    val brightnessFloat = brightnessPercent / 100f
+                    window.attributes = window.attributes.also {
+                        it.screenBrightness = brightnessFloat
+                    }
+                    Log.d("AdminMode", "Applied brightness: $brightnessPercent% ($brightnessFloat)")
                 }
             }
 
