@@ -7,45 +7,27 @@ import java.time.LocalTime
  *
  * Config events use the syntax: [CONFIG] TYPE VALUE
  *
- * See .clinerules/10-project-meta.md for full syntax documentation.
+ * Supported configurations:
+ * - SLEEP HH:MM - Sleep time (static time only)
+ * - WAKE HH:MM - Wake time (static time only)
+ * - BRIGHTNESS 0-100 - Screen brightness
+ * - TIME_FORMAT 12|24 - Clock format
  */
 sealed class ConfigResult {
 
     /**
      * Sleep time configuration.
      *
-     * Syntax:
-     * - `[CONFIG] SLEEP 21:00` - Static time (HH:MM)
-     * - `[CONFIG] SLEEP SUNSET` - At sunset
-     * - `[CONFIG] SLEEP SUNSET+30` - 30 min after sunset
-     * - `[CONFIG] SLEEP SUNSET-15` - 15 min before sunset
+     * Syntax: `[CONFIG] SLEEP 21:00` - Static time (HH:MM or 12h format)
      */
-    sealed class SleepConfig : ConfigResult() {
-        /** Static sleep time (HH:MM format). */
-        data class StaticTime(val time: LocalTime) : SleepConfig()
-
-        /** Dynamic sleep time relative to sunset. */
-        data class DynamicTime(val reference: SolarReference, val offsetMinutes: Int) :
-                SleepConfig()
-    }
+    data class SleepConfig(val time: LocalTime) : ConfigResult()
 
     /**
      * Wake time configuration.
      *
-     * Syntax:
-     * - `[CONFIG] WAKE 07:00` - Static time (HH:MM)
-     * - `[CONFIG] WAKE SUNRISE` - At sunrise
-     * - `[CONFIG] WAKE SUNRISE+15` - 15 min after sunrise
-     * - `[CONFIG] WAKE SUNRISE-10` - 10 min before sunrise
+     * Syntax: `[CONFIG] WAKE 07:00` - Static time (HH:MM or 12h format)
      */
-    sealed class WakeConfig : ConfigResult() {
-        /** Static wake time (HH:MM format). */
-        data class StaticTime(val time: LocalTime) : WakeConfig()
-
-        /** Dynamic wake time relative to sunrise. */
-        data class DynamicTime(val reference: SolarReference, val offsetMinutes: Int) :
-                WakeConfig()
-    }
+    data class WakeConfig(val time: LocalTime) : ConfigResult()
 
     /**
      * Brightness configuration.
@@ -76,10 +58,4 @@ sealed class ConfigResult {
      * @param reason Why parsing failed
      */
     data class Invalid(val rawText: String, val reason: String) : ConfigResult()
-}
-
-/** Reference point for solar-based time calculations. */
-enum class SolarReference {
-    SUNRISE,
-    SUNSET
 }

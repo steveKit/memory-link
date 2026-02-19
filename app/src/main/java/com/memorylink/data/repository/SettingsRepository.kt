@@ -2,7 +2,6 @@ package com.memorylink.data.repository
 
 import android.util.Log
 import com.memorylink.data.auth.TokenStorage
-import com.memorylink.data.remote.SunriseSunsetApi
 import com.memorylink.domain.model.AppSettings
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -17,18 +16,12 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Settings are unified - both admin panel and [CONFIG] calendar events write to the same storage.
  * Last write wins, no priority system.
- *
- * For dynamic times (SUNRISE/SUNSET), the SunriseSunsetApi is used to resolve the actual time, with
- * fallbacks to defaults.
- *
- * See .clinerules/10-project-meta.md for config documentation.
  */
 @Singleton
 class SettingsRepository
 @Inject
 constructor(
-        private val tokenStorage: TokenStorage,
-        private val sunriseSunsetApi: SunriseSunsetApi
+        private val tokenStorage: TokenStorage
 ) {
     companion object {
         private const val TAG = "SettingsRepository"
@@ -56,8 +49,8 @@ constructor(
         return newSettings
     }
 
-    /** Build AppSettings by reading from storage and resolving solar times. */
-    private suspend fun buildSettings(): AppSettings {
+    /** Build AppSettings by reading from storage. */
+    private fun buildSettings(): AppSettings {
         return AppSettings(
                 sleepTime = resolveSleepTime(),
                 wakeTime = resolveWakeTime(),
@@ -69,85 +62,35 @@ constructor(
     }
 
     /**
-     * Resolve sleep time - either from static time or solar calculation. Falls back to default
-     * (SUNSET+30 or 21:00) if nothing is set.
+     * Resolve sleep time from storage.
+     * Falls back to default if not set.
      */
-    private suspend fun resolveSleepTime(): LocalTime {
-        // Check for static time
+    private fun resolveSleepTime(): LocalTime {
         tokenStorage.sleepTime?.let { timeStr ->
             parseTime(timeStr)?.let { time ->
-                Log.d(TAG, "Using static sleep time: $time")
+                Log.d(TAG, "Using stored sleep time: $time")
                 return time
             }
         }
 
-        // Check for solar time
-        tokenStorage.sleepSolarRef?.let { solarRef ->
-            val offset = tokenStorage.sleepSolarOffset
-            val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_SLEEP_TIME)
-            Log.d(TAG, "Using solar sleep time: $solarRef${formatOffset(offset)} -> $resolvedTime")
-            return resolvedTime
-        }
-
-        // Default: Fixed time (no solar calculation)
         Log.d(TAG, "Using default sleep time: ${AppSettings.DEFAULT_SLEEP_TIME}")
         return AppSettings.DEFAULT_SLEEP_TIME
     }
 
     /**
-     * Resolve wake time - either from static time or solar calculation. Falls back to default
-     * (SUNRISE or 06:00) if nothing is set.
+     * Resolve wake time from storage.
+     * Falls back to default if not set.
      */
-    private suspend fun resolveWakeTime(): LocalTime {
-        // Check for static time
+    private fun resolveWakeTime(): LocalTime {
         tokenStorage.wakeTime?.let { timeStr ->
             parseTime(timeStr)?.let { time ->
-                Log.d(TAG, "Using static wake time: $time")
+                Log.d(TAG, "Using stored wake time: $time")
                 return time
             }
         }
 
-        // Check for solar time
-        tokenStorage.wakeSolarRef?.let { solarRef ->
-            val offset = tokenStorage.wakeSolarOffset
-            val resolvedTime = resolveSolarTime(solarRef, offset, AppSettings.DEFAULT_WAKE_TIME)
-            Log.d(TAG, "Using solar wake time: $solarRef${formatOffset(offset)} -> $resolvedTime")
-            return resolvedTime
-        }
-
-        // Default: Fixed time (no solar calculation)
         Log.d(TAG, "Using default wake time: ${AppSettings.DEFAULT_WAKE_TIME}")
         return AppSettings.DEFAULT_WAKE_TIME
-    }
-
-    /**
-     * Resolve solar time (SUNRISE/SUNSET) with offset.
-     *
-     * @param solarRef "SUNRISE" or "SUNSET"
-     * @param offsetMinutes Offset in minutes (can be negative)
-     * @param fallback Fallback time if API fails
-     * @return Resolved LocalTime
-     */
-    private suspend fun resolveSolarTime(
-            solarRef: String,
-            offsetMinutes: Int,
-            fallback: LocalTime
-    ): LocalTime {
-        val baseTime =
-                when (solarRef.uppercase()) {
-                    "SUNRISE" -> sunriseSunsetApi.getSunrise(fallback)
-                    "SUNSET" -> sunriseSunsetApi.getSunset(fallback)
-                    else -> {
-                        Log.w(TAG, "Unknown solar reference: $solarRef, using fallback")
-                        fallback
-                    }
-                }
-
-        return if (offsetMinutes != 0) {
-            baseTime.plusMinutes(offsetMinutes.toLong())
-        } else {
-            baseTime
-        }
     }
 
     /**
@@ -180,19 +123,5 @@ constructor(
     /** Notify that settings have changed. Call after admin panel or [CONFIG] event changes. */
     suspend fun onSettingsChanged() {
         refreshSettings()
-    }
-
-    /** Clear the solar time cache (call at midnight for fresh data). */
-    fun clearSolarCache() {
-        sunriseSunsetApi.clearCache()
-    }
-
-    /** Format offset for logging (e.g., +30, -15, or empty for 0). */
-    private fun formatOffset(offset: Int): String {
-        return when {
-            offset > 0 -> "+$offset"
-            offset < 0 -> "$offset"
-            else -> ""
-        }
     }
 }

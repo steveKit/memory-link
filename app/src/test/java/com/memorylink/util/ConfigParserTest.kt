@@ -1,7 +1,6 @@
 package com.memorylink.util
 
 import com.memorylink.domain.model.ConfigResult.*
-import com.memorylink.domain.model.SolarReference
 import java.time.LocalTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,12 +10,8 @@ import org.junit.Test
 /**
  * Unit tests for ConfigParser.
  *
- * Per .clinerules/10-project-meta.md:
- * - Unit Tests: 100% coverage on config parser ([CONFIG] event syntax)
- *
  * Tests all config patterns:
- * - SLEEP/WAKE with static times (HH:MM)
- * - SLEEP/WAKE with dynamic times (SUNRISE/SUNSET with offsets)
+ * - SLEEP/WAKE with static times (HH:MM or 12-hour format)
  * - BRIGHTNESS (0-100)
  * - TIME_FORMAT (12/24)
  * - Invalid syntax handling
@@ -61,39 +56,39 @@ class ConfigParserTest {
     @Test
     fun `SLEEP parses static time HH-MM format (24h)`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 21:00")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(21, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(21, 0), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses unambiguous 24h time (hour 13-23)`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 22:30")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(22, 30), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(22, 30), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses ambiguous time as PM (hour 1-11 without AM-PM)`() {
         // "9:30" without AM/PM for SLEEP should become 21:30 (9:30 PM)
         val result = ConfigParser.parse("[CONFIG] SLEEP 9:30")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(21, 30), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(21, 30), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses ambiguous hour 12 as PM (noon)`() {
         // "12:00" without AM/PM for SLEEP should be 12:00 (noon, not midnight)
         val result = ConfigParser.parse("[CONFIG] SLEEP 12:00")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(12, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(12, 0), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses midnight as 0-00`() {
         // "0:00" is clearly midnight
         val result = ConfigParser.parse("[CONFIG] SLEEP 0:00")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(0, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(0, 0), (result as SleepConfig).time)
     }
 
     // endregion
@@ -103,50 +98,50 @@ class ConfigParserTest {
     @Test
     fun `SLEEP parses 12h format with PM (space)`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 9:00 PM")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(21, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(21, 0), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses 12h format with PM (no space)`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 9:00PM")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(21, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(21, 0), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses 12h shorthand with PM`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 9PM")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(21, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(21, 0), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses 12h format lowercase pm`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 10:30pm")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(22, 30), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(22, 30), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses 12h format with AM (explicit early morning)`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 1:00 AM")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(1, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(1, 0), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses 12PM as noon`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 12PM")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(12, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(12, 0), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP parses 12AM as midnight`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 12AM")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(0, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(0, 0), (result as SleepConfig).time)
     }
 
     // endregion
@@ -156,65 +151,20 @@ class ConfigParserTest {
     @Test
     fun `SLEEP trims extra words after 24h time`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 21:00 bedtime")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(21, 0), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(21, 0), (result as SleepConfig).time)
     }
 
     @Test
     fun `SLEEP trims extra words after 12h time`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 9:00 PM tonight reminder")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(21, 0), (result as SleepConfig.StaticTime).time)
-    }
-
-    @Test
-    fun `SLEEP trims extra words after solar reference`() {
-        val result = ConfigParser.parse("[CONFIG] SLEEP SUNSET+30 reminder")
-        assertTrue(result is SleepConfig.DynamicTime)
-        val dynamic = result as SleepConfig.DynamicTime
-        assertEquals(SolarReference.SUNSET, dynamic.reference)
-        assertEquals(30, dynamic.offsetMinutes)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(21, 0), (result as SleepConfig).time)
     }
 
     // endregion
 
-    // region SLEEP config tests - solar times
-
-    @Test
-    fun `SLEEP parses SUNSET without offset`() {
-        val result = ConfigParser.parse("[CONFIG] SLEEP SUNSET")
-        assertTrue(result is SleepConfig.DynamicTime)
-        val dynamic = result as SleepConfig.DynamicTime
-        assertEquals(SolarReference.SUNSET, dynamic.reference)
-        assertEquals(0, dynamic.offsetMinutes)
-    }
-
-    @Test
-    fun `SLEEP parses SUNSET with positive offset`() {
-        val result = ConfigParser.parse("[CONFIG] SLEEP SUNSET+30")
-        assertTrue(result is SleepConfig.DynamicTime)
-        val dynamic = result as SleepConfig.DynamicTime
-        assertEquals(SolarReference.SUNSET, dynamic.reference)
-        assertEquals(30, dynamic.offsetMinutes)
-    }
-
-    @Test
-    fun `SLEEP parses SUNSET with negative offset`() {
-        val result = ConfigParser.parse("[CONFIG] SLEEP SUNSET-15")
-        assertTrue(result is SleepConfig.DynamicTime)
-        val dynamic = result as SleepConfig.DynamicTime
-        assertEquals(SolarReference.SUNSET, dynamic.reference)
-        assertEquals(-15, dynamic.offsetMinutes)
-    }
-
-    @Test
-    fun `SLEEP parses SUNRISE with offset`() {
-        val result = ConfigParser.parse("[CONFIG] SLEEP SUNRISE+60")
-        assertTrue(result is SleepConfig.DynamicTime)
-        val dynamic = result as SleepConfig.DynamicTime
-        assertEquals(SolarReference.SUNRISE, dynamic.reference)
-        assertEquals(60, dynamic.offsetMinutes)
-    }
+    // region SLEEP config tests - error cases
 
     @Test
     fun `SLEEP returns invalid for missing value`() {
@@ -241,31 +191,31 @@ class ConfigParserTest {
     @Test
     fun `WAKE parses static time (24h format)`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 07:00")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(7, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(7, 0), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE parses ambiguous time as AM (hour 1-11 without AM-PM)`() {
         // "7:00" without AM/PM for WAKE should stay 07:00 (7:00 AM)
         val result = ConfigParser.parse("[CONFIG] WAKE 7:00")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(7, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(7, 0), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE parses ambiguous time 6-30 as AM`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 6:30")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(6, 30), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(6, 30), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE parses ambiguous hour 12 as midnight (12 AM)`() {
         // "12:00" without AM/PM for WAKE should be 00:00 (midnight, 12 AM)
         val result = ConfigParser.parse("[CONFIG] WAKE 12:00")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(0, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(0, 0), (result as WakeConfig).time)
     }
 
     // endregion
@@ -275,50 +225,50 @@ class ConfigParserTest {
     @Test
     fun `WAKE parses 12h format with AM (space)`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 7:00 AM")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(7, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(7, 0), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE parses 12h format with AM (no space)`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 7:00AM")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(7, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(7, 0), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE parses 12h shorthand with AM`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 7AM")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(7, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(7, 0), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE parses 12h format lowercase am`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 6:30am")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(6, 30), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(6, 30), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE parses 12h format with PM (explicit late wake)`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 2:00 PM")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(14, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(14, 0), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE parses 12AM as midnight`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 12AM")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(0, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(0, 0), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE parses 12PM as noon`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 12PM")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(12, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(12, 0), (result as WakeConfig).time)
     }
 
     // endregion
@@ -328,65 +278,20 @@ class ConfigParserTest {
     @Test
     fun `WAKE trims extra words after 24h time`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 07:00 alarm set")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(7, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(7, 0), (result as WakeConfig).time)
     }
 
     @Test
     fun `WAKE trims extra words after 12h time`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 7:00 AM morning alarm")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(7, 0), (result as WakeConfig.StaticTime).time)
-    }
-
-    @Test
-    fun `WAKE trims extra words after solar reference`() {
-        val result = ConfigParser.parse("[CONFIG] WAKE SUNRISE+15 daily")
-        assertTrue(result is WakeConfig.DynamicTime)
-        val dynamic = result as WakeConfig.DynamicTime
-        assertEquals(SolarReference.SUNRISE, dynamic.reference)
-        assertEquals(15, dynamic.offsetMinutes)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(7, 0), (result as WakeConfig).time)
     }
 
     // endregion
 
-    // region WAKE config tests - solar times
-
-    @Test
-    fun `WAKE parses SUNRISE without offset`() {
-        val result = ConfigParser.parse("[CONFIG] WAKE SUNRISE")
-        assertTrue(result is WakeConfig.DynamicTime)
-        val dynamic = result as WakeConfig.DynamicTime
-        assertEquals(SolarReference.SUNRISE, dynamic.reference)
-        assertEquals(0, dynamic.offsetMinutes)
-    }
-
-    @Test
-    fun `WAKE parses SUNRISE with positive offset`() {
-        val result = ConfigParser.parse("[CONFIG] WAKE SUNRISE+15")
-        assertTrue(result is WakeConfig.DynamicTime)
-        val dynamic = result as WakeConfig.DynamicTime
-        assertEquals(SolarReference.SUNRISE, dynamic.reference)
-        assertEquals(15, dynamic.offsetMinutes)
-    }
-
-    @Test
-    fun `WAKE parses SUNRISE with negative offset`() {
-        val result = ConfigParser.parse("[CONFIG] WAKE SUNRISE-10")
-        assertTrue(result is WakeConfig.DynamicTime)
-        val dynamic = result as WakeConfig.DynamicTime
-        assertEquals(SolarReference.SUNRISE, dynamic.reference)
-        assertEquals(-10, dynamic.offsetMinutes)
-    }
-
-    @Test
-    fun `WAKE parses SUNSET with offset`() {
-        val result = ConfigParser.parse("[CONFIG] WAKE SUNSET-120")
-        assertTrue(result is WakeConfig.DynamicTime)
-        val dynamic = result as WakeConfig.DynamicTime
-        assertEquals(SolarReference.SUNSET, dynamic.reference)
-        assertEquals(-120, dynamic.offsetMinutes)
-    }
+    // region WAKE config tests - error cases
 
     @Test
     fun `WAKE returns invalid for missing value`() {
@@ -516,25 +421,13 @@ class ConfigParserTest {
     @Test
     fun `parses lowercase config prefix`() {
         val result = ConfigParser.parse("[config] sleep 21:00")
-        assertTrue(result is SleepConfig.StaticTime)
+        assertTrue(result is SleepConfig)
     }
 
     @Test
     fun `parses mixed case config type`() {
         val result = ConfigParser.parse("[CONFIG] Sleep 21:00")
-        assertTrue(result is SleepConfig.StaticTime)
-    }
-
-    @Test
-    fun `parses lowercase solar reference`() {
-        val result = ConfigParser.parse("[CONFIG] WAKE sunrise")
-        assertTrue(result is WakeConfig.DynamicTime)
-    }
-
-    @Test
-    fun `parses mixed case solar reference with offset`() {
-        val result = ConfigParser.parse("[CONFIG] SLEEP Sunset+30")
-        assertTrue(result is SleepConfig.DynamicTime)
+        assertTrue(result is SleepConfig)
     }
 
     // endregion
@@ -544,13 +437,13 @@ class ConfigParserTest {
     @Test
     fun `handles leading whitespace`() {
         val result = ConfigParser.parse("  [CONFIG] SLEEP 21:00")
-        assertTrue(result is SleepConfig.StaticTime)
+        assertTrue(result is SleepConfig)
     }
 
     @Test
     fun `handles trailing whitespace`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 21:00  ")
-        assertTrue(result is SleepConfig.StaticTime)
+        assertTrue(result is SleepConfig)
     }
 
     @Test
@@ -574,8 +467,8 @@ class ConfigParserTest {
                 )
         val results = ConfigParser.parseAll(titles)
         assertEquals(2, results.size)
-        assertTrue(results[0] is SleepConfig.StaticTime)
-        assertTrue(results[1] is WakeConfig.StaticTime)
+        assertTrue(results[0] is SleepConfig)
+        assertTrue(results[1] is WakeConfig)
     }
 
     @Test
@@ -605,15 +498,15 @@ class ConfigParserTest {
     @Test
     fun `handles midnight time`() {
         val result = ConfigParser.parse("[CONFIG] WAKE 00:00")
-        assertTrue(result is WakeConfig.StaticTime)
-        assertEquals(LocalTime.of(0, 0), (result as WakeConfig.StaticTime).time)
+        assertTrue(result is WakeConfig)
+        assertEquals(LocalTime.of(0, 0), (result as WakeConfig).time)
     }
 
     @Test
     fun `handles 23-59 time`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 23:59")
-        assertTrue(result is SleepConfig.StaticTime)
-        assertEquals(LocalTime.of(23, 59), (result as SleepConfig.StaticTime).time)
+        assertTrue(result is SleepConfig)
+        assertEquals(LocalTime.of(23, 59), (result as SleepConfig).time)
     }
 
     @Test
@@ -626,13 +519,6 @@ class ConfigParserTest {
     fun `rejects minute 60`() {
         val result = ConfigParser.parse("[CONFIG] SLEEP 12:60")
         assertTrue(result is Invalid)
-    }
-
-    @Test
-    fun `handles large solar offset`() {
-        val result = ConfigParser.parse("[CONFIG] WAKE SUNRISE+120")
-        assertTrue(result is WakeConfig.DynamicTime)
-        assertEquals(120, (result as WakeConfig.DynamicTime).offsetMinutes)
     }
 
     // endregion

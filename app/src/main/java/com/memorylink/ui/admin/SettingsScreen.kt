@@ -1,7 +1,6 @@
 package com.memorylink.ui.admin
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,12 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -37,11 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,11 +46,12 @@ import java.time.format.DateTimeFormatter
  * Settings screen for display configuration.
  *
  * Shows current settings and allows editing:
- * - Wake time (fixed or solar-based)
- * - Sleep time (fixed or solar-based)
+ * - Wake time
+ * - Sleep time
  * - Brightness
  * - Time format (12/24 hour)
  * - Show year in date
+ * - Show events during sleep
  *
  * Settings can be changed here or via [CONFIG] calendar events - last write wins.
  */
@@ -69,8 +61,6 @@ fun SettingsScreen(
         calendarState: CalendarState,
         onWakeTimeChange: (LocalTime?) -> Unit,
         onSleepTimeChange: (LocalTime?) -> Unit,
-        onWakeSolarTimeChange: (String, Int) -> Unit,
-        onSleepSolarTimeChange: (String, Int) -> Unit,
         onBrightnessChange: (Int?) -> Unit,
         onTimeFormatChange: (Boolean?) -> Unit,
         onShowYearChange: (Boolean?) -> Unit,
@@ -111,13 +101,8 @@ fun SettingsScreen(
                                 title = "Wake Time",
                                 description = "When display enters full brightness mode",
                                 currentTime = settingsState.wakeTime,
-                                currentSolarRef = settingsState.wakeSolarRef,
-                                currentSolarOffset = settingsState.wakeSolarOffset,
-                                resolvedTime = settingsState.resolvedWakeTime,
                                 use24HourFormat = use24Hour,
-                                solarOptions = SolarTimeOption.WAKE_OPTIONS,
-                                onTimeSelected = onWakeTimeChange,
-                                onSolarTimeSelected = onWakeSolarTimeChange
+                                onTimeSelected = onWakeTimeChange
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -127,13 +112,8 @@ fun SettingsScreen(
                                 title = "Sleep Time",
                                 description = "When display enters dimmed mode",
                                 currentTime = settingsState.sleepTime,
-                                currentSolarRef = settingsState.sleepSolarRef,
-                                currentSolarOffset = settingsState.sleepSolarOffset,
-                                resolvedTime = settingsState.resolvedSleepTime,
                                 use24HourFormat = use24Hour,
-                                solarOptions = SolarTimeOption.SLEEP_OPTIONS,
-                                onTimeSelected = onSleepTimeChange,
-                                onSolarTimeSelected = onSleepSolarTimeChange
+                                onTimeSelected = onSleepTimeChange
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -184,35 +164,25 @@ fun SettingsScreen(
         }
 }
 
-/** Time setting item that supports both fixed time and solar-based options. */
+/** Time setting item with time picker. */
 @Composable
 private fun TimeSettingItem(
         title: String,
         description: String,
-        currentTime: LocalTime?,
-        currentSolarRef: String?,
-        currentSolarOffset: Int,
-        resolvedTime: LocalTime,
+        currentTime: LocalTime,
         use24HourFormat: Boolean,
-        solarOptions: List<SolarTimeOption>,
-        onTimeSelected: (LocalTime?) -> Unit,
-        onSolarTimeSelected: (String, Int) -> Unit
+        onTimeSelected: (LocalTime?) -> Unit
 ) {
         var showTimePicker by remember { mutableStateOf(false) }
 
         val timePattern = if (use24HourFormat) "HH:mm" else "h:mm a"
-        // Solar time is active only when explicitly set (solar ref is non-null) AND no fixed time is set
-        // This ensures Fixed Time is the default when neither is explicitly set
-        val isSolarTime = currentSolarRef != null && currentTime == null
-
-        // Determine the default solar reference based on available options
-        val defaultSolarRef = solarOptions.firstOrNull()?.solarRef ?: "SUNRISE"
 
         Column(
                 modifier =
                         Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(Color(0xFF1E1E1E))
+                                .clickable { showTimePicker = true }
                                 .padding(16.dp)
         ) {
                 Text(
@@ -228,92 +198,25 @@ private fun TimeSettingItem(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Mode toggle buttons row
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                        Button(
-                                onClick = { showTimePicker = true },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                colors =
-                                        ButtonDefaults.buttonColors(
-                                                containerColor =
-                                                        if (!isSolarTime)
-                                                                AccentBlue.copy(alpha = 0.3f)
-                                                        else Color(0xFF2A2A2A)
-                                        ),
-                                shape = RoundedCornerShape(8.dp)
-                        ) { Text(text = "Fixed Time", fontSize = 14.sp, color = Color.White) }
+                Text(
+                        text = currentTime.format(DateTimeFormatter.ofPattern(timePattern)),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentBlue
+                )
 
-                        Button(
-                                onClick = {
-                                        // When switching to solar time, use default offset of 0
-                                        onSolarTimeSelected(defaultSolarRef, 0)
-                                },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                colors =
-                                        ButtonDefaults.buttonColors(
-                                                containerColor =
-                                                        if (isSolarTime)
-                                                                AccentBlue.copy(alpha = 0.3f)
-                                                        else Color(0xFF2A2A2A)
-                                        ),
-                                shape = RoundedCornerShape(8.dp)
-                        ) { Text(text = "Solar Time", fontSize = 14.sp, color = Color.White) }
-                }
+                Spacer(modifier = Modifier.height(8.dp))
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Conditional settings display based on selected mode
-                if (isSolarTime) {
-                        // Solar time settings
-                        val solarLabel = if (currentSolarRef == "SUNRISE") "☀️ Sunrise" else "🌙 Sunset"
-                        
-                        Text(
-                                text = solarLabel,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentBlue
-                        )
-                        
-                        Text(
-                                text = "Today: ${resolvedTime.format(DateTimeFormatter.ofPattern(timePattern))}",
-                                fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.6f)
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Offset adjustment controls (only shown in solar mode)
-                        OffsetAdjuster(
-                                currentOffset = currentSolarOffset,
-                                onOffsetChange = { newOffset ->
-                                        onSolarTimeSelected(currentSolarRef!!, newOffset)
-                                }
-                        )
-                } else {
-                        // Fixed time settings
-                        Text(
-                                text = resolvedTime.format(DateTimeFormatter.ofPattern(timePattern)),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentBlue
-                        )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Text(
-                                text = "Tap \"Fixed Time\" to change",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.5f)
-                        )
-                }
+                Text(
+                        text = "Tap to change",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                )
         }
 
         if (showTimePicker) {
                 SimpleTimePickerDialog(
-                        initialTime = currentTime ?: resolvedTime,
+                        initialTime = currentTime,
                         use24HourFormat = use24HourFormat,
                         onTimeSelected = {
                                 onTimeSelected(it)
@@ -321,130 +224,6 @@ private fun TimeSettingItem(
                         },
                         onDismiss = { showTimePicker = false }
                 )
-        }
-}
-
-/**
- * Offset adjuster component with +/- buttons and editable text field.
- * 
- * Layout: [-] [+] | [offset value] min
- */
-@Composable
-private fun OffsetAdjuster(
-        currentOffset: Int,
-        onOffsetChange: (Int) -> Unit,
-        modifier: Modifier = Modifier
-) {
-        // Local state for text field editing
-        var textValue by remember(currentOffset) { mutableStateOf(currentOffset.toString()) }
-
-        // Clamp offset to valid range
-        fun clampOffset(value: Int): Int = value.coerceIn(-120, 120)
-
-        Row(
-                modifier = modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-        ) {
-                Text(
-                        text = "Offset:",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(end = 12.dp)
-                )
-
-                // Minus button
-                Box(
-                        modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF2A2A2A))
-                                .clickable {
-                                        val newValue = clampOffset(currentOffset - 15)
-                                        textValue = newValue.toString()
-                                        onOffsetChange(newValue)
-                                },
-                        contentAlignment = Alignment.Center
-                ) {
-                        Text(
-                                text = "−",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentBlue
-                        )
-                }
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                // Plus button
-                Box(
-                        modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF2A2A2A))
-                                .clickable {
-                                        val newValue = clampOffset(currentOffset + 15)
-                                        textValue = newValue.toString()
-                                        onOffsetChange(newValue)
-                                },
-                        contentAlignment = Alignment.Center
-                ) {
-                        Text(
-                                text = "+",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentBlue
-                        )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // Editable text field
-                Row(
-                        modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF2A2A2A))
-                                .border(1.dp, Color(0xFF3A3A3A), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                        BasicTextField(
-                                value = textValue,
-                                onValueChange = { newText ->
-                                        // Allow negative sign, digits only
-                                        val filtered = newText.filter { it.isDigit() || it == '-' }
-                                        // Ensure only one negative sign at the start
-                                        val cleaned = if (filtered.startsWith("-")) {
-                                                "-" + filtered.drop(1).filter { it.isDigit() }
-                                        } else {
-                                                filtered.filter { it.isDigit() }
-                                        }
-                                        textValue = cleaned
-                                        
-                                        // Parse and apply if valid
-                                        cleaned.toIntOrNull()?.let { parsed ->
-                                                val clamped = clampOffset(parsed)
-                                                onOffsetChange(clamped)
-                                        }
-                                },
-                                modifier = Modifier.width(50.dp),
-                                textStyle = TextStyle(
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        textAlign = TextAlign.Center
-                                ),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                cursorBrush = SolidColor(AccentBlue)
-                        )
-
-                        Text(
-                                text = "min",
-                                fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.padding(start = 4.dp)
-                        )
-                }
         }
 }
 
@@ -934,7 +713,7 @@ private fun ShowHolidaysSettingItem(
 
 @Preview(showBackground = true, backgroundColor = 0xFF121212, widthDp = 400, heightDp = 800)
 @Composable
-private fun SettingsScreenPreview_FixedTime() {
+private fun SettingsScreenPreview() {
         MemoryLinkTheme {
                 SettingsScreen(
                         settingsState =
@@ -948,40 +727,6 @@ private fun SettingsScreenPreview_FixedTime() {
                         calendarState = CalendarState(),
                         onWakeTimeChange = {},
                         onSleepTimeChange = {},
-                        onWakeSolarTimeChange = { _, _ -> },
-                        onSleepSolarTimeChange = { _, _ -> },
-                        onBrightnessChange = {},
-                        onTimeFormatChange = {},
-                        onShowYearChange = {},
-                        onShowEventsDuringSleepChange = {},
-                        onShowHolidaysChange = {},
-                        onBackClick = {}
-                )
-        }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFF121212, widthDp = 400, heightDp = 800)
-@Composable
-private fun SettingsScreenPreview_SolarTime() {
-        MemoryLinkTheme {
-                SettingsScreen(
-                        settingsState =
-                                SettingsState(
-                                        wakeSolarRef = "SUNRISE",
-                                        wakeSolarOffset = 15,
-                                        sleepSolarRef = "SUNSET",
-                                        sleepSolarOffset = 30,
-                                        brightness = 80,
-                                        use24HourFormat = false,
-                                        showEventsDuringSleep = false,
-                                        resolvedWakeTime = LocalTime.of(6, 45),
-                                        resolvedSleepTime = LocalTime.of(18, 30)
-                                ),
-                        calendarState = CalendarState(),
-                        onWakeTimeChange = {},
-                        onSleepTimeChange = {},
-                        onWakeSolarTimeChange = { _, _ -> },
-                        onSleepSolarTimeChange = { _, _ -> },
                         onBrightnessChange = {},
                         onTimeFormatChange = {},
                         onShowYearChange = {},
@@ -1012,8 +757,6 @@ private fun SettingsScreenPreview_WithHolidays() {
                         ),
                         onWakeTimeChange = {},
                         onSleepTimeChange = {},
-                        onWakeSolarTimeChange = { _, _ -> },
-                        onSleepSolarTimeChange = { _, _ -> },
                         onBrightnessChange = {},
                         onTimeFormatChange = {},
                         onShowYearChange = {},

@@ -3,14 +3,17 @@ package com.memorylink.util
 import android.util.Log
 import com.memorylink.domain.model.ConfigResult
 import com.memorylink.domain.model.ConfigResult.*
-import com.memorylink.domain.model.SolarReference
 import java.time.LocalTime
 
 /**
- * Parser for [CONFIG] calendar event syntax. See: 10-project-meta.md
+ * Parser for [CONFIG] calendar event syntax.
  *
- * Supports: SLEEP/WAKE (static time or SUNRISE/SUNSET±offset), BRIGHTNESS (0-100), TIME_FORMAT
- * (12/24). Invalid syntax is logged and returns ConfigResult.Invalid.
+ * Supports:
+ * - SLEEP/WAKE with static time (HH:MM or 12-hour format)
+ * - BRIGHTNESS (0-100)
+ * - TIME_FORMAT (12/24)
+ *
+ * Invalid syntax is logged and returns ConfigResult.Invalid.
  *
  * Time formats supported:
  * - 24-hour: "21:00", "9:30", "07:00"
@@ -29,7 +32,6 @@ object ConfigParser {
     // 12-hour with AM/PM: "9:00 PM", "9:00PM", "9PM", "9:30am", etc.
     private val TIME_12H_PATTERN =
             Regex("""^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$""", RegexOption.IGNORE_CASE)
-    private val SOLAR_PATTERN = Regex("""^(SUNRISE|SUNSET)([+-]\d+)?$""", RegexOption.IGNORE_CASE)
 
     /**
      * Check if an event title is a config event.
@@ -44,7 +46,7 @@ object ConfigParser {
     /**
      * Parse a config event title into a ConfigResult.
      *
-     * @param title The full event title (e.g., "[CONFIG] SLEEP SUNSET+30")
+     * @param title The full event title (e.g., "[CONFIG] SLEEP 21:00")
      * @return Parsed ConfigResult, or Invalid if parsing fails
      */
     fun parse(title: String): ConfigResult {
@@ -86,7 +88,6 @@ object ConfigParser {
      * - Static time (24h): "21:00", "9:30"
      * - Static time (12h): "9:00 PM", "9PM", "9:00pm"
      * - Ambiguous time (no AM/PM): Assumes PM for SLEEP (e.g., "9:00" → 21:00)
-     * - Dynamic time: "SUNSET", "SUNSET+30", "SUNSET-15"
      *
      * Extra words are trimmed from the value before parsing.
      */
@@ -96,16 +97,11 @@ object ConfigParser {
         }
 
         // Extract time portion (trim extra words like "bedtime", "reminder", etc.)
-        val cleanedValue = extractTimeOrSolarValue(value)
-
-        // Try solar reference first (SUNRISE/SUNSET patterns)
-        parseSolarTime(cleanedValue)?.let { (reference, offset) ->
-            return SleepConfig.DynamicTime(reference, offset)
-        }
+        val cleanedValue = extractTimeValue(value)
 
         // Try static time with context: SLEEP assumes PM for ambiguous times
         parseStaticTimeWithContext(cleanedValue, assumePm = true)?.let {
-            return SleepConfig.StaticTime(it)
+            return SleepConfig(it)
         }
 
         return Invalid(rawTitle, "Invalid SLEEP value: $value")
@@ -118,7 +114,6 @@ object ConfigParser {
      * - Static time (24h): "07:00", "6:30"
      * - Static time (12h): "7:00 AM", "7AM", "7:00am"
      * - Ambiguous time (no AM/PM): Assumes AM for WAKE (e.g., "7:00" → 07:00)
-     * - Dynamic time: "SUNRISE", "SUNRISE+15", "SUNRISE-10"
      *
      * Extra words are trimmed from the value before parsing.
      */
@@ -128,16 +123,11 @@ object ConfigParser {
         }
 
         // Extract time portion (trim extra words like "alarm", "morning", etc.)
-        val cleanedValue = extractTimeOrSolarValue(value)
-
-        // Try solar reference first (SUNRISE/SUNSET patterns)
-        parseSolarTime(cleanedValue)?.let { (reference, offset) ->
-            return WakeConfig.DynamicTime(reference, offset)
-        }
+        val cleanedValue = extractTimeValue(value)
 
         // Try static time with context: WAKE assumes AM for ambiguous times
         parseStaticTimeWithContext(cleanedValue, assumePm = false)?.let {
-            return WakeConfig.StaticTime(it)
+            return WakeConfig(it)
         }
 
         return Invalid(rawTitle, "Invalid WAKE value: $value")
@@ -179,18 +169,17 @@ object ConfigParser {
     }
 
     /**
-     * Extract the time or solar value from a string that may contain extra words.
+     * Extract the time value from a string that may contain extra words.
      *
      * Examples:
      * - "21:00 bedtime" → "21:00"
      * - "9:00 PM set alarm" → "9:00 PM"
      * - "9PM tonight" → "9PM"
-     * - "SUNSET+30 reminder" → "SUNSET+30"
      *
      * @param value The raw config value that may contain extra words
-     * @return The cleaned time or solar reference string
+     * @return The cleaned time string
      */
-    private fun extractTimeOrSolarValue(value: String): String {
+    private fun extractTimeValue(value: String): String {
         val trimmed = value.trim()
 
         // Try to match 12-hour pattern with AM/PM (may include space before AM/PM)
@@ -203,12 +192,6 @@ object ConfigParser {
         // Try to match 24-hour pattern (just HH:MM)
         val time24hExtract = Regex("""^(\d{1,2}:\d{2})""")
         time24hExtract.find(trimmed)?.let {
-            return it.groupValues[1]
-        }
-
-        // Try to match solar pattern (SUNRISE/SUNSET with optional offset)
-        val solarExtract = Regex("""^((?:SUNRISE|SUNSET)(?:[+-]\d+)?)""", RegexOption.IGNORE_CASE)
-        solarExtract.find(trimmed)?.let {
             return it.groupValues[1]
         }
 
@@ -316,34 +299,6 @@ object ConfigParser {
         } catch (e: Exception) {
             null
         }
-    }
-
-    /**
-     * Parse a solar time value (SUNRISE/SUNSET with optional offset).
-     *
-     * @param value Solar string like "SUNSET", "SUNRISE+30", "SUNSET-15"
-     * @return Pair of (SolarReference, offsetMinutes) if valid, null otherwise
-     */
-    private fun parseSolarTime(value: String): Pair<SolarReference, Int>? {
-        val match = SOLAR_PATTERN.matchEntire(value) ?: return null
-
-        val reference =
-                when (match.groupValues[1].uppercase()) {
-                    "SUNRISE" -> SolarReference.SUNRISE
-                    "SUNSET" -> SolarReference.SUNSET
-                    else -> return null
-                }
-
-        val offset =
-                match.groupValues[2].let { offsetStr ->
-                    if (offsetStr.isEmpty()) {
-                        0
-                    } else {
-                        offsetStr.toIntOrNull() ?: return null
-                    }
-                }
-
-        return reference to offset
     }
 
     /**

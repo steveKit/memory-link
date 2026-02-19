@@ -167,32 +167,32 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
     // Last write wins - no priority system.
 
     /**
-     * Wake time as static time (HH:mm format), or null if using solar time. Written by admin panel
-     * or [CONFIG] WAKE HH:MM events.
+     * Wake time in HH:mm format.
+     * Written by admin panel or [CONFIG] WAKE HH:MM events.
      */
     var wakeTime: String?
         get() = prefs.getString(KEY_WAKE_TIME, null)
         set(value) = prefs.edit().putString(KEY_WAKE_TIME, value).apply()
 
     /**
-     * Sleep time as static time (HH:mm format), or null if using solar time. Written by admin panel
-     * or [CONFIG] SLEEP HH:MM events.
+     * Sleep time in HH:mm format.
+     * Written by admin panel or [CONFIG] SLEEP HH:MM events.
      */
     var sleepTime: String?
         get() = prefs.getString(KEY_SLEEP_TIME, null)
         set(value) = prefs.edit().putString(KEY_SLEEP_TIME, value).apply()
 
     /**
-     * Screen brightness (0-100), or -1 if using default. Written by admin panel or [CONFIG]
-     * BRIGHTNESS events.
+     * Screen brightness (0-100), or -1 if using default.
+     * Written by admin panel or [CONFIG] BRIGHTNESS events.
      */
     var brightness: Int
         get() = prefs.getInt(KEY_BRIGHTNESS, -1)
         set(value) = prefs.edit().putInt(KEY_BRIGHTNESS, value).apply()
 
     /**
-     * Time format. null = use default (12h), true = 24h, false = 12h. Written by admin panel or
-     * [CONFIG] TIME_FORMAT events.
+     * Time format. null = use default (12h), true = 24h, false = 12h.
+     * Written by admin panel or [CONFIG] TIME_FORMAT events.
      */
     var use24HourFormat: Boolean?
         get() {
@@ -228,8 +228,8 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         }
 
     /**
-     * Whether to show events during sleep mode. null = use default (false). Written by admin
-     * panel.
+     * Whether to show events during sleep mode. null = use default (false).
+     * Written by admin panel.
      */
     var showEventsDuringSleep: Boolean?
         get() {
@@ -246,35 +246,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
                 prefs.edit().putBoolean(KEY_SHOW_EVENTS_DURING_SLEEP, value).apply()
             }
         }
-
-    // ========== Solar Time Settings ==========
-    // Used when wake/sleep times are relative to sunrise/sunset.
-
-    /**
-     * Wake solar reference ("SUNRISE" or "SUNSET"), or null for static time. When set, wakeTime is
-     * ignored and solar calculation is used.
-     */
-    var wakeSolarRef: String?
-        get() = prefs.getString(KEY_WAKE_SOLAR_REF, null)
-        set(value) = prefs.edit().putString(KEY_WAKE_SOLAR_REF, value).apply()
-
-    /** Wake solar offset in minutes (e.g., +30 or -15). Only used when wakeSolarRef is set. */
-    var wakeSolarOffset: Int
-        get() = prefs.getInt(KEY_WAKE_SOLAR_OFFSET, 0)
-        set(value) = prefs.edit().putInt(KEY_WAKE_SOLAR_OFFSET, value).apply()
-
-    /**
-     * Sleep solar reference ("SUNRISE" or "SUNSET"), or null for static time. When set, sleepTime
-     * is ignored and solar calculation is used.
-     */
-    var sleepSolarRef: String?
-        get() = prefs.getString(KEY_SLEEP_SOLAR_REF, null)
-        set(value) = prefs.edit().putString(KEY_SLEEP_SOLAR_REF, value).apply()
-
-    /** Sleep solar offset in minutes (e.g., +30 or -15). Only used when sleepSolarRef is set. */
-    var sleepSolarOffset: Int
-        get() = prefs.getInt(KEY_SLEEP_SOLAR_OFFSET, 0)
-        set(value) = prefs.edit().putInt(KEY_SLEEP_SOLAR_OFFSET, value).apply()
 
     // ========== Holiday Calendar Settings ==========
     // Optional secondary calendar for holidays. Syncs weekly instead of every 5 minutes.
@@ -326,38 +297,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
                 .apply()
     }
 
-    /** Set wake time to a static time. Clears any solar reference. */
-    fun setStaticWakeTime(time: String?) {
-        wakeTime = time
-        if (time != null) {
-            wakeSolarRef = null
-            wakeSolarOffset = 0
-        }
-    }
-
-    /** Set wake time to a solar-based time. Clears any static time. */
-    fun setSolarWakeTime(solarRef: String, offsetMinutes: Int) {
-        wakeSolarRef = solarRef
-        wakeSolarOffset = offsetMinutes
-        wakeTime = null
-    }
-
-    /** Set sleep time to a static time. Clears any solar reference. */
-    fun setStaticSleepTime(time: String?) {
-        sleepTime = time
-        if (time != null) {
-            sleepSolarRef = null
-            sleepSolarOffset = 0
-        }
-    }
-
-    /** Set sleep time to a solar-based time. Clears any static time. */
-    fun setSolarSleepTime(solarRef: String, offsetMinutes: Int) {
-        sleepSolarRef = solarRef
-        sleepSolarOffset = offsetMinutes
-        sleepTime = null
-    }
-
     /** Clear all app settings (used when resetting or testing). */
     fun clearSettings() {
         prefs.edit()
@@ -366,10 +305,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
                 .remove(KEY_BRIGHTNESS)
                 .remove(KEY_TIME_FORMAT)
                 .remove(KEY_SHOW_YEAR)
-                .remove(KEY_WAKE_SOLAR_REF)
-                .remove(KEY_WAKE_SOLAR_OFFSET)
-                .remove(KEY_SLEEP_SOLAR_REF)
-                .remove(KEY_SLEEP_SOLAR_OFFSET)
                 .apply()
     }
 
@@ -451,12 +386,6 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         private const val KEY_TIME_FORMAT = "time_format"
         private const val KEY_SHOW_YEAR = "show_year"
         private const val KEY_SHOW_EVENTS_DURING_SLEEP = "show_events_during_sleep"
-
-        // Solar time settings
-        private const val KEY_WAKE_SOLAR_REF = "wake_solar_ref"
-        private const val KEY_WAKE_SOLAR_OFFSET = "wake_solar_offset"
-        private const val KEY_SLEEP_SOLAR_REF = "sleep_solar_ref"
-        private const val KEY_SLEEP_SOLAR_OFFSET = "sleep_solar_offset"
 
         // Holiday calendar settings
         private const val KEY_HOLIDAY_CALENDAR_ID = "holiday_calendar_id"

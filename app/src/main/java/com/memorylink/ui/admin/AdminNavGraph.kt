@@ -153,8 +153,6 @@ fun AdminNavGraph(
                     calendarState = calendarState,
                     onWakeTimeChange = viewModel::setWakeTime,
                     onSleepTimeChange = viewModel::setSleepTime,
-                    onWakeSolarTimeChange = viewModel::setWakeSolarTime,
-                    onSleepSolarTimeChange = viewModel::setSleepSolarTime,
                     onBrightnessChange = viewModel::setBrightness,
                     onTimeFormatChange = viewModel::setUse24HourFormat,
                     onShowYearChange = viewModel::setShowYearInDate,

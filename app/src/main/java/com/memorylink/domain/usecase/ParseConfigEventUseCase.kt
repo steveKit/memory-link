@@ -26,7 +26,7 @@ import javax.inject.Inject
  * 1. CalendarSyncWorker syncs events → triggers this use case
  * 2. This use case parses [CONFIG] events (chronologically by startTime)
  * 3. Settings are stored in TokenStorage (unified fields)
- * 4. SettingsRepository refreshes to resolve solar times
+ * 4. SettingsRepository refreshes to load updated settings
  * 5. Successfully processed event IDs are returned for deletion
  */
 class ParseConfigEventUseCase
@@ -155,42 +155,16 @@ constructor(
         }
     }
 
-    /** Apply sleep time configuration to unified storage. */
+    /** Apply sleep time configuration to storage. */
     private fun applySleepConfig(config: SleepConfig) {
-        when (config) {
-            is SleepConfig.StaticTime -> {
-                // Use the helper method to set static time and clear solar ref
-                tokenStorage.setStaticSleepTime(config.time.format(TIME_FORMATTER))
-                Log.d(TAG, "Set sleep time: ${config.time}")
-            }
-            is SleepConfig.DynamicTime -> {
-                // Use the helper method to set solar time and clear static time
-                tokenStorage.setSolarSleepTime(config.reference.name, config.offsetMinutes)
-                Log.d(
-                        TAG,
-                        "Set sleep time: ${config.reference}${formatOffset(config.offsetMinutes)}"
-                )
-            }
-        }
+        tokenStorage.sleepTime = config.time.format(TIME_FORMATTER)
+        Log.d(TAG, "Set sleep time: ${config.time}")
     }
 
-    /** Apply wake time configuration to unified storage. */
+    /** Apply wake time configuration to storage. */
     private fun applyWakeConfig(config: WakeConfig) {
-        when (config) {
-            is WakeConfig.StaticTime -> {
-                // Use the helper method to set static time and clear solar ref
-                tokenStorage.setStaticWakeTime(config.time.format(TIME_FORMATTER))
-                Log.d(TAG, "Set wake time: ${config.time}")
-            }
-            is WakeConfig.DynamicTime -> {
-                // Use the helper method to set solar time and clear static time
-                tokenStorage.setSolarWakeTime(config.reference.name, config.offsetMinutes)
-                Log.d(
-                        TAG,
-                        "Set wake time: ${config.reference}${formatOffset(config.offsetMinutes)}"
-                )
-            }
-        }
+        tokenStorage.wakeTime = config.time.format(TIME_FORMATTER)
+        Log.d(TAG, "Set wake time: ${config.time}")
     }
 
     /** Apply brightness configuration. */
@@ -203,15 +177,6 @@ constructor(
     private fun applyTimeFormatConfig(config: TimeFormatConfig) {
         tokenStorage.use24HourFormat = config.use24Hour
         Log.d(TAG, "Set time format: ${if (config.use24Hour) "24h" else "12h"}")
-    }
-
-    /** Format offset minutes for logging (e.g., +30, -15, or empty for 0). */
-    private fun formatOffset(minutes: Int): String {
-        return when {
-            minutes > 0 -> "+$minutes"
-            minutes < 0 -> "$minutes"
-            else -> ""
-        }
     }
 
     /** Clear all settings. Call this when user wants to reset to defaults. */
