@@ -48,10 +48,12 @@ sealed class DisplayState {
         /**
          * AWAKE_NO_EVENT: Within wake period but no future events in lookahead window. Display:
          * Full clock (72sp) + date (36sp), full brightness.
+         *
+         * All parameters are required - defaults are defined in AppSettings (single source of truth).
          */
         data class AwakeNoEvent(
-                override val use24HourFormat: Boolean = false,
-                override val showYearInDate: Boolean = true,
+                override val use24HourFormat: Boolean,
+                override val showYearInDate: Boolean,
                 override val brightness: Int = DEFAULT_BRIGHTNESS
         ) : DisplayState()
 
@@ -85,9 +87,9 @@ sealed class DisplayState {
                 val timedEventTitle: String? = null,
                 val timedEventTime: LocalTime? = null,
                 val timedEventDate: LocalDate? = null,
-                // Settings
-                override val use24HourFormat: Boolean = false,
-                override val showYearInDate: Boolean = true,
+                // Settings - required, defaults in AppSettings (single source of truth)
+                override val use24HourFormat: Boolean,
+                override val showYearInDate: Boolean,
                 override val brightness: Int = DEFAULT_BRIGHTNESS
         ) : DisplayState() {
 
@@ -123,9 +125,9 @@ sealed class DisplayState {
                 val timedEventTitle: String? = null,
                 val timedEventTime: LocalTime? = null,
                 val timedEventDate: LocalDate? = null,
-                // Settings
-                override val use24HourFormat: Boolean = false,
-                override val showYearInDate: Boolean = true,
+                // Settings - required, defaults in AppSettings (single source of truth)
+                override val use24HourFormat: Boolean,
+                override val showYearInDate: Boolean,
                 override val brightness: Int = SLEEP_BRIGHTNESS
         ) : DisplayState() {
 

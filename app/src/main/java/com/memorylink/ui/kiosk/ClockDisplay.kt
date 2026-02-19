@@ -103,8 +103,8 @@ data class ClockColorScheme(
 fun ClockDisplay(
         time: LocalTime,
         date: LocalDate,
-        use24HourFormat: Boolean = false,
-        showYearInDate: Boolean = true,
+        use24HourFormat: Boolean,
+        showYearInDate: Boolean,
         allDayEventTitle: String? = null,
         allDayEventDate: LocalDate? = null,
         allDayEventEndDate: LocalDate? = null,
@@ -492,8 +492,8 @@ private fun formatEndDate(endDate: LocalDate, today: LocalDate, tomorrow: LocalD
 fun ClockDisplay(
         time: LocalTime,
         date: LocalDate,
-        use24HourFormat: Boolean = false,
-        showYearInDate: Boolean = true,
+        use24HourFormat: Boolean,
+        showYearInDate: Boolean,
         allDayEvents: List<AllDayEventInfo>,
         colorScheme: ClockColorScheme = ClockColorScheme.Awake,
         modifier: Modifier = Modifier
@@ -787,6 +787,7 @@ private fun ClockDisplayLandscapeAwakePreview() {
                         time = LocalTime.of(14, 30),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
+                        showYearInDate = false,
                         colorScheme = ClockColorScheme.Awake
                 )
         }
@@ -806,6 +807,7 @@ private fun ClockDisplayLandscapeSleepPreview() {
                         time = LocalTime.of(23, 45),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
+                        showYearInDate = false,
                         colorScheme = ClockColorScheme.Sleep
                 )
         }
@@ -825,6 +827,7 @@ private fun ClockDisplayAllDayTodayPreview() {
                         time = LocalTime.of(10, 30),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
+                        showYearInDate = false,
                         allDayEventTitle = "Mom's Birthday",
                         allDayEventDate = null, // null = today
                         colorScheme = ClockColorScheme.Awake
@@ -846,6 +849,7 @@ private fun ClockDisplayAllDayTomorrowPreview() {
                         time = LocalTime.of(10, 30),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
+                        showYearInDate = false,
                         allDayEventTitle = "Family Reunion",
                         allDayEventDate = LocalDate.now().plusDays(1), // tomorrow
                         colorScheme = ClockColorScheme.Awake
@@ -867,6 +871,7 @@ private fun ClockDisplayAllDayFuturePreview() {
                         time = LocalTime.of(10, 30),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
+                        showYearInDate = false,
                         allDayEventTitle = "Company Retreat",
                         allDayEventDate = LocalDate.of(2026, 2, 13), // Friday (future)
                         colorScheme = ClockColorScheme.Awake
@@ -888,6 +893,7 @@ private fun ClockDisplayPortraitAwakePreview() {
                         time = LocalTime.of(9, 5),
                         date = LocalDate.of(2026, 12, 25),
                         use24HourFormat = false,
+                        showYearInDate = false,
                         colorScheme = ClockColorScheme.Awake
                 )
         }
@@ -907,6 +913,7 @@ private fun ClockDisplayPortraitSleepPreview() {
                         time = LocalTime.of(3, 30),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
+                        showYearInDate = false,
                         colorScheme = ClockColorScheme.Sleep
                 )
         }
@@ -926,6 +933,7 @@ private fun ClockDisplay24HourPreview() {
                         time = LocalTime.of(14, 30),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = true,
+                        showYearInDate = false,
                         colorScheme = ClockColorScheme.Awake
                 )
         }
@@ -945,6 +953,7 @@ private fun ClockDisplayTabletPreview() {
                         time = LocalTime.of(10, 30),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
+                        showYearInDate = false,
                         colorScheme = ClockColorScheme.Awake
                 )
         }
@@ -964,6 +973,7 @@ private fun ClockDisplayLongAllDayPreview() {
                         time = LocalTime.of(10, 30),
                         date = LocalDate.of(2026, 2, 11),
                         use24HourFormat = false,
+                        showYearInDate = false,
                         allDayEventTitle = "Annual Family Reunion at Grandma's House",
                         allDayEventDate = LocalDate.of(2026, 2, 14), // Saturday (future)
                         colorScheme = ClockColorScheme.Awake

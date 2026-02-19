@@ -142,7 +142,7 @@ private fun AwakeNoEventContent(
         currentTime: LocalTime,
         currentDate: LocalDate,
         use24HourFormat: Boolean,
-        showYearInDate: Boolean = true,
+        showYearInDate: Boolean,
         modifier: Modifier = Modifier
 ) {
         Box(
@@ -179,7 +179,7 @@ private fun AwakeWithEventContent(
         currentTime: LocalTime,
         currentDate: LocalDate,
         use24HourFormat: Boolean,
-        showYearInDate: Boolean = true,
+        showYearInDate: Boolean,
         // All-day events (displayed in clock area, each on separate line)
         allDayEvents: List<AllDayEventInfo>,
         // Timed event fields
@@ -291,7 +291,7 @@ private fun SleepContent(
         currentTime: LocalTime,
         currentDate: LocalDate,
         use24HourFormat: Boolean,
-        showYearInDate: Boolean = true,
+        showYearInDate: Boolean,
         // All-day events are NOT displayed during sleep mode (ignored)
         @Suppress("UNUSED_PARAMETER") allDayEvents: List<AllDayEventInfo> = emptyList(),
         // Timed event fields (optional - only present if showEventsDuringSleep is enabled)
@@ -439,7 +439,7 @@ private fun SleepWithEventLayout(
 @Composable
 private fun KioskScreenAwakeNoEventPreview() {
         MemoryLinkTheme {
-                KioskScreen(displayState = DisplayState.AwakeNoEvent(use24HourFormat = false))
+                KioskScreen(displayState = DisplayState.AwakeNoEvent(use24HourFormat = false, showYearInDate = false))
         }
 }
 
@@ -453,7 +453,7 @@ private fun KioskScreenAwakeNoEventPreview() {
 @Composable
 private fun KioskScreenAwakeNoEventPortraitPreview() {
         MemoryLinkTheme {
-                KioskScreen(displayState = DisplayState.AwakeNoEvent(use24HourFormat = false))
+                KioskScreen(displayState = DisplayState.AwakeNoEvent(use24HourFormat = false, showYearInDate = false))
         }
 }
 
@@ -473,7 +473,8 @@ private fun KioskScreenTimedEventTodayPreview() {
                                         timedEventTitle = "Doctor Appointment",
                                         timedEventTime = LocalTime.of(10, 30),
                                         timedEventDate = null, // null = today
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -495,7 +496,8 @@ private fun KioskScreenTimedEventFuturePreview() {
                                         timedEventTitle = "Doctor Appointment",
                                         timedEventTime = LocalTime.of(10, 30),
                                         timedEventDate = LocalDate.of(2026, 2, 19),
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -517,7 +519,8 @@ private fun KioskScreenAllDayTodayPreview() {
                                         allDayEvents = listOf(
                                                 AllDayEventInfo(title = "Mom's Birthday")
                                         ),
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -542,7 +545,8 @@ private fun KioskScreenAllDayTomorrowPreview() {
                                                         startDate = LocalDate.now().plusDays(1)
                                                 )
                                         ),
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -567,7 +571,8 @@ private fun KioskScreenAllDayFuturePreview() {
                                                         startDate = LocalDate.of(2026, 2, 20)
                                                 )
                                         ),
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -592,7 +597,8 @@ private fun KioskScreenAllDayPlusTimedPreview() {
                                         timedEventTitle = "Doctor Appointment",
                                         timedEventTime = LocalTime.of(14, 30),
                                         timedEventDate = null,
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -622,7 +628,8 @@ private fun KioskScreenMultipleAllDayPreview() {
                                         timedEventTitle = "Physical Therapy",
                                         timedEventTime = LocalTime.of(10, 0),
                                         timedEventDate = LocalDate.of(2026, 2, 19),
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -637,7 +644,7 @@ private fun KioskScreenMultipleAllDayPreview() {
 )
 @Composable
 private fun KioskScreenSleepPreview() {
-        MemoryLinkTheme { KioskScreen(displayState = DisplayState.Sleep(use24HourFormat = false)) }
+        MemoryLinkTheme { KioskScreen(displayState = DisplayState.Sleep(use24HourFormat = false, showYearInDate = false)) }
 }
 
 @Preview(
@@ -649,7 +656,7 @@ private fun KioskScreenSleepPreview() {
 )
 @Composable
 private fun KioskScreenSleepPortraitPreview() {
-        MemoryLinkTheme { KioskScreen(displayState = DisplayState.Sleep(use24HourFormat = false)) }
+        MemoryLinkTheme { KioskScreen(displayState = DisplayState.Sleep(use24HourFormat = false, showYearInDate = false)) }
 }
 
 @Preview(
@@ -668,7 +675,8 @@ private fun KioskScreenSleepWithEventPreview() {
                                         timedEventTitle = "Doctor Appointment",
                                         timedEventTime = LocalTime.of(10, 30),
                                         timedEventDate = null,
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -690,7 +698,8 @@ private fun KioskScreenSleepWithTimedPreview() {
                                         timedEventTitle = "Lunch Celebration",
                                         timedEventTime = LocalTime.of(12, 0),
                                         timedEventDate = null,
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -712,7 +721,8 @@ private fun KioskScreen24HourPreview() {
                                         timedEventTitle = "Lunch with Family",
                                         timedEventTime = LocalTime.of(12, 0),
                                         timedEventDate = null,
-                                        use24HourFormat = true
+                                        use24HourFormat = true,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -735,7 +745,8 @@ private fun KioskScreenLongTitlePreview() {
                                                 "Meet Eric downstairs so he can take you to your doctors appointment",
                                         timedEventTime = LocalTime.of(10, 0),
                                         timedEventDate = LocalDate.of(2026, 2, 23),
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
@@ -763,7 +774,8 @@ private fun KioskScreenTabletPreview() {
                                         timedEventTitle = "Physical Therapy",
                                         timedEventTime = LocalTime.of(11, 0),
                                         timedEventDate = null,
-                                        use24HourFormat = false
+                                        use24HourFormat = false,
+                                        showYearInDate = false
                                 )
                 )
         }
