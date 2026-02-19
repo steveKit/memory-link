@@ -493,6 +493,98 @@ class ConfigParserTest {
 
     // endregion
 
+    // region SHOW config tests
+
+    @Test
+    fun `SHOW YEAR parses correctly`() {
+        val result = ConfigParser.parse("[CONFIG] SHOW YEAR")
+        assertTrue(result is ShowYearConfig)
+        assertTrue((result as ShowYearConfig).show)
+    }
+
+    @Test
+    fun `SHOW SLEEP_EVENTS parses correctly`() {
+        val result = ConfigParser.parse("[CONFIG] SHOW SLEEP_EVENTS")
+        assertTrue(result is ShowSleepEventsConfig)
+        assertTrue((result as ShowSleepEventsConfig).show)
+    }
+
+    @Test
+    fun `SHOW HOLIDAYS parses correctly`() {
+        val result = ConfigParser.parse("[CONFIG] SHOW HOLIDAYS")
+        assertTrue(result is ShowHolidaysConfig)
+        assertTrue((result as ShowHolidaysConfig).show)
+    }
+
+    @Test
+    fun `SHOW is case insensitive for setting name`() {
+        val result = ConfigParser.parse("[CONFIG] SHOW year")
+        assertTrue(result is ShowYearConfig)
+        assertTrue((result as ShowYearConfig).show)
+    }
+
+    @Test
+    fun `SHOW returns invalid for missing setting name`() {
+        val result = ConfigParser.parse("[CONFIG] SHOW")
+        assertTrue(result is Invalid)
+        assertTrue((result as Invalid).reason.contains("SHOW requires a setting name"))
+    }
+
+    @Test
+    fun `SHOW returns invalid for unknown setting name`() {
+        val result = ConfigParser.parse("[CONFIG] SHOW UNKNOWN")
+        assertTrue(result is Invalid)
+        assertTrue((result as Invalid).reason.contains("Unknown SHOW setting"))
+    }
+
+    // endregion
+
+    // region HIDE config tests
+
+    @Test
+    fun `HIDE YEAR parses correctly`() {
+        val result = ConfigParser.parse("[CONFIG] HIDE YEAR")
+        assertTrue(result is ShowYearConfig)
+        assertFalse((result as ShowYearConfig).show)
+    }
+
+    @Test
+    fun `HIDE SLEEP_EVENTS parses correctly`() {
+        val result = ConfigParser.parse("[CONFIG] HIDE SLEEP_EVENTS")
+        assertTrue(result is ShowSleepEventsConfig)
+        assertFalse((result as ShowSleepEventsConfig).show)
+    }
+
+    @Test
+    fun `HIDE HOLIDAYS parses correctly`() {
+        val result = ConfigParser.parse("[CONFIG] HIDE HOLIDAYS")
+        assertTrue(result is ShowHolidaysConfig)
+        assertFalse((result as ShowHolidaysConfig).show)
+    }
+
+    @Test
+    fun `HIDE is case insensitive for setting name`() {
+        val result = ConfigParser.parse("[CONFIG] HIDE sleep_events")
+        assertTrue(result is ShowSleepEventsConfig)
+        assertFalse((result as ShowSleepEventsConfig).show)
+    }
+
+    @Test
+    fun `HIDE returns invalid for missing setting name`() {
+        val result = ConfigParser.parse("[CONFIG] HIDE")
+        assertTrue(result is Invalid)
+        assertTrue((result as Invalid).reason.contains("HIDE requires a setting name"))
+    }
+
+    @Test
+    fun `HIDE returns invalid for unknown setting name`() {
+        val result = ConfigParser.parse("[CONFIG] HIDE UNKNOWN")
+        assertTrue(result is Invalid)
+        assertTrue((result as Invalid).reason.contains("Unknown HIDE setting"))
+    }
+
+    // endregion
+
     // region Edge cases tests
 
     @Test

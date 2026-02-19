@@ -149,6 +149,9 @@ constructor(
             is WakeConfig -> applyWakeConfig(config)
             is BrightnessConfig -> applyBrightnessConfig(config)
             is TimeFormatConfig -> applyTimeFormatConfig(config)
+            is ShowYearConfig -> applyShowYearConfig(config)
+            is ShowSleepEventsConfig -> applyShowSleepEventsConfig(config)
+            is ShowHolidaysConfig -> applyShowHolidaysConfig(config)
             is Invalid -> {
                 /* Already handled */
             }
@@ -177,6 +180,24 @@ constructor(
     private fun applyTimeFormatConfig(config: TimeFormatConfig) {
         tokenStorage.use24HourFormat = config.use24Hour
         Log.d(TAG, "Set time format: ${if (config.use24Hour) "24h" else "12h"}")
+    }
+
+    /** Apply show/hide year configuration. */
+    private fun applyShowYearConfig(config: ShowYearConfig) {
+        tokenStorage.showYear = config.show
+        Log.d(TAG, "Set show year: ${config.show}")
+    }
+
+    /** Apply show/hide sleep events configuration. */
+    private fun applyShowSleepEventsConfig(config: ShowSleepEventsConfig) {
+        tokenStorage.showEventsDuringSleep = config.show
+        Log.d(TAG, "Set show events during sleep: ${config.show}")
+    }
+
+    /** Apply show/hide holidays configuration. Only effective if holiday calendar is configured. */
+    private fun applyShowHolidaysConfig(config: ShowHolidaysConfig) {
+        tokenStorage.showHolidays = config.show
+        Log.d(TAG, "Set show holidays: ${config.show}")
     }
 
     /** Clear all settings. Call this when user wants to reset to defaults. */
