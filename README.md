@@ -16,7 +16,6 @@ A kiosk-locked Android tablet app for dementia/elderly users displaying calendar
 - 🕐 Large, high-contrast clock with 3-line layout (time / day & date / year)
 - 📅 Shows next calendar event for TODAY only
 - 🌙 Configurable sleep mode (dimmed display at night)
-- 🌅 Supports SUNRISE/SUNSET dynamic scheduling with offsets
 - 📴 Works offline with 2-week event cache
 - 🔐 Hidden admin access (5-tap + PIN)
 - ⚙️ Remote configuration via special calendar events
@@ -69,17 +68,20 @@ MemoryLink can be configured remotely by creating special calendar events with t
 
 ### Available Commands
 
-| Command       | Example                    | Description                                   |
-| ------------- | -------------------------- | --------------------------------------------- |
-| `SLEEP`       | `[CONFIG] SLEEP 21:00`     | Set sleep mode start time (HH:MM)             |
-| `SLEEP`       | `[CONFIG] SLEEP SUNSET`    | Sleep at sunset                               |
-| `SLEEP`       | `[CONFIG] SLEEP SUNSET+30` | Sleep 30 minutes after sunset                 |
-| `SLEEP`       | `[CONFIG] SLEEP SUNSET-15` | Sleep 15 minutes before sunset                |
-| `WAKE`        | `[CONFIG] WAKE 07:00`      | Set wake time (HH:MM)                         |
-| `WAKE`        | `[CONFIG] WAKE SUNRISE`    | Wake at sunrise                               |
-| `WAKE`        | `[CONFIG] WAKE SUNRISE+15` | Wake 15 minutes after sunrise                 |
-| `BRIGHTNESS`  | `[CONFIG] BRIGHTNESS 80`   | Screen brightness (0-100)                     |
-| `TIME_FORMAT` | `[CONFIG] TIME_FORMAT 12`  | Clock format: `12` or `24` hour (default: 12) |
+| Command             | Example                      | Description                                      |
+| ------------------- | ---------------------------- | ------------------------------------------------ |
+| `SLEEP`             | `[CONFIG] SLEEP 21:00`       | Set sleep mode start time (HH:MM or 12h format)  |
+| `WAKE`              | `[CONFIG] WAKE 07:00`        | Set wake time (HH:MM or 12h format)              |
+| `BRIGHTNESS`        | `[CONFIG] BRIGHTNESS 80`     | Screen brightness (0-100)                        |
+| `TIME_FORMAT`       | `[CONFIG] TIME_FORMAT 12`    | Clock format: `12` or `24` hour (default: 12)    |
+| `SHOW YEAR`         | `[CONFIG] SHOW YEAR`         | Display year in date (e.g., "February 11, 2026") |
+| `HIDE YEAR`         | `[CONFIG] HIDE YEAR`         | Hide year in date (e.g., "February 11")          |
+| `SHOW SLEEP_EVENTS` | `[CONFIG] SHOW SLEEP_EVENTS` | Show next event during sleep mode                |
+| `HIDE SLEEP_EVENTS` | `[CONFIG] HIDE SLEEP_EVENTS` | Hide events during sleep (clock only, default)   |
+| `SHOW HOLIDAYS`     | `[CONFIG] SHOW HOLIDAYS`     | Show holiday calendar events\*                   |
+| `HIDE HOLIDAYS`     | `[CONFIG] HIDE HOLIDAYS`     | Hide holiday calendar events\*                   |
+
+_\*HOLIDAYS commands only apply if a holiday calendar is configured in admin mode._
 
 ### Example: Setting Up a Sleep Schedule
 

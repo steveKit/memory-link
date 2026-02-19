@@ -12,6 +12,9 @@ import java.time.LocalTime
  * - WAKE HH:MM - Wake time (static time only)
  * - BRIGHTNESS 0-100 - Screen brightness
  * - TIME_FORMAT 12|24 - Clock format
+ * - SHOW/HIDE YEAR - Show/hide year in date display
+ * - SHOW/HIDE SLEEP_EVENTS - Show/hide events during sleep mode
+ * - SHOW/HIDE HOLIDAYS - Show/hide holiday calendar events
  */
 sealed class ConfigResult {
 
@@ -50,6 +53,35 @@ sealed class ConfigResult {
      * @param use24Hour True for 24-hour format, false for 12-hour
      */
     data class TimeFormatConfig(val use24Hour: Boolean) : ConfigResult()
+
+    /**
+     * Show/hide year in date display.
+     *
+     * Syntax: `[CONFIG] SHOW YEAR` or `[CONFIG] HIDE YEAR`
+     *
+     * @param show True to show year, false to hide
+     */
+    data class ShowYearConfig(val show: Boolean) : ConfigResult()
+
+    /**
+     * Show/hide events during sleep mode.
+     *
+     * Syntax: `[CONFIG] SHOW SLEEP_EVENTS` or `[CONFIG] HIDE SLEEP_EVENTS`
+     *
+     * @param show True to show events during sleep, false for clock only
+     */
+    data class ShowSleepEventsConfig(val show: Boolean) : ConfigResult()
+
+    /**
+     * Show/hide holiday calendar events.
+     *
+     * Syntax: `[CONFIG] SHOW HOLIDAYS` or `[CONFIG] HIDE HOLIDAYS`
+     *
+     * Note: Only applies if a holiday calendar is configured in admin mode.
+     *
+     * @param show True to show holidays, false to hide
+     */
+    data class ShowHolidaysConfig(val show: Boolean) : ConfigResult()
 
     /**
      * Unknown or invalid config (logged but ignored).

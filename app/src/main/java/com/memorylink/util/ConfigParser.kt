@@ -12,6 +12,7 @@ import java.time.LocalTime
  * - SLEEP/WAKE with static time (HH:MM or 12-hour format)
  * - BRIGHTNESS (0-100)
  * - TIME_FORMAT (12/24)
+ * - SHOW/HIDE YEAR, SLEEP_EVENTS, HOLIDAYS
  *
  * Invalid syntax is logged and returns ConfigResult.Invalid.
  *
@@ -74,6 +75,8 @@ object ConfigParser {
             "WAKE" -> parseWakeConfig(configValue, title)
             "BRIGHTNESS" -> parseBrightnessConfig(configValue, title)
             "TIME_FORMAT" -> parseTimeFormatConfig(configValue, title)
+            "SHOW" -> parseShowHideConfig(configValue, show = true, title)
+            "HIDE" -> parseShowHideConfig(configValue, show = false, title)
             else -> {
                 Log.w(TAG, "Unknown config type: $configType")
                 Invalid(title, "Unknown config type: $configType")
@@ -165,6 +168,35 @@ object ConfigParser {
             "12" -> TimeFormatConfig(use24Hour = false)
             "24" -> TimeFormatConfig(use24Hour = true)
             else -> Invalid(rawTitle, "TIME_FORMAT must be 12 or 24, got: $value")
+        }
+    }
+
+    /**
+     * Parse SHOW/HIDE configuration.
+     *
+     * Accepts:
+     * - YEAR - Show/hide year in date display
+     * - SLEEP_EVENTS - Show/hide events during sleep mode
+     * - HOLIDAYS - Show/hide holiday calendar events (only if holiday calendar configured)
+     *
+     * @param value The setting name (YEAR, SLEEP_EVENTS, HOLIDAYS)
+     * @param show True for SHOW, false for HIDE
+     * @param rawTitle Original title for error messages
+     */
+    private fun parseShowHideConfig(value: String, show: Boolean, rawTitle: String): ConfigResult {
+        if (value.isEmpty()) {
+            val action = if (show) "SHOW" else "HIDE"
+            return Invalid(rawTitle, "$action requires a setting name (YEAR, SLEEP_EVENTS, HOLIDAYS)")
+        }
+
+        return when (value.uppercase()) {
+            "YEAR" -> ShowYearConfig(show)
+            "SLEEP_EVENTS" -> ShowSleepEventsConfig(show)
+            "HOLIDAYS" -> ShowHolidaysConfig(show)
+            else -> {
+                val action = if (show) "SHOW" else "HIDE"
+                Invalid(rawTitle, "Unknown $action setting: $value. Use YEAR, SLEEP_EVENTS, or HOLIDAYS")
+            }
         }
     }
 
