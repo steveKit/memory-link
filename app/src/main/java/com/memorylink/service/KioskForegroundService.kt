@@ -30,13 +30,13 @@ import kotlinx.coroutines.launch
  * Foreground service that handles kiosk mode operations.
  *
  * Responsibilities:
- * - Calendar sync every 5 minutes (as per .clinerules/10-project-meta.md)
+ * - Calendar sync every 15 minutes (primary sync mechanism)
  * - State refresh every minute (for event time passing checks)
  *
- * This is more reliable than WorkManager for an always-on kiosk display:
- * - WorkManager has a minimum 15-minute interval
- * - Foreground service allows exact 5-minute sync intervals
- * - Service runs with high priority, resisting Doze mode delays
+ * Architecture:
+ * - Foreground service runs with high priority, resisting Doze mode delays
+ * - WorkManager provides a daily backup sync (in case service is killed)
+ * - Manual "Sync Now" available via admin panel for immediate updates
  *
  * Note: Clock display is handled by KioskScreen's rememberLiveTime() composable,
  * which updates every second using system time directly.
@@ -49,8 +49,8 @@ class KioskForegroundService : Service() {
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "kiosk_service_channel"
 
-        /** Sync interval: 5 minutes as per clinerules */
-        private const val SYNC_INTERVAL_MS = 5 * 60 * 1000L
+        /** Sync interval: 15 minutes (primary sync mechanism) */
+        private const val SYNC_INTERVAL_MS = 15 * 60 * 1000L
 
         /** State refresh interval: 1 minute for event time checking */
         private const val STATE_REFRESH_INTERVAL_MS = 60 * 1000L
@@ -121,7 +121,7 @@ class KioskForegroundService : Service() {
 
     /**
      * Start the calendar sync loop.
-     * Syncs every 5 minutes as per clinerules spec.
+     * Syncs every 15 minutes as the primary sync mechanism.
      */
     private fun startSyncLoop() {
         syncJob?.cancel()

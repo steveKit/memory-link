@@ -23,7 +23,7 @@ import javax.inject.Singleton
  * - Sleep time: Transition to sleep state, stop KioskForegroundService
  *
  * Note: Minute ticks and calendar sync are handled by KioskForegroundService, which provides more
- * reliable 5-minute sync intervals than WorkManager and 1-minute state refresh for event time
+ * reliable 15-minute sync intervals than WorkManager and 1-minute state refresh for event time
  * checking.
  *
  * Per .clinerules/40-state-machine.md:

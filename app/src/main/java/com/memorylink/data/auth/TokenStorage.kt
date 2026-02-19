@@ -248,7 +248,7 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         }
 
     // ========== Holiday Calendar Settings ==========
-    // Optional secondary calendar for holidays. Syncs weekly instead of every 5 minutes.
+    // Optional secondary calendar for holidays. Syncs weekly instead of every 15 minutes.
 
     /** Holiday calendar ID (optional). When set, holidays are synced from this calendar. */
     var holidayCalendarId: String?

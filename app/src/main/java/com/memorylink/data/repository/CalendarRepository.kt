@@ -19,8 +19,8 @@ import kotlinx.coroutines.flow.map
 /**
  * Repository bridging GoogleCalendarService (remote) and EventDao (local cache).
  *
- * Uses syncToken for incremental sync (410 triggers full resync). Syncs every 5 minutes, caches 2
- * weeks, evicts after 7 days.
+ * Uses syncToken for incremental sync (410 triggers full resync). Primary sync every 15 minutes via
+ * KioskForegroundService, with daily WorkManager backup. Caches 2 weeks, evicts after 7 days.
  */
 @Singleton
 class CalendarRepository
@@ -420,7 +420,7 @@ constructor(
     /**
      * Sync events from the holiday calendar.
      *
-     * Holiday calendars sync weekly (vs 5 min for main calendar) since holidays change rarely.
+     * Holiday calendars sync weekly (vs 15 min for main calendar) since holidays change rarely.
      * All holiday events are marked with isHoliday = true.
      *
      * @param force If true, sync even if weekly threshold hasn't passed

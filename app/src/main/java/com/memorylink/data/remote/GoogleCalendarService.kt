@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
  *
  * Per .clinerules/20-android.md:
  * - Error Handling: Exponential backoff on API failures (1s, 2s, 4s, max 5 retries)
- * - Quota: Max 12 calls/hour (5-min interval) = 288/day
+ * - Quota: Max 4 calls/hour (15-min interval) = 96/day (~2,880/month, well under 1M free tier)
  *
  * Per .clinerules/10-project-meta.md:
  * - Event Lookahead: Fetch today's events (midnight to midnight, device timezone)
