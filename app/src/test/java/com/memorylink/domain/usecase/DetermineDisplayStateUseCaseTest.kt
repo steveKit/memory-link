@@ -211,8 +211,9 @@ class DetermineDisplayStateUseCaseTest {
 
         assertTrue(result is DisplayState.AwakeWithEvent)
         val state = result as DisplayState.AwakeWithEvent
-        assertEquals("Birthday Party", state.allDayEventTitle)
-        assertNull(state.allDayEventDate) // null means today
+        assertEquals(1, state.allDayEvents.size)
+        assertEquals("Birthday Party", state.allDayEvents[0].title)
+        assertNull(state.allDayEvents[0].startDate) // null means today
     }
 
     @Test
@@ -232,8 +233,9 @@ class DetermineDisplayStateUseCaseTest {
 
         assertTrue(result is DisplayState.AwakeWithEvent)
         val state = result as DisplayState.AwakeWithEvent
-        assertEquals("Holiday", state.allDayEventTitle)
-        assertEquals(LocalDate.of(2026, 2, 13), state.allDayEventDate)
+        assertEquals(1, state.allDayEvents.size)
+        assertEquals("Holiday", state.allDayEvents[0].title)
+        assertEquals(LocalDate.of(2026, 2, 13), state.allDayEvents[0].startDate)
     }
 
     // endregion
@@ -313,8 +315,9 @@ class DetermineDisplayStateUseCaseTest {
 
         assertTrue(result is DisplayState.AwakeWithEvent)
         val state = result as DisplayState.AwakeWithEvent
-        assertEquals("Birthday", state.allDayEventTitle)
-        assertNull(state.allDayEventDate) // today
+        assertEquals(1, state.allDayEvents.size)
+        assertEquals("Birthday", state.allDayEvents[0].title)
+        assertNull(state.allDayEvents[0].startDate) // today
         assertEquals("Doctor", state.timedEventTitle)
         assertEquals(LocalTime.of(14, 0), state.timedEventTime)
         assertNull(state.timedEventDate) // today
@@ -345,8 +348,9 @@ class DetermineDisplayStateUseCaseTest {
 
         assertTrue(result is DisplayState.AwakeWithEvent)
         val state = result as DisplayState.AwakeWithEvent
-        assertEquals("Birthday", state.allDayEventTitle)
-        assertNull(state.allDayEventDate) // today
+        assertEquals(1, state.allDayEvents.size)
+        assertEquals("Birthday", state.allDayEvents[0].title)
+        assertNull(state.allDayEvents[0].startDate) // today
         assertEquals("Tomorrow Event", state.timedEventTitle)
         assertEquals(LocalDate.of(2026, 2, 12), state.timedEventDate) // tomorrow
     }
