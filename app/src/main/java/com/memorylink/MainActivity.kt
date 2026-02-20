@@ -279,6 +279,9 @@ private fun MemoryLinkNavHost(
                         navController.navigate(MainRoutes.KIOSK) {
                             popUpTo(MainRoutes.SETUP) { inclusive = true }
                         }
+                        // Start foreground service for calendar sync now that setup is complete
+                        Log.d("MainActivity", "Starting KioskForegroundService after setup")
+                        com.memorylink.service.KioskForegroundService.start(navController.context)
                     }
             )
         }

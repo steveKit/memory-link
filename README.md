@@ -1,12 +1,6 @@
 # MemoryLink
 
-MemoryLink is a Kotlin-based kiosk application that transforms any Android tablet into a distraction-free "smart clock" for seniors and individuals with cognitive challenges. By replacing complex mobile interfaces with a high-contrast, read-only display, MemoryLink provides a single, reliable source of truth for the time, date, and "what’s happening next."
-
-## Why MemoryLink?
-
-- **Cognitive Clarity:** Strips away the noise of modern OS notifications and icons, leaving only essential information.
-- **Locked-Down Security:** Utilizes Android Kiosk mode to prevent accidental navigation or "getting lost" in other apps.
-- **Remote Peace of Mind:** Caregivers manage the schedule via Google Calendar; the app handles the rest.
+MemoryLink is a Kotlin-based kiosk application that transforms any Android tablet into a distraction-free "smart clock" for seniors and individuals with cognitive challenges. By stripping away complex interfaces and focussing only on what's coming next, MemoryLink provides a clear, reliable way for users to stay oriented and aware of their day, while allowing caregivers to manage the schedule remotely through a shared google calendar.
 
 > [!IMPORTANT]
 > **Language & Grammar:** This app is currently optimized for English sentence structure. Display phrases (e.g., "Today is...", "At 10:30 am...") are hard-coded with English syntax to ensure natural readability for the user.
@@ -20,8 +14,8 @@ MemoryLink is a Kotlin-based kiosk application that transforms any Android table
 ## Key Features
 
 - 📱 Full-screen kiosk mode (no escape for memory user)
-- 🕐 Large, high-contrast clock with 3-line layout (time / day & date / year)
-- 📅 Shows next calendar event for TODAY only
+- 🕐 Large, high-contrast clock with date
+- 📅 Shows next calendar event
 - 🌙 Configurable sleep mode (dimmed display at night)
 - 📴 Works offline with 2-week event cache
 - 🔐 Hidden admin access (5-tap + PIN)
