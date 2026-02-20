@@ -316,7 +316,8 @@ private fun calculateOptimalFontSizes(
                         maxHeightPx = Int.MAX_VALUE, // No height constraint for initial sizing
                         minFontSizeSp = minFontSizeSp,
                         maxFontSizeSp = maxTimeFontSizeSp,
-                        softWrap = false // Single line
+                        softWrap = false, // Single line
+                        fontWeight = FontWeight.Bold // Matches rendering
                 )
 
         // Date: sized independently to fill width as single line
@@ -328,7 +329,7 @@ private fun calculateOptimalFontSizes(
                         maxHeightPx = Int.MAX_VALUE, // No height constraint for initial sizing
                         minFontSizeSp = minFontSizeSp,
                         maxFontSizeSp = maxDateFontSizeSp,
-                        softWrap = false // Single line
+                        softWrap = false // Single line - uses default FontWeight.Normal
                 )
 
         // All-day event: sized independently (if present)
@@ -341,7 +342,8 @@ private fun calculateOptimalFontSizes(
                                 maxHeightPx = Int.MAX_VALUE,
                                 minFontSizeSp = minFontSizeSp,
                                 maxFontSizeSp = maxAllDayFontSizeSp,
-                                softWrap = false // Single line
+                                softWrap = false, // Single line
+                                fontWeight = FontWeight.Medium // Matches rendering
                         )
                 } else {
                         maxAllDayFontSizeSp
@@ -368,7 +370,12 @@ private fun calculateOptimalFontSizes(
         }
 }
 
-/** Binary search to find the maximum font size that fits within constraints. */
+/**
+ * Binary search to find the maximum font size that fits within constraints.
+ *
+ * @param fontWeight Must match the actual fontWeight used when rendering to ensure accurate
+ * measurement (different weights have different character widths)
+ */
 private fun findMaxFontSizeThatFits(
         text: String,
         textMeasurer: androidx.compose.ui.text.TextMeasurer,
@@ -376,7 +383,8 @@ private fun findMaxFontSizeThatFits(
         maxHeightPx: Int,
         minFontSizeSp: Float,
         maxFontSizeSp: Float,
-        softWrap: Boolean
+        softWrap: Boolean,
+        fontWeight: FontWeight = FontWeight.Normal
 ): Float {
         if (text.isEmpty()) return maxFontSizeSp
         if (maxWidthPx <= 0 || maxHeightPx <= 0) return minFontSizeSp
@@ -388,7 +396,12 @@ private fun findMaxFontSizeThatFits(
         while (high - low > 0.5f) {
                 val mid = (low + high) / 2f
 
-                val testStyle = TextStyle(fontSize = mid.sp, lineHeight = (mid * 1.15f).sp)
+                val testStyle =
+                        TextStyle(
+                                fontSize = mid.sp,
+                                lineHeight = (mid * 1.15f).sp,
+                                fontWeight = fontWeight
+                        )
 
                 val measureResult =
                         textMeasurer.measure(
@@ -691,7 +704,8 @@ private fun calculateOptimalFontSizesMultiple(
                         maxHeightPx = Int.MAX_VALUE,
                         minFontSizeSp = minFontSizeSp,
                         maxFontSizeSp = maxTimeFontSizeSp,
-                        softWrap = false
+                        softWrap = false,
+                        fontWeight = FontWeight.Bold // Matches rendering
                 )
 
         // Date: sized independently
@@ -703,7 +717,7 @@ private fun calculateOptimalFontSizesMultiple(
                         maxHeightPx = Int.MAX_VALUE,
                         minFontSizeSp = minFontSizeSp,
                         maxFontSizeSp = maxDateFontSizeSp,
-                        softWrap = false
+                        softWrap = false // Uses default FontWeight.Normal
                 )
 
         // All-day events: find the smallest font size that fits ALL events
@@ -719,7 +733,8 @@ private fun calculateOptimalFontSizesMultiple(
                                         maxHeightPx = Int.MAX_VALUE,
                                         minFontSizeSp = minFontSizeSp,
                                         maxFontSizeSp = maxAllDayFontSizeSp,
-                                        softWrap = false
+                                        softWrap = false,
+                                        fontWeight = FontWeight.Medium // Matches rendering
                                 )
                         }
                 } else {
