@@ -39,7 +39,17 @@ constructor(
 
     companion object {
         private const val TAG = "StateCoordinator"
+
+        /** Debounce window for state refresh to avoid redundant calculations. */
+        private const val REFRESH_DEBOUNCE_MS = 50L
     }
+
+    /** Job for debounced refresh - cancelled and restarted on each refresh request. */
+    private var refreshJob: kotlinx.coroutines.Job? = null
+
+    /** Counter for failed config event deletions (for admin visibility if needed). */
+    private val _pendingConfigDeletions = MutableStateFlow(0)
+    val pendingConfigDeletions: StateFlow<Int> = _pendingConfigDeletions.asStateFlow()
 
     /** Current display state. UI observes this single StateFlow to render. */
     private val _displayState = MutableStateFlow<DisplayState>(createInitialState())
@@ -134,7 +144,7 @@ constructor(
     }
 
     /**
-     * Force a state refresh.
+     * Force a state refresh with debouncing.
      *
      * Called by [StateTransitionReceiver] when:
      * - Wake alarm fires (transition to awake)
@@ -142,8 +152,30 @@ constructor(
      * - Minute tick fires (update clock, check events)
      *
      * Also called when events or settings change.
+     *
+     * Debouncing prevents redundant state calculations when multiple triggers fire in quick
+     * succession (e.g., settings + events both change).
      */
     fun refreshState() {
+        refreshJob?.cancel()
+        refreshJob =
+                applicationScope.launch {
+                    kotlinx.coroutines.delay(REFRESH_DEBOUNCE_MS)
+                    performStateRefresh()
+                }
+    }
+
+    /**
+     * Immediate state refresh without debouncing. Use for critical transitions where delay is
+     * unacceptable.
+     */
+    fun refreshStateImmediate() {
+        refreshJob?.cancel()
+        performStateRefresh()
+    }
+
+    /** Internal: performs the actual state calculation and update. */
+    private fun performStateRefresh() {
         val now = timeProvider.now()
         val state = determineDisplayStateUseCase(now, _events.value, _settings.value)
         val previousState = _displayState.value
@@ -171,11 +203,15 @@ constructor(
      *
      * This signals to remote caregivers that the config has been consumed and settings updated.
      * Deletions are best-effort: failures are logged but don't block other operations. Failed
-     * deletions will be retried on the next sync cycle.
+     * deletions are tracked in [pendingConfigDeletions] for admin visibility and will be retried on
+     * the next sync cycle.
      *
      * @param eventIds List of event IDs to delete
      */
     private fun deleteProcessedConfigEvents(eventIds: List<String>) {
+        // Track pending deletions for visibility
+        _pendingConfigDeletions.value += eventIds.size
+
         applicationScope.launch {
             var successCount = 0
             var failCount = 0
@@ -189,11 +225,19 @@ constructor(
                 }
             }
 
+            // Update pending count - subtract successful deletions
+            _pendingConfigDeletions.value =
+                    (_pendingConfigDeletions.value - successCount).coerceAtLeast(0)
+
             if (successCount > 0) {
                 Log.d(TAG, "Deleted $successCount config events from calendar")
             }
             if (failCount > 0) {
-                Log.w(TAG, "Failed to delete $failCount config events (will retry on next sync)")
+                Log.w(
+                        TAG,
+                        "Failed to delete $failCount config events " +
+                                "(pending: ${_pendingConfigDeletions.value}, will retry on next sync)"
+                )
             }
         }
     }

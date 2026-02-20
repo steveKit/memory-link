@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "a001a8baaf93c7a736bbaffd3ca76974",
+    "identityHash": "c84cc62fe96a9726b3d133a189aa2e7f",
     "entities": [
       {
         "tableName": "cached_events",
@@ -82,6 +82,26 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_cached_events_fetched_at` ON `${TABLE_NAME}` (`fetched_at`)"
+          },
+          {
+            "name": "index_cached_events_is_config_event_start_time",
+            "unique": false,
+            "columnNames": [
+              "is_config_event",
+              "start_time"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cached_events_is_config_event_start_time` ON `${TABLE_NAME}` (`is_config_event`, `start_time`)"
+          },
+          {
+            "name": "index_cached_events_is_holiday_start_time",
+            "unique": false,
+            "columnNames": [
+              "is_holiday",
+              "start_time"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_cached_events_is_holiday_start_time` ON `${TABLE_NAME}` (`is_holiday`, `start_time`)"
           }
         ],
         "foreignKeys": []
@@ -90,7 +110,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a001a8baaf93c7a736bbaffd3ca76974')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c84cc62fe96a9726b3d133a189aa2e7f')"
     ]
   }
 }

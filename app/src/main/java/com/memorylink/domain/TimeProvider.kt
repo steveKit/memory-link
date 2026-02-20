@@ -24,6 +24,20 @@ interface TimeProvider {
 
     /** Get current date only. */
     fun currentDate(): LocalDate
+
+    /**
+     * Check if the current time is within the sleep period.
+     *
+     * Sleep period wraps around midnight:
+     * - If sleep > wake: sleep period is [sleep, midnight) and [midnight, wake)
+     * - If sleep <= wake: (unusual but handle it) sleep period is [sleep, wake)
+     *
+     * @param currentTime The time to check
+     * @param sleepTime When sleep period begins
+     * @param wakeTime When sleep period ends
+     * @return true if currentTime is within the sleep period
+     */
+    fun isInSleepPeriod(currentTime: LocalTime, sleepTime: LocalTime, wakeTime: LocalTime): Boolean
 }
 
 /** Production implementation using system clock. */
@@ -37,4 +51,19 @@ class SystemTimeProvider @Inject constructor() : TimeProvider {
     override fun currentTime(): LocalTime = LocalTime.now(zoneId)
 
     override fun currentDate(): LocalDate = LocalDate.now(zoneId)
+
+    override fun isInSleepPeriod(
+            currentTime: LocalTime,
+            sleepTime: LocalTime,
+            wakeTime: LocalTime
+    ): Boolean {
+        return if (sleepTime.isAfter(wakeTime)) {
+            // Normal case: sleep at night, wake in morning
+            // Sleep period: sleepTime to midnight, then midnight to wakeTime
+            currentTime >= sleepTime || currentTime < wakeTime
+        } else {
+            // Edge case: wake time is after sleep time (e.g., both in same half of day)
+            currentTime >= sleepTime && currentTime < wakeTime
+        }
+    }
 }

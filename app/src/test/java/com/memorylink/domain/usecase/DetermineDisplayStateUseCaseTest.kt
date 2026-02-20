@@ -1,5 +1,6 @@
 package com.memorylink.domain.usecase
 
+import com.memorylink.domain.TimeProvider
 import com.memorylink.domain.model.AppSettings
 import com.memorylink.domain.model.CalendarEvent
 import com.memorylink.domain.model.DisplayState
@@ -30,11 +31,31 @@ class DetermineDisplayStateUseCaseTest {
 
     private lateinit var useCase: DetermineDisplayStateUseCase
     private lateinit var getNextEventUseCase: GetNextEventUseCase
+    private lateinit var fakeTimeProvider: FakeTimeProvider
+
+    /** Fake TimeProvider for testing. */
+    private class FakeTimeProvider : TimeProvider {
+        override fun now(): LocalDateTime = LocalDateTime.now()
+        override fun currentTime(): LocalTime = LocalTime.now()
+        override fun currentDate(): LocalDate = LocalDate.now()
+        override fun isInSleepPeriod(
+                currentTime: LocalTime,
+                sleepTime: LocalTime,
+                wakeTime: LocalTime
+        ): Boolean {
+            return if (sleepTime.isAfter(wakeTime)) {
+                currentTime >= sleepTime || currentTime < wakeTime
+            } else {
+                currentTime >= sleepTime && currentTime < wakeTime
+            }
+        }
+    }
 
     @Before
     fun setup() {
         getNextEventUseCase = GetNextEventUseCase()
-        useCase = DetermineDisplayStateUseCase(getNextEventUseCase)
+        fakeTimeProvider = FakeTimeProvider()
+        useCase = DetermineDisplayStateUseCase(getNextEventUseCase, fakeTimeProvider)
     }
 
     // region Default Settings (sleep: 21:30, wake: 06:00)

@@ -10,7 +10,6 @@ import com.memorylink.data.repository.SettingsRepository
 import com.memorylink.domain.model.AppSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -95,7 +94,7 @@ constructor(
     /** Check if current time is within the awake period. */
     fun isAwakePeriod(settings: AppSettings = settingsRepository.currentSettings): Boolean {
         val currentTime = timeProvider.currentTime()
-        return !isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime)
+        return !timeProvider.isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime)
     }
 
     /** Stop all scheduled alarms. Called on app shutdown. */
@@ -196,24 +195,6 @@ constructor(
         pendingIntent?.let {
             alarmManager.cancel(it)
             it.cancel()
-        }
-    }
-
-    /**
-     * Check if the current time is within the sleep period. Duplicated from
-     * DetermineDisplayStateUseCase for independence.
-     */
-    private fun isInSleepPeriod(
-            currentTime: LocalTime,
-            sleepTime: LocalTime,
-            wakeTime: LocalTime
-    ): Boolean {
-        return if (sleepTime.isAfter(wakeTime)) {
-            // Normal case: sleep at night, wake in morning
-            currentTime >= sleepTime || currentTime < wakeTime
-        } else {
-            // Edge case: wake time is after sleep time
-            currentTime >= sleepTime && currentTime < wakeTime
         }
     }
 }

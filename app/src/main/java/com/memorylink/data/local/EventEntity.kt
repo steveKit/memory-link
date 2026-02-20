@@ -5,10 +5,23 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** Room entity for cached calendar events. Evicted after 7 days. */
+/**
+ * Room entity for cached calendar events. Evicted after 7 days.
+ *
+ * Indices are optimized for common query patterns:
+ * - start_time: Primary ordering for event queries
+ * - fetched_at: Eviction queries
+ * - is_config_event + start_time: Config event filtering
+ * - is_holiday + start_time: Holiday event filtering/ordering
+ */
 @Entity(
         tableName = "cached_events",
-        indices = [Index(value = ["start_time"]), Index(value = ["fetched_at"])]
+        indices =
+                [
+                        Index(value = ["start_time"]),
+                        Index(value = ["fetched_at"]),
+                        Index(value = ["is_config_event", "start_time"]),
+                        Index(value = ["is_holiday", "start_time"])]
 )
 data class EventEntity(
         @PrimaryKey @ColumnInfo(name = "id") val id: String,
@@ -21,8 +34,8 @@ data class EventEntity(
         @ColumnInfo(name = "is_config_event") val isConfigEvent: Boolean = false,
         @ColumnInfo(name = "is_all_day") val isAllDay: Boolean = false,
         /**
-         * Whether this event is from the holiday calendar.
-         * Holidays are displayed before personal events and can be toggled off.
+         * Whether this event is from the holiday calendar. Holidays are displayed before personal
+         * events and can be toggled off.
          */
         @ColumnInfo(name = "is_holiday", defaultValue = "0") val isHoliday: Boolean = false,
         /** Used for cache eviction. */

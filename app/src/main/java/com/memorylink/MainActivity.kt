@@ -20,8 +20,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -201,15 +201,34 @@ class MainActivity : ComponentActivity() {
      */
     fun isDeviceOwner(): Boolean = isDeviceOwner
 
+    /**
+     * Hide system UI for fullscreen kiosk mode.
+     *
+     * Uses WindowInsetsController on Android 11+ (API 30+) for the modern approach, with legacy
+     * fallback for older devices.
+     */
     private fun hideSystemUI() {
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility =
-                (android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                        android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
-                        android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                        android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                        android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                        android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            // Modern API for Android 11+
+            window.insetsController?.let { controller ->
+                controller.hide(
+                        android.view.WindowInsets.Type.systemBars() or
+                                android.view.WindowInsets.Type.navigationBars()
+                )
+                controller.systemBarsBehavior =
+                        android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            // Legacy fallback for Android 10 and below
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                    (android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                            android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                            android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                            android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                            android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
+        }
     }
 }
 
@@ -305,9 +324,8 @@ private fun MemoryLinkNavHost(
                 activity?.window?.let { window ->
                     val brightnessPercent = settingsState.brightness ?: 100
                     val brightnessFloat = brightnessPercent / 100f
-                    window.attributes = window.attributes.also {
-                        it.screenBrightness = brightnessFloat
-                    }
+                    window.attributes =
+                            window.attributes.also { it.screenBrightness = brightnessFloat }
                     Log.d("AdminMode", "Applied brightness: $brightnessPercent% ($brightnessFloat)")
                 }
             }
@@ -334,8 +352,8 @@ private fun MemoryLinkNavHost(
 /**
  * Kiosk screen with admin gesture detection overlay.
  *
- * Detects 5 rapid taps in top-left corner to trigger admin mode.
- * Also applies screen brightness from DisplayState to the window.
+ * Detects 5 rapid taps in top-left corner to trigger admin mode. Also applies screen brightness
+ * from DisplayState to the window.
  *
  * @param onAdminGestureDetected Called when admin gesture is completed
  */
@@ -352,10 +370,11 @@ private fun KioskWithAdminGesture(onAdminGestureDetected: () -> Unit) {
         val activity = view.context as? ComponentActivity
         activity?.window?.let { window ->
             val brightnessFloat = displayState.brightness / 100f
-            window.attributes = window.attributes.also {
-                it.screenBrightness = brightnessFloat
-            }
-            Log.d("KioskScreen", "Applied brightness: ${displayState.brightness}% ($brightnessFloat)")
+            window.attributes = window.attributes.also { it.screenBrightness = brightnessFloat }
+            Log.d(
+                    "KioskScreen",
+                    "Applied brightness: ${displayState.brightness}% ($brightnessFloat)"
+            )
         }
     }
 

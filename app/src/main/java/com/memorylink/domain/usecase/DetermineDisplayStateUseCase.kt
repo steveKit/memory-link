@@ -1,12 +1,12 @@
 package com.memorylink.domain.usecase
 
+import com.memorylink.domain.TimeProvider
 import com.memorylink.domain.model.AllDayEventInfo
 import com.memorylink.domain.model.AppSettings
 import com.memorylink.domain.model.CalendarEvent
 import com.memorylink.domain.model.DisplayState
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import javax.inject.Inject
 
 /**
@@ -17,7 +17,10 @@ import javax.inject.Inject
  */
 class DetermineDisplayStateUseCase
 @Inject
-constructor(private val getNextEventUseCase: GetNextEventUseCase) {
+constructor(
+        private val getNextEventUseCase: GetNextEventUseCase,
+        private val timeProvider: TimeProvider
+) {
 
     /** Determine display state. Time is NOT embedded in result (UI uses live clock). */
     operator fun invoke(
@@ -30,16 +33,18 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
 
         // Check if any timed events today haven't ended yet
         // This is used to delay sleep until after the last event
-        val hasRemainingTimedEventsToday = events.any { event ->
-            !event.isAllDay &&
-            event.startTime.toLocalDate() == today &&
-            event.endTime.isAfter(now)
-        }
+        val hasRemainingTimedEventsToday =
+                events.any { event ->
+                    !event.isAllDay &&
+                            event.startTime.toLocalDate() == today &&
+                            event.endTime.isAfter(now)
+                }
 
         // Check if we're in sleep period
         // Sleep is delayed if there are remaining timed events today
-        if (isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime) &&
-                !hasRemainingTimedEventsToday) {
+        if (timeProvider.isInSleepPeriod(currentTime, settings.sleepTime, settings.wakeTime) &&
+                        !hasRemainingTimedEventsToday
+        ) {
             return buildSleepState(now, today, events, settings)
         }
 
@@ -58,9 +63,7 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
         }
 
         // Convert CalendarEvents to AllDayEventInfo for display
-        val allDayEventInfos = allDayEvents.map { event ->
-            convertToAllDayEventInfo(event, today)
-        }
+        val allDayEventInfos = allDayEvents.map { event -> convertToAllDayEventInfo(event, today) }
 
         return DisplayState.AwakeWithEvent(
                 // All-day events (each shown on separate line)
@@ -105,8 +108,8 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
     /**
      * Build Sleep state, optionally with event data if showEventsDuringSleep is enabled.
      *
-     * When the setting is disabled, returns a Sleep state with no event data.
-     * When enabled, populates event data similar to AwakeWithEvent for dimmed display.
+     * When the setting is disabled, returns a Sleep state with no event data. When enabled,
+     * populates event data similar to AwakeWithEvent for dimmed display.
      */
     private fun buildSleepState(
             now: LocalDateTime,
@@ -128,9 +131,7 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
         val timedEvent = nextEvents.timedEvent
 
         // Convert CalendarEvents to AllDayEventInfo for display
-        val allDayEventInfos = allDayEvents.map { event ->
-            convertToAllDayEventInfo(event, today)
-        }
+        val allDayEventInfos = allDayEvents.map { event -> convertToAllDayEventInfo(event, today) }
 
         return DisplayState.Sleep(
                 // All-day events (each shown on separate line)
@@ -148,27 +149,5 @@ constructor(private val getNextEventUseCase: GetNextEventUseCase) {
                 use24HourFormat = settings.use24HourFormat,
                 showYearInDate = settings.showYearInDate
         )
-    }
-
-    /**
-     * Check if the current time is within the sleep period.
-     *
-     * Sleep period wraps around midnight:
-     * - If sleep > wake: sleep period is [sleep, midnight) and [midnight, wake)
-     * - If sleep <= wake: (unusual but handle it) sleep period is [sleep, wake)
-     */
-    private fun isInSleepPeriod(
-            currentTime: LocalTime,
-            sleepTime: LocalTime,
-            wakeTime: LocalTime
-    ): Boolean {
-        return if (sleepTime.isAfter(wakeTime)) {
-            // Normal case: sleep at night, wake in morning
-            // Sleep period: sleepTime to midnight, then midnight to wakeTime
-            currentTime >= sleepTime || currentTime < wakeTime
-        } else {
-            // Edge case: wake time is after sleep time (e.g., both in same half of day)
-            currentTime >= sleepTime && currentTime < wakeTime
-        }
     }
 }

@@ -75,12 +75,11 @@ constructor(
         // before today but are still active (end_time > dayStart), with holiday filtering.
         // Results are ordered: holidays first, then by start_time.
         return eventDao.getActiveEventsInRangeWithHolidayFilter(
-            dayStart,
-            twoWeeksLater,
-            includeHolidays
-        ).map { entities ->
-            entities.map { it.toDomainModel() }
-        }
+                        dayStart,
+                        twoWeeksLater,
+                        includeHolidays
+                )
+                .map { entities -> entities.map { it.toDomainModel() } }
     }
 
     /** Observe config events for settings processing. */
@@ -229,73 +228,6 @@ constructor(
         }
     }
 
-    /** @deprecated Use syncEvents() for incremental sync. */
-    @Deprecated("Use syncEvents() for incremental sync", ReplaceWith("syncEvents()"))
-    suspend fun syncEventsLegacy(forceFullSync: Boolean = false): SyncResult {
-        val calendarId = tokenStorage.selectedCalendarId
-        if (calendarId.isNullOrBlank()) {
-            Log.w(TAG, "No calendar selected")
-            return SyncResult.NoCalendarSelected
-        }
-
-        // Determine date range
-        val today = LocalDate.now()
-        val startDate = if (forceFullSync) today.minusDays(7) else today
-        val endDate = if (forceFullSync) today.plusDays(14) else today
-
-        // Fetch events from API
-        val result = calendarService.fetchEventsInRange(calendarId, startDate, endDate)
-
-        return when (result) {
-            is ApiResult.Success -> {
-                val fetchedAt = System.currentTimeMillis()
-
-                // Convert DTOs to entities
-                val entities =
-                        result.data.map { dto ->
-                            EventEntity(
-                                    id = dto.id,
-                                    title = dto.title,
-                                    startTime = dto.startTimeMillis,
-                                    endTime = dto.endTimeMillis,
-                                    isConfigEvent = dto.isConfigEvent,
-                                    isAllDay = dto.isAllDay,
-                                    fetchedAt = fetchedAt
-                            )
-                        }
-
-                // Insert/update events in database
-                eventDao.insertEvents(entities)
-
-                // Evict old events (older than 7 days)
-                val cutoffTime = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
-                val deletedCount = eventDao.deleteOldEvents(cutoffTime)
-                if (deletedCount > 0) {
-                    Log.d(TAG, "Evicted $deletedCount old events")
-                }
-
-                // Update last sync time
-                tokenStorage.lastSyncTime = fetchedAt
-
-                Log.d(TAG, "Sync successful: ${entities.size} events cached")
-                SyncResult.Success(entities.size)
-            }
-            is ApiResult.NotAuthenticated -> {
-                Log.w(TAG, "Sync failed: not authenticated")
-                SyncResult.NotAuthenticated
-            }
-            is ApiResult.SyncTokenExpired -> {
-                // Should not happen with legacy sync, but handle anyway
-                Log.w(TAG, "Unexpected sync token expiration in legacy sync")
-                SyncResult.Error("Unexpected sync token error")
-            }
-            is ApiResult.Error -> {
-                Log.e(TAG, "Sync failed: ${result.message}")
-                SyncResult.Error(result.message)
-            }
-        }
-    }
-
     /** Get list of available calendars for selection. */
     suspend fun getAvailableCalendars(): ApiResult<List<GoogleCalendarService.CalendarDto>> {
         return calendarService.getCalendarList()
@@ -407,10 +339,7 @@ constructor(
         return calendarChanged
     }
 
-    /**
-     * Clear the holiday calendar selection.
-     * Removes all cached holiday events.
-     */
+    /** Clear the holiday calendar selection. Removes all cached holiday events. */
     suspend fun clearHolidayCalendar() {
         Log.d(TAG, "Clearing holiday calendar selection")
         eventDao.deleteHolidayEvents()
@@ -420,8 +349,8 @@ constructor(
     /**
      * Sync events from the holiday calendar.
      *
-     * Holiday calendars sync weekly (vs 15 min for main calendar) since holidays change rarely.
-     * All holiday events are marked with isHoliday = true.
+     * Holiday calendars sync weekly (vs 15 min for main calendar) since holidays change rarely. All
+     * holiday events are marked with isHoliday = true.
      *
      * @param force If true, sync even if weekly threshold hasn't passed
      * @return SyncResult indicating success/failure

@@ -28,6 +28,13 @@ import kotlinx.coroutines.withContext
  */
 @Singleton
 class GoogleCalendarService @Inject constructor(private val authManager: GoogleAuthManager) {
+
+    /**
+     * Cached Calendar service instance. Reused across API calls for efficiency. Invalidated when
+     * access token changes.
+     */
+    private var cachedCalendarService: Calendar? = null
+    private var cachedAccessToken: String? = null
     /** Result wrapper for API calls. */
     sealed class ApiResult<out T> {
         data class Success<T>(val data: T) : ApiResult<T>()
@@ -374,17 +381,35 @@ class GoogleCalendarService @Inject constructor(private val authManager: GoogleA
         )
     }
 
-    /** Create an authenticated Calendar service instance. */
+    /**
+     * Get or create an authenticated Calendar service instance.
+     *
+     * Caches the service instance for efficiency. Cache is invalidated when access token changes
+     * (detected by token comparison).
+     */
     private suspend fun getCalendarService(): Calendar? {
         val accessToken = authManager.getValidAccessToken() ?: return null
 
-        return Calendar.Builder(
-                        NetHttpTransport(),
-                        GsonFactory.getDefaultInstance(),
-                        { request -> request.headers.authorization = "Bearer $accessToken" }
-                )
-                .setApplicationName("MemoryLink")
-                .build()
+        // Return cached instance if token hasn't changed
+        if (cachedCalendarService != null && cachedAccessToken == accessToken) {
+            return cachedCalendarService
+        }
+
+        // Create new service and cache it
+        val service =
+                Calendar.Builder(
+                                NetHttpTransport(),
+                                GsonFactory.getDefaultInstance(),
+                                { request -> request.headers.authorization = "Bearer $accessToken" }
+                        )
+                        .setApplicationName("MemoryLink")
+                        .build()
+
+        cachedCalendarService = service
+        cachedAccessToken = accessToken
+        Log.d(TAG, "Created new Calendar service instance (token changed)")
+
+        return service
     }
 
     /**

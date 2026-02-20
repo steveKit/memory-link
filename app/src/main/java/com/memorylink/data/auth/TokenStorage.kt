@@ -1,10 +1,6 @@
 package com.memorylink.data.auth
 
-import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,22 +13,11 @@ import javax.inject.Singleton
  *
  * Settings are unified - both admin panel and [CONFIG] calendar events write to the same fields.
  * Last write wins, no priority system.
+ *
+ * Note: SharedPreferences instance is injected from AppModule to avoid duplicate creation.
  */
 @Singleton
-class TokenStorage @Inject constructor(@ApplicationContext private val context: Context) {
-    private val masterKey: MasterKey by lazy {
-        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
-    }
-
-    private val prefs: SharedPreferences by lazy {
-        EncryptedSharedPreferences.create(
-                context,
-                PREFS_FILE_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    }
+class TokenStorage @Inject constructor(private val prefs: SharedPreferences) {
 
     // ========== OAuth Tokens ==========
 
@@ -166,33 +151,27 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
     // These settings are written by both admin panel and [CONFIG] calendar events.
     // Last write wins - no priority system.
 
-    /**
-     * Wake time in HH:mm format.
-     * Written by admin panel or [CONFIG] WAKE HH:MM events.
-     */
+    /** Wake time in HH:mm format. Written by admin panel or [CONFIG] WAKE HH:MM events. */
     var wakeTime: String?
         get() = prefs.getString(KEY_WAKE_TIME, null)
         set(value) = prefs.edit().putString(KEY_WAKE_TIME, value).apply()
 
-    /**
-     * Sleep time in HH:mm format.
-     * Written by admin panel or [CONFIG] SLEEP HH:MM events.
-     */
+    /** Sleep time in HH:mm format. Written by admin panel or [CONFIG] SLEEP HH:MM events. */
     var sleepTime: String?
         get() = prefs.getString(KEY_SLEEP_TIME, null)
         set(value) = prefs.edit().putString(KEY_SLEEP_TIME, value).apply()
 
     /**
-     * Screen brightness (0-100), or -1 if using default.
-     * Written by admin panel or [CONFIG] BRIGHTNESS events.
+     * Screen brightness (0-100), or -1 if using default. Written by admin panel or [CONFIG]
+     * BRIGHTNESS events.
      */
     var brightness: Int
         get() = prefs.getInt(KEY_BRIGHTNESS, -1)
         set(value) = prefs.edit().putInt(KEY_BRIGHTNESS, value).apply()
 
     /**
-     * Time format. null = use default (12h), true = 24h, false = 12h.
-     * Written by admin panel or [CONFIG] TIME_FORMAT events.
+     * Time format. null = use default (12h), true = 24h, false = 12h. Written by admin panel or
+     * [CONFIG] TIME_FORMAT events.
      */
     var use24HourFormat: Boolean?
         get() {
@@ -228,8 +207,7 @@ class TokenStorage @Inject constructor(@ApplicationContext private val context: 
         }
 
     /**
-     * Whether to show events during sleep mode. null = use default (false).
-     * Written by admin panel.
+     * Whether to show events during sleep mode. null = use default (false). Written by admin panel.
      */
     var showEventsDuringSleep: Boolean?
         get() {
