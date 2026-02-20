@@ -54,10 +54,7 @@ data class EventCardColorScheme(val textColor: Color) {
  * Uses 0.6em (60% of parent font size) so it scales proportionally with AutoSizeText.
  */
 private val OrdinalSuffixStyle =
-        SpanStyle(
-                fontSize = 0.6.em,
-                baselineShift = BaselineShift.Superscript
-        )
+        SpanStyle(fontSize = 0.6.em, baselineShift = BaselineShift.Superscript)
 
 /**
  * Displays the next calendar event with time and title as a single flowing sentence.
@@ -65,7 +62,8 @@ private val OrdinalSuffixStyle =
  * Format:
  * - Timed event today: "At 10:30 am, Event Title"
  * - Timed event tomorrow: "Tomorrow, at 10:30 am, Event Title"
- * - Timed event future: "On Wednesday, February 18th at 10:30 am, Event Title"
+ * - Timed event within 7 days: "On Wednesday at 10:30 am, Event Title" (no month/day)
+ * - Timed event beyond 7 days: "On Wednesday, February 18th at 10:30 am, Event Title"
  *
  * Date suffixes (st, nd, rd, th) are displayed in a smaller superscript style.
  *
@@ -115,9 +113,7 @@ fun EventCard(
                 when {
                         eventDate == null -> {
                                 // Today: "At {time}, {title}" - no date suffix needed
-                                buildAnnotatedString {
-                                        append("At $formattedTime, $title")
-                                }
+                                buildAnnotatedString { append("At $formattedTime, $title") }
                         }
                         eventDate == tomorrow -> {
                                 // Tomorrow: "Tomorrow, at {time}, {title}" - no date suffix needed
@@ -126,24 +122,37 @@ fun EventCard(
                                 }
                         }
                         else -> {
-                                // Future date: "On {day}, {month} {day}{suffix} at {time}, {title}"
+                                // Future date formatting
                                 // Year is never shown here - it's already in the main date area
                                 val dayOfWeekFormatter =
                                         DateTimeFormatter.ofPattern("EEEE", Locale.getDefault())
-                                val monthFormatter =
-                                        DateTimeFormatter.ofPattern("MMMM", Locale.getDefault())
 
                                 val dayOfWeek = eventDate.format(dayOfWeekFormatter)
-                                val month = eventDate.format(monthFormatter)
-                                val dayOfMonth = eventDate.dayOfMonth
-                                val suffix = dayOfMonth.toOrdinalSuffix()
 
-                                buildAnnotatedString {
-                                        append("On $dayOfWeek, $month $dayOfMonth")
-                                        withStyle(OrdinalSuffixStyle) {
-                                                append(suffix)
+                                // Within 7 days: "On {day} at {time}, {title}" (no month/date)
+                                // Beyond 7 days: "On {day}, {month} {day}{suffix} at {time},
+                                // {title}"
+                                val sevenDaysFromNow = LocalDate.now().plusDays(7)
+
+                                if (eventDate <= sevenDaysFromNow) {
+                                        buildAnnotatedString {
+                                                append("On $dayOfWeek at $formattedTime, $title")
                                         }
-                                        append(" at $formattedTime, $title")
+                                } else {
+                                        val monthFormatter =
+                                                DateTimeFormatter.ofPattern(
+                                                        "MMMM",
+                                                        Locale.getDefault()
+                                                )
+                                        val month = eventDate.format(monthFormatter)
+                                        val dayOfMonth = eventDate.dayOfMonth
+                                        val suffix = dayOfMonth.toOrdinalSuffix()
+
+                                        buildAnnotatedString {
+                                                append("On $dayOfWeek, $month $dayOfMonth")
+                                                withStyle(OrdinalSuffixStyle) { append(suffix) }
+                                                append(" at $formattedTime, $title")
+                                        }
                                 }
                         }
                 }
@@ -296,20 +305,40 @@ private fun EventCardFuture21stPreview() {
 }
 
 @Preview(
-        name = "Event Card - Long Future Event",
+        name = "Event Card - Within 7 Days (no month/day)",
         showBackground = true,
         backgroundColor = 0xFF121212,
         widthDp = 400,
         heightDp = 300
 )
 @Composable
-private fun EventCardLongFuturePreview() {
+private fun EventCardWithin7DaysPreview() {
+        MemoryLinkTheme {
+                EventCard(
+                        title = "Meet me downstairs for lunch",
+                        startTime = LocalTime.of(12, 0),
+                        eventDate = LocalDate.now().plusDays(5), // 5 days from now (within 7 days)
+                        use24HourFormat = false,
+                        modifier = Modifier.fillMaxSize().padding(16.dp)
+                )
+        }
+}
+
+@Preview(
+        name = "Event Card - Beyond 7 Days (with month/day)",
+        showBackground = true,
+        backgroundColor = 0xFF121212,
+        widthDp = 400,
+        heightDp = 300
+)
+@Composable
+private fun EventCardBeyond7DaysPreview() {
         MemoryLinkTheme {
                 EventCard(
                         title =
                                 "Meet Eric downstairs so he can take you to your doctors appointment",
                         startTime = LocalTime.of(15, 0),
-                        eventDate = LocalDate.of(2026, 2, 23), // February 23rd
+                        eventDate = LocalDate.now().plusDays(10), // 10 days from now (beyond 7)
                         use24HourFormat = false,
                         modifier = Modifier.fillMaxSize().padding(16.dp)
                 )
