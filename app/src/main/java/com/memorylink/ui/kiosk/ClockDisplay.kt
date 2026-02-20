@@ -524,9 +524,6 @@ fun ClockDisplay(
         val formattedEvents =
                 allDayEvents.map { event -> formatAllDayEvent(event, today, tomorrow) }
 
-        // Find the longest event text for font sizing
-        val longestEventText = formattedEvents.maxByOrNull { it.length }
-
         BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
                 val textMeasurer = rememberTextMeasurer()
                 val density = LocalDensity.current
@@ -538,8 +535,7 @@ fun ClockDisplay(
                         remember(
                                 formattedTime,
                                 formattedDate,
-                                longestEventText,
-                                formattedEvents.size,
+                                formattedEvents, // Track all events for proper font calculation
                                 maxWidthPx,
                                 maxHeightPx,
                                 isLandscape
@@ -710,19 +706,22 @@ private fun calculateOptimalFontSizesMultiple(
                         softWrap = false
                 )
 
-        // All-day events: find size that fits the longest text
+        // All-day events: find the smallest font size that fits ALL events
+        // We can't just use the longest text by character count because
+        // different characters have different widths (e.g., "WWW" is wider than "iii")
         val allDayFontSizeSp =
                 if (allDayEventTexts.isNotEmpty()) {
-                        val longestText = allDayEventTexts.maxByOrNull { it.length } ?: ""
-                        findMaxFontSizeThatFits(
-                                text = longestText,
-                                textMeasurer = textMeasurer,
-                                maxWidthPx = maxWidthPx,
-                                maxHeightPx = Int.MAX_VALUE,
-                                minFontSizeSp = minFontSizeSp,
-                                maxFontSizeSp = maxAllDayFontSizeSp,
-                                softWrap = false
-                        )
+                        allDayEventTexts.minOf { eventText ->
+                                findMaxFontSizeThatFits(
+                                        text = eventText,
+                                        textMeasurer = textMeasurer,
+                                        maxWidthPx = maxWidthPx,
+                                        maxHeightPx = Int.MAX_VALUE,
+                                        minFontSizeSp = minFontSizeSp,
+                                        maxFontSizeSp = maxAllDayFontSizeSp,
+                                        softWrap = false
+                                )
+                        }
                 } else {
                         maxAllDayFontSizeSp
                 }
