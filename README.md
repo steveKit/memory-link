@@ -112,6 +112,7 @@ Caregivers can adjust device settings remotely without physical access to the ta
 | SHOW SLEEP_EVENTS | `[CONFIG] SHOW SLEEP_EVENTS` | Show next event during sleep mode.                     |
 | HIDE SLEEP_EVENTS | `[CONFIG] HIDE SLEEP_EVENTS` | Hide events during sleep (clock only, default).        |
 | SHOW HOLIDAYS     | `[CONFIG] SHOW HOLIDAYS`     | Show holiday calendar events (if configured in Admin). |
+| HIDE HOLIDAYS     | `[CONFIG] HIDE HOLIDAYS`     | Hide holiday calendar events (if configured in Admin). |
 
 > **Note:** If using 12-hour format for schedules, WAKE assumes AM and SLEEP assumes PM. 24-hour format is recommended for clarity.
 
