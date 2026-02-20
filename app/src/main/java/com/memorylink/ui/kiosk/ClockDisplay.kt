@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.memorylink.domain.model.AllDayEventInfo
-import com.memorylink.ui.components.AutoSizeText
 import com.memorylink.ui.theme.AccentBlue
 import com.memorylink.ui.theme.DisplayConstants
 import com.memorylink.ui.theme.MemoryLinkTheme
@@ -477,8 +476,8 @@ private fun formatEndDate(endDate: LocalDate, today: LocalDate, tomorrow: LocalD
 /**
  * Displays the current time, date, and multiple all-day events.
  *
- * This overload accepts a list of AllDayEventInfo objects for displaying multiple events,
- * each on a separate line below the date.
+ * This overload accepts a list of AllDayEventInfo objects for displaying multiple events, each on a
+ * separate line below the date.
  *
  * @param time The current time to display
  * @param date The current date to display
@@ -522,9 +521,8 @@ fun ClockDisplay(
         // Format all all-day events
         val today = LocalDate.now()
         val tomorrow = today.plusDays(1)
-        val formattedEvents = allDayEvents.map { event ->
-                formatAllDayEvent(event, today, tomorrow)
-        }
+        val formattedEvents =
+                allDayEvents.map { event -> formatAllDayEvent(event, today, tomorrow) }
 
         // Find the longest event text for font sizing
         val longestEventText = formattedEvents.maxByOrNull { it.length }
@@ -594,7 +592,9 @@ fun ClockDisplay(
                                 modifier = Modifier.fillMaxWidth()
                         )
 
-                        // All-day events (each on separate line, auto-sized to fit)
+                        // All-day events (each on separate line, consistent font size)
+                        // All events use the same font size (smallest needed to fit longest event)
+                        // to maintain visual consistency across multiple events
                         formattedEvents.forEach { eventText ->
                                 Spacer(
                                         modifier =
@@ -603,20 +603,18 @@ fun ClockDisplay(
                                                 )
                                 )
 
-                                // Each event auto-sizes independently:
-                                // - maxFontSize = 60.sp (DisplayConstants.MAX_ALL_DAY_FONT_SIZE)
-                                // - Shrinks if text is too long to fit width
-                                // - Single line only (softWrap = false)
-                                AutoSizeText(
+                                Text(
                                         text = eventText,
-                                        maxFontSize = DisplayConstants.MAX_ALL_DAY_FONT_SIZE,
-                                        minFontSize = DisplayConstants.MIN_FONT_SIZE,
-                                        softWrap = false,
+                                        style =
+                                                TextStyle(
+                                                        color = colorScheme.allDayEventColor,
+                                                        fontWeight = FontWeight.Medium,
+                                                        fontSize = allDayFontSize,
+                                                        lineHeight = allDayFontSize * 1.15f
+                                                ),
                                         textAlign = TextAlign.Center,
-                                        style = TextStyle(
-                                                color = colorScheme.allDayEventColor,
-                                                fontWeight = FontWeight.Medium
-                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.fillMaxWidth()
                                 )
                         }
@@ -632,7 +630,11 @@ fun ClockDisplay(
  * @param tomorrow Tomorrow's date
  * @return Formatted event string
  */
-private fun formatAllDayEvent(event: AllDayEventInfo, today: LocalDate, tomorrow: LocalDate): String {
+private fun formatAllDayEvent(
+        event: AllDayEventInfo,
+        today: LocalDate,
+        tomorrow: LocalDate
+): String {
         // Check if this is an ongoing multi-day event
         val isOngoingMultiDay = event.endDate != null && event.startDate == null
 
