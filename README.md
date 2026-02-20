@@ -105,7 +105,7 @@ Caregivers can adjust device settings remotely without physical access to the ta
 | ----------------- | ---------------------------- | ------------------------------------------------------ |
 | SLEEP             | `[CONFIG] SLEEP 21:00`       | Set sleep mode start time (24h or 12h format).         |
 | WAKE              | `[CONFIG] WAKE 7:00`         | Set wake time (24h or 12h format).                     |
-| BRIGHTNESS        | `[CONFIG] BRIGHTNESS 80`     | Screen brightness (10-100).                            |
+| BRIGHTNESS        | `[CONFIG] BRIGHTNESS 80`     | Screen brightness (0-100).                             |
 | TIME_FORMAT       | `[CONFIG] TIME_FORMAT 12`    | Clock format: `12` or `24` hour.                       |
 | SHOW YEAR         | `[CONFIG] SHOW YEAR`         | Display year in date (e.g., "February 11, 2026").      |
 | HIDE YEAR         | `[CONFIG] HIDE YEAR`         | Hide year in date (e.g., "February 11").               |
