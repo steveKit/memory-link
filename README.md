@@ -15,7 +15,7 @@ By stripping away complex interfaces and focusing only on what's coming next, Me
 
 ---
 
-## 🛠 Developer Guide: Setup & Installation
+## Developer Guide: Setup & Installation
 
 MemoryLink requires specific provisioning to function as a true, inescapable kiosk.
 
