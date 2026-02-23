@@ -263,8 +263,8 @@ constructor(
                             error = null
                     )
                 }
-                // Trigger calendar sync after sign-in
-                syncCalendars()
+                // Auto-reconnect to remembered calendar if available
+                autoReconnectToRememberedCalendar()
             }
             is GoogleAuthManager.AuthResult.Error -> {
                 _authState.update { it.copy(isLoading = false, error = result.message) }
@@ -371,6 +371,30 @@ constructor(
 
     private fun syncCalendars() {
         viewModelScope.launch { calendarRepository.syncEvents() }
+    }
+
+    /**
+     * Auto-reconnect to the remembered calendar from the previous session. Called after successful
+     * sign-in to restore the user's calendar selection.
+     */
+    private fun autoReconnectToRememberedCalendar() {
+        val rememberedId = tokenStorage.rememberedCalendarId
+        val rememberedName = tokenStorage.rememberedCalendarName
+
+        if (!rememberedId.isNullOrBlank() && !rememberedName.isNullOrBlank()) {
+            // Restore the calendar selection
+            viewModelScope.launch {
+                calendarRepository.selectCalendar(rememberedId, rememberedName)
+                _calendarState.update {
+                    it.copy(
+                            selectedCalendarId = rememberedId,
+                            selectedCalendarName = rememberedName
+                    )
+                }
+                // Trigger sync with the restored calendar
+                syncCalendars()
+            }
+        }
     }
 
     // ========== Holiday Calendar Methods ==========

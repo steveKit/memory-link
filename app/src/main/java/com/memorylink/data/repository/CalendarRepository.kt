@@ -233,7 +233,10 @@ constructor(
         return calendarService.getCalendarList()
     }
 
-    /** Select a calendar. Clears cache if calendar changes (forces full resync). */
+    /**
+     * Select a calendar. Clears cache if calendar changes (forces full resync). Also remembers the
+     * selection for auto-reconnect on next login.
+     */
     suspend fun selectCalendar(calendarId: String, calendarName: String): Boolean {
         val previousCalendarId = tokenStorage.selectedCalendarId
         val calendarChanged = previousCalendarId != calendarId
@@ -248,6 +251,9 @@ constructor(
 
         tokenStorage.selectedCalendarId = calendarId
         tokenStorage.selectedCalendarName = calendarName
+        // Also remember for auto-reconnect on next login
+        tokenStorage.rememberedCalendarId = calendarId
+        tokenStorage.rememberedCalendarName = calendarName
         Log.d(TAG, "Selected calendar: $calendarName ($calendarId)")
 
         return calendarChanged

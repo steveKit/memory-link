@@ -48,6 +48,21 @@ class TokenStorage @Inject constructor(private val prefs: SharedPreferences) {
         get() = prefs.getString(KEY_SELECTED_CALENDAR_NAME, null)
         set(value) = prefs.edit().putString(KEY_SELECTED_CALENDAR_NAME, value).apply()
 
+    // ========== Remembered Calendar (for auto-reconnect on re-login) ==========
+
+    /**
+     * Remembered calendar ID from previous session. Used to auto-reconnect when user logs back in.
+     * Unlike selectedCalendarId, this persists across sign-out.
+     */
+    var rememberedCalendarId: String?
+        get() = prefs.getString(KEY_REMEMBERED_CALENDAR_ID, null)
+        set(value) = prefs.edit().putString(KEY_REMEMBERED_CALENDAR_ID, value).apply()
+
+    /** Remembered calendar name for display during auto-reconnect. */
+    var rememberedCalendarName: String?
+        get() = prefs.getString(KEY_REMEMBERED_CALENDAR_NAME, null)
+        set(value) = prefs.edit().putString(KEY_REMEMBERED_CALENDAR_NAME, value).apply()
+
     /** User's email address (for display purposes). */
     var userEmail: String?
         get() = prefs.getString(KEY_USER_EMAIL, null)
@@ -324,16 +339,22 @@ class TokenStorage @Inject constructor(private val prefs: SharedPreferences) {
         this.tokenExpirationTime = System.currentTimeMillis() + (expiresInSeconds * 1000)
     }
 
-    /** Clear all stored tokens and user data. Called on sign-out. */
+    /**
+     * Clear all stored tokens and active session data. Called on sign-out. Preserves remembered
+     * calendar preference for auto-reconnect on next login.
+     */
     fun clearAll() {
         prefs.edit()
                 .remove(KEY_ACCESS_TOKEN)
                 .remove(KEY_REFRESH_TOKEN)
                 .remove(KEY_TOKEN_EXPIRATION)
                 .remove(KEY_SELECTED_CALENDAR_ID)
+                .remove(KEY_SELECTED_CALENDAR_NAME)
                 .remove(KEY_USER_EMAIL)
                 .remove(KEY_LAST_SYNC_TIME)
+                .remove(KEY_SYNC_TOKEN)
                 .apply()
+        // Note: remembered_calendar_id and remembered_calendar_name are intentionally preserved
     }
 
     companion object {
@@ -343,6 +364,8 @@ class TokenStorage @Inject constructor(private val prefs: SharedPreferences) {
         private const val KEY_TOKEN_EXPIRATION = "token_expiration"
         private const val KEY_SELECTED_CALENDAR_ID = "selected_calendar_id"
         private const val KEY_SELECTED_CALENDAR_NAME = "selected_calendar_name"
+        private const val KEY_REMEMBERED_CALENDAR_ID = "remembered_calendar_id"
+        private const val KEY_REMEMBERED_CALENDAR_NAME = "remembered_calendar_name"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_LAST_SYNC_TIME = "last_sync_time"
         private const val KEY_LAST_MANUAL_SYNC_TIME = "last_manual_sync_time"
