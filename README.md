@@ -6,12 +6,12 @@ By stripping away complex interfaces and focusing only on what's coming next, Me
 
 ## Key Features
 
-- 📱 **Full-Screen Kiosk Mode:** Locks the device down so the memory user cannot accidentally exit the app.
-- 🕐 **High-Contrast Display:** Features a large clock, date, and the next calendar event with auto-scaling text.
-- 📅 **Remote Management:** Caregivers manage events and device settings from their phone via Google Calendar.
-- 🌙 **Sleep Schedule:** Configurable night mode dims the display automatically.
-- 📴 **Offline Resilience:** Works offline with a 2-week rolling event cache.
-- 🔐 **Secure Admin Access:** Hidden panel accessed via a 5-tap gesture + PIN.
+- **Full-Screen Kiosk Mode:** Locks the device down so the memory user cannot accidentally exit the app.
+- **High-Contrast Display:** Features a large clock, date, and the next calendar event with auto-scaling text.
+- **Remote Management:** Caregivers manage events and device settings from their phone via Google Calendar.
+- **Sleep Schedule:** Configurable night mode dims the display automatically.
+- **Offline Resilience:** Works offline with a 2-week rolling event cache.
+- **Secure Admin Access:** Hidden panel accessed via a 5-tap gesture + PIN.
 
 ---
 
@@ -65,7 +65,7 @@ During the in-app Google Sign-In setup (accessed via Admin Mode), the app reques
 
 ---
 
-## 📱 User Guide: Caregiver Management
+## User Guide: Caregiver Management
 
 To access the device's Admin Mode, tap 5 times rapidly in the top-left corner of the screen and enter your 4-digit PIN. (The panel times out after 30 seconds of inactivity).
 
