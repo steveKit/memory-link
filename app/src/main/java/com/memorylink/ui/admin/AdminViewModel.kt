@@ -88,18 +88,15 @@ constructor(
         viewModelScope.launch {
             settingsRepository.settings.collect { appSettings ->
                 _settingsState.update {
-                    it.copy(
-                            wakeTime = appSettings.wakeTime,
-                            sleepTime = appSettings.sleepTime
-                    )
+                    it.copy(wakeTime = appSettings.wakeTime, sleepTime = appSettings.sleepTime)
                 }
             }
         }
     }
 
     /**
-     * Restore sync cooldown state from persisted timestamp.
-     * Called on ViewModel init to maintain cooldown across admin panel exits/re-entries.
+     * Restore sync cooldown state from persisted timestamp. Called on ViewModel init to maintain
+     * cooldown across admin panel exits/re-entries.
      */
     private fun restoreSyncCooldownState() {
         val lastManualSync = tokenStorage.lastManualSyncTime
@@ -283,11 +280,12 @@ constructor(
         return result
     }
 
-    /** Sign out from Google account. */
+    /** Sign out from Google account. Clears cached events to protect user privacy. */
     fun signOut() {
         resetInactivityTimer()
         viewModelScope.launch {
             googleAuthManager.signOut()
+            calendarRepository.clearCache()
             _authState.update { AuthState() }
             _calendarState.update { CalendarState() }
         }
@@ -635,8 +633,7 @@ data class CalendarState(
 data class CalendarItem(val id: String, val name: String, val isPrimary: Boolean)
 
 /**
- * Unified settings state for admin panel.
- * Shows current values that can be edited. Last write wins.
+ * Unified settings state for admin panel. Shows current values that can be edited. Last write wins.
  */
 data class SettingsState(
         val wakeTime: LocalTime = LocalTime.of(6, 0),
@@ -646,9 +643,8 @@ data class SettingsState(
         val showYearInDate: Boolean? = null,
         val showEventsDuringSleep: Boolean? = null,
         /**
-         * Whether to show holiday events on the display.
-         * Only applicable if a holiday calendar is configured.
-         * Default: true
+         * Whether to show holiday events on the display. Only applicable if a holiday calendar is
+         * configured. Default: true
          */
         val showHolidays: Boolean = true
 )
